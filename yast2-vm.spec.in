@@ -1,0 +1,31 @@
+@HEADER-COMMENT@
+
+# neededforbuild  yast2-devel-packages
+
+@HEADER@
+Requires:	yast2 yast2-installation
+
+Summary:	Start installation in a Virtual Machine
+
+%description
+-
+
+@PREP@
+
+@BUILD@
+
+@INSTALL@
+
+@CLEAN@
+
+%files
+%defattr(-,root,root)
+@clientdir@/vm*.ycp
+@clientdir@/inst_vm*.ycp
+@moduledir@/VM*.ycp
+@moduledir@/VM*.ybc
+@desktopdir@/vm.desktop
+%dir @yncludedir@/vm
+@yncludedir@/vm/*
+@scrconfdir@/*.scr
+%doc @docdir@

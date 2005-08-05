@@ -1,0 +1,82 @@
+/**
+ * Module:	inst_vm_kickoff.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * Purpose:	Prepare and start installation in a virtual machine.
+ *
+ * $Id:$
+ */
+{
+    import "VM";
+    import "Directory";
+    import "Progress";
+    import "Report";
+    import "Package";
+    import "Service";
+
+
+    textdomain "vm";
+
+
+    list <string> progress_stages = [
+				     // progress stages
+				     _("Prepare virtual machine environment"),
+				     // progress stages
+				     _("Write virtual machine configuration"),
+				     // progress stages
+				     _("Start installation"),
+				     // progress stages
+				     _("Finish installation"),
+    ];
+
+    // progress stage
+    string update_stage = _("Update the configuration");
+
+    list progress_descriptions = [];
+
+    integer progress_length = size(progress_stages);
+
+    // Headline for virtual machine installation
+    string headline = _("Preparing Installation of the Virtual Machine");
+
+    // help text
+    string help_text = _("<P><B>Installation</B></P><P>Preparing the virtual machine for installation...</P>");
+
+    // enable progress
+    Progress::on();
+
+    // Headline for virtual machine installation
+    Progress::New (headline, "", progress_length,
+		   progress_stages, progress_descriptions, help_text);
+
+    Progress::NextStage ();
+
+    boolean success = VM::Prepare();
+
+    if (!success)
+    {
+	return `abort;
+    }
+
+    Progress::NextStage ();
+
+    success = VM::Write();
+    if (!success)
+    {
+	return `abort;
+    }
+
+    Progress::NextStage ();
+
+    success = VM::Start();
+
+    Progress::NextStage ();
+
+    VM::Prepare2();
+    success = VM::Start();
+
+    Progress::Finish ();
+
+    return `next;
+}

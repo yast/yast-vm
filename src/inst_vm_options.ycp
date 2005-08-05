@@ -1,0 +1,115 @@
+/**
+ * Module:	inst_vm_options.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * Purpose:	Ask the user for various options for the virtual machine.
+ *
+ * $Id:$
+ *
+ */
+
+{
+    textdomain "vm";
+
+    import "VM";
+    import "VM_Common";
+    import "Wizard";
+    import "Popup";
+
+    // screen title for virtual machine options
+    string title = _("The Virtual Machine Options");
+
+    // build and show dialog
+
+    Wizard::OpenAcceptDialog ();
+
+    term contents = `HVSquash(
+			      `VBox(
+				    // textentry label - virtual machine name
+				    `Left(`TextEntry(`id(`vmname), _("Machine Name"), VM::GetConfigName())),
+				    `VSpacing(0.5),
+				    // textentry label - extra parameters for kernel
+				    `Left(`TextEntry(`id(`bootopts), _("Boot &Options"), VM::GetExtraArgs())),
+				    `VSpacing(0.5),
+				    `Left(`ComboBox(`id(`memory), `opt(`editable),
+						    // combobox label
+						    _("&Memory Size in MB:"),
+						    ["256", "512"])),
+// SMP isn't currently supported
+//
+//				    `Left(`ComboBox(`id(`ncpus), `opt(`editable),
+//						    // combobox label
+//						    _("Number of CPUs:"),
+//						    ["1", "2", "4"])),
+				    `VSpacing(0.5),
+				    `Left(`ComboBox(`id(`startmode),
+						    // combobox label
+						    _("A&ctivation"),
+						    [
+						     // combobox item
+						     `item(`id("manual"), _("Manually")),
+						     // combobox item
+						     `item(`id("onboot"), _("On Boot")),
+						     ]))///,
+				    )
+			      );
+
+    // help text - virtual machine options
+    string help_text = _("<P><B>Options</B></P>")
+    + _("<P>Set how much host system memory will be used by the virtual machine.</P>")
+    + _("<P>The virtual machine can be started automatically on boot or manually when needed.</P>")
+    + _("<P><I>Boot Options</I> are used as extra arguments for the kernel.</P>");
+
+    Wizard::SetContents (title, contents, help_text, (boolean) WFM::Args(0),
+			 (boolean) WFM::Args(1));
+
+    UI::ChangeWidget (`id(`memory), `ValidChars, "0123456789");
+    UI::ChangeWidget (`id(`memory), `Value, tostring (VM::GetMemorySize()));
+
+//    UI::ChangeWidget (`id(`ncpus), `ValidChars, "0123456789");
+//    UI::ChangeWidget (`id(`ncpus), `Value, tostring (number_of_cpus));
+
+    UI::ChangeWidget (`id(`startmode), `Value, VM::GetStartMode());
+
+    any ret = nil;
+
+    while (true)
+    {
+	ret = Wizard::UserInput ();
+
+	if (ret == `cancel || ret == `back)
+	    break;
+
+	if (ret == `next)
+	{
+	    integer mem = tointeger ((string) UI::QueryWidget (`id(`memory), `Value));
+//	    integer tmp2 = tointeger ((string) UI::QueryWidget (`id(`ncpus), `Value));
+	    string mode = (string) UI::QueryWidget (`id(`startmode), `Value);
+	    string boot = (string) UI::QueryWidget (`id(`bootopts), `Value);
+	    string vmname = (string) UI::QueryWidget (`id(`vmname), `Value);
+
+
+	    if (mem == nil || mem <= 0)
+	    {
+		// error popup
+		string message = _("Invalid amount of memory.");
+		Popup::Message (message);
+		continue;
+	    }
+//	    TODO: else if (mem < available memory)
+
+	    VM::SetMemorySize(mem);
+	    y2internal("mode: %1", mode);
+	    VM::SetStartMode(mode);
+	    VM::SetConfigName(vmname);
+	    VM::SetExtraArgs(boot);
+
+	    break;
+	}
+    }
+
+    Wizard::CloseDialog ();
+
+    return ret;
+}

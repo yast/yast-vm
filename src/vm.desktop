@@ -1,0 +1,24 @@
+[Desktop Entry]
+Type=Application
+Categories=Qt;X-SuSE-YaST;X-SuSE-YaST-Software;
+
+X-KDE-ModuleType=Library
+X-KDE-RootOnly=true
+X-KDE-HasReadOnlyMode=true
+X-KDE-Library=yast2
+X-SuSE-YaST-Call=vm
+
+X-SuSE-YaST-Group=Software
+X-SuSE-YaST-Argument=
+X-SuSE-YaST-RootOnly=true
+X-SuSE-YaST-AutoInst=
+X-SuSE-YaST-Geometry=
+X-SuSE-YaST-SortKey=
+X-SuSE-YaST-AutoinstResource=
+
+Icon=yast-uml
+Exec=/sbin/yast2 vm
+
+Name=Virtual Machine Installation (XEN)
+GenericName=Install a system into XEN virtual machine
+X-KDE-SubstituteUID=true

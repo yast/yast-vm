@@ -1,0 +1,190 @@
+/**
+ * Module:	inst_vm_disks.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * Purpose:	Ask the user for virtual disks configuration.
+ *
+ * $Id:$
+ *
+ */
+{
+    textdomain "vm";
+
+    import "VM";
+    import "Label";
+    import "Popup";
+    import "Wizard";
+
+
+    // screen title for uml disks
+    string title = _("Virtual Disks");
+
+    list<map<string,any> > disks = VM::GetDiskConfig();
+
+
+    define map<string,any> ask_size (string device, integer s, boolean sparse) ``{
+
+	UI::OpenDialog (`opt(`decorated),
+			// heading in a popup dialog
+			`VBox(`Heading(_("Size of Virtual Disk") ),
+			      `VSpacing(0.5),
+			      `ComboBox(`id(`size), `opt(`editable),
+					// combobox label
+					_("&Disk Size in MB:"),
+					["512", "1024", "2048", "4096"]),
+			      `VSpacing(0.8),
+			      // label - disk device widget (enter /dev/hda1, /dev/sdb3...)
+			      `HSquash(`TextEntry(`id(`device), _("&Virtual Disk Device"), device)),
+			      `VSpacing(0.8),
+			      `CheckBox(`id(`sparse), _("Create &Sparse Image File"), sparse),
+			      `VSpacing(1),
+			      `HBox(
+				    `PushButton(`id(`ok), `opt(`default), Label::OKButton()),
+				    `PushButton(`id(`cancel), Label::CancelButton())
+				    )
+			      )
+			);
+
+	UI::ChangeWidget (`id(`size), `ValidChars, "0123456789");
+	UI::ChangeWidget (`id(`size), `Value, tostring (s));
+
+	if ((symbol) UI::UserInput() == `ok)
+	    s = tointeger ((string) UI::QueryWidget (`id(`size), `Value));
+	else
+	    s = -1;
+
+	boolean sparse_file = (boolean) UI::QueryWidget (`id(`sparse), `Value);
+
+	string dev = (string) UI::QueryWidget (`id(`device), `Value);
+
+	UI::CloseDialog ();
+
+	y2debug("ret: %1", $[ "size" : s, "sparse" : sparse_file, "target" : device]);
+
+	return $[ "size" : s, "sparse" : sparse_file, "target" : dev ];
+    }
+
+    define void refresh_table(list<map<string,any> > disks)
+    {
+	integer id_cnt = 0;
+	list <term> d = [];
+	foreach (map<string,any> m, disks, ``{
+	    d = add(d, `item (`id(id_cnt), m["target"]:"", m["size"]:0, (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
+	    id_cnt = id_cnt + 1;
+	});
+	UI::ChangeWidget (`id(`disks), `Items, d);
+    }
+
+    // build and show dialog
+
+    Wizard::OpenAcceptDialog ();
+
+    term contents = `VBox(
+			  `VBox(
+				`Left(`Table(`id(`disks),
+					     // table - column heading
+					     `header (_("Virtual Device"), `Right(_("Disk Size (MB)")), `Center(_("Sparse File"))), []))
+				),
+			  `HBox(
+				`PushButton (`id (`add), Label::AddButton()),
+				`PushButton (`id (`edit), Label::EditButton()),
+				`PushButton (`id (`delete), Label::DeleteButton())
+				)
+			  );
+
+    // help text for disk setup
+    string help_text = _("<P><B>Virtual Disk Setup<B></P>")
+    + _("<P>Here, configure number and size of virtual disks.
+The content of each virtual disk is stored in a file in the host system.</P>
+");
+
+    // TODO: add sparse option help text
+
+    Wizard::SetContents (title, contents, help_text, (boolean) WFM::Args(0),
+			 (boolean) WFM::Args(1));
+
+    refresh_table(disks);
+
+    symbol ret = nil;
+
+    while (true)
+    {
+	ret = (symbol) Wizard::UserInput ();
+
+	if (ret == `abort && Popup::ConfirmAbort (`painless))
+	    break;
+
+	if (ret == `cancel || ret == `back)
+	    break;
+
+	if (ret == `add)
+	{
+	    map<string,any> m = ask_size ("", 1024, false);
+
+	    integer s = m["size"]:-1;
+	    if (s >= 0)
+	    {
+		disks = add(disks, m);
+		refresh_table(disks);
+	    }
+	}
+
+	if (ret == `edit)
+	{
+	    integer id = (integer) UI::QueryWidget (`id(`disks), `CurrentItem);
+	    if (id != nil)
+	    {
+		map<string,any> d = disks[id]:$[];
+		d = ask_size(d["target"]:"", d["size"]:0, d["sparse"]:false);
+
+		if (d["size"]:0 > 0)
+		{
+		    disks[id] = d;
+
+		    refresh_table(disks);
+		}
+	    }
+	}
+
+	if (ret == `delete)
+	{
+	    integer id = (integer) UI::QueryWidget (`id(`disks), `CurrentItem);
+
+	    if (id != nil)
+	    {
+		list<map<string,any> > new_disks = [];
+
+		foreach(map<string,any> m, disks, ``{
+			if (id != 0)
+			{
+			    new_disks = add(new_disks, m);
+			}
+			id = id - 1;
+		    }
+		);
+
+		disks = new_disks;
+		refresh_table(disks);
+	    }
+	}
+
+	if (ret == `next)
+	{
+	    if (size (disks) <= 0)
+	    {
+		// error popup
+		string message = _("At least one disk is required.");
+		Popup::Message (message);
+		continue;
+	    }
+
+	    VM::SetDiskConfig(disks);
+	    break;
+	}
+    }
+
+    Wizard::CloseDialog ();
+
+    return ret;
+}

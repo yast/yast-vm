@@ -1,0 +1,276 @@
+/**
+ * File:	modules/VM.ycp
+ * Package:	VM configuration - generic module
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * $Id:$
+ */
+{
+    module "VM";
+
+    import "Report";
+    import "VM_XEN";
+
+    textdomain "vm";
+
+
+    map functions = $[];
+    string vmmtype = "";
+
+    boolean CallBooleanFunction(string name) {
+	boolean() toEval = (boolean())functions[name]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("%1() function is missing!", name);
+	    return nil;
+	}
+    }
+
+    boolean CallBooleanStringFunction(string name, string arg) {
+	boolean(string) toEval = (boolean(string))functions[name]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(arg);
+	}
+	else
+	{
+	    y2error("%1() function is missing!", name);
+	    return nil;
+	}
+    }
+
+    string CallStringFunction(string name) {
+	string() toEval = (string())functions[name]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("%1() function is missing!", name);
+	    return nil;
+	}
+    }
+
+    // initializes the module, must be called as the first function
+    global boolean SetVMMtype(string vmm) {
+	if (vmm == "xen")
+	{
+	    functions = VM_XEN::GetFunctions();
+	    vmmtype = vmm;
+	}
+	else
+	{
+	    y2error("unsupported VMM type: %1", vmm);
+	    return false;
+	}
+
+	return true;
+    }
+
+    global string GetVMMtype() {
+	return vmmtype;
+    }
+
+
+    global integer GetMemorySize() {
+	integer() toEval = (integer())functions["getMemorySize"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("getMemorySize() function is missing!");
+	    return nil;
+	}
+    }
+
+    global boolean SetMemorySize(integer msize) {
+	boolean(integer) toEval = (boolean(integer))functions["setMemorySize"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(msize);
+	}
+	else
+	{
+	    y2error("setMemorySize() function is missing!");
+	    return nil;
+	}
+    }
+
+    global boolean ResetMemorySize() {
+	return CallBooleanFunction("resetMemorySize");
+    }
+
+    global string GetStartMode() {
+	return CallStringFunction("getStartMode");
+    }
+
+    global boolean SetStartMode(string smode) {
+	return CallBooleanStringFunction("setStartMode", smode);
+    }
+
+    global boolean ResetStartMode() {
+	return CallBooleanFunction("resetStartMode");
+    }
+
+    global string GetExtraArgs() {
+	return CallStringFunction("getExtraArgs");
+    }
+
+    global boolean SetExtraArgs(string args) {
+	return CallBooleanStringFunction("setExtraArgs", args);
+    }
+
+    global boolean ResetExtraArgs() {
+	return CallBooleanFunction("resetExtraArgs");
+    }
+
+    global string GetConfigName() {
+	return CallStringFunction("getConfigName");
+    }
+
+    global boolean SetConfigName(string name) {
+	return CallBooleanStringFunction("setConfigName", name);
+    }
+
+    global boolean ResetConfigName() {
+	return CallBooleanFunction("resetConfigName");
+    }
+
+    global string GetMAC() {
+	return CallStringFunction("getMAC");
+    }
+
+    global boolean SetMAC(string mac) {
+	return CallBooleanStringFunction("setMAC", mac);
+    }
+
+    global boolean ResetMAC() {
+	return CallBooleanFunction("resetMAC");
+    }
+
+    global list<map<string,any> > GetDiskConfig() {
+	list<map<string,any> >() toEval = (list<map<string,any> >())functions["getDiskConfig"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("getDiskConfig() function is missing!");
+	    return nil;
+	}
+    }
+
+    global boolean SetDiskConfig(list<map<string,any> > smode) {
+	boolean(list<map<string,any> >) toEval = (boolean(list<map<string,any> >))functions["setDiskConfig"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(smode);
+	}
+	else
+	{
+	    y2error("setDiskConfig() function is missing!");
+	    return nil;
+	}
+    }
+
+    global boolean ResetDiskConfig() {
+	return CallBooleanFunction("resetDiskConfig");
+    }
+
+    global list<string> GetDiskProposal() {
+	list<string>() toEval = (list<string>())functions["getDiskProposal"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("getDiskProposal() function is missing!");
+	    return nil;
+	}
+    }
+
+    global string GetSourceProposal() {
+	return CallStringFunction("getSourceProposal");
+    }
+
+    global boolean ResetSource() {
+	return CallBooleanFunction("resetSourceConfig");
+    }
+
+    global map<string,any> GetSourceConfig() {
+	map<string,any>() toEval = (map<string,any>())functions["getSourceConfig"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("getSourceConfig() function is missing!");
+	    return nil;
+	}
+    }
+
+    global boolean SetSourceConfig(integer sid, symbol type, string custom) {
+	boolean(integer, symbol, string) toEval = (boolean(integer, symbol, string))functions["setSourceConfig"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(sid, type, custom);
+	}
+	else
+	{
+	    y2error("setSourceConfig() function is missing!");
+	    return nil;
+	}
+    }
+
+    global map getOptionsProposal()
+    {
+	map<string,any>() toEval = (map<string,any>())functions["getOptionsProposal"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("getOptionsProposal() function is missing!");
+	    return nil;
+	}
+    }
+
+
+    global boolean Write() {
+	return CallBooleanFunction("Write");
+    }
+
+    global boolean Prepare() {
+	return CallBooleanFunction("Prepare");
+    }
+
+    global boolean Prepare2() {
+	return CallBooleanFunction("Prepare2");
+    }
+
+    global boolean Start() {
+	return CallBooleanFunction("Start");
+    }
+}

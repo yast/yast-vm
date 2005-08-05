@@ -1,0 +1,53 @@
+/**
+ * File:
+ *   include/vm/cmdline.ycp
+ *
+ * Summary:
+ *   Command line interface functions
+ *
+ * Authors:
+ *   Ladislav Slezak <lslezak@suse.cz>
+ *
+ * $Id:$
+ *
+ * Handlers for command line mode.
+ *
+ */
+
+{
+    import "Progress";
+    import "Wizard";
+    import "GetInstArgs";
+
+    textdomain "vm";
+
+    define symbol GUIhandler() {
+	// create initial dialog
+	Wizard::CreateDialog ();
+	Wizard::SetDesktopIcon ("vm");
+
+	// calling inst_proposal
+	symbol ret = (symbol) WFM::CallFunction ("inst_proposal", 
+                [GetInstArgs::ButtonsProposal(true,true,"vm")]);
+
+	if (ret == `next)
+	{
+	    while (WFM::CallFunction ("inst_vm_kickoff", [false, false]) == `abort)
+	    {
+		// start proposal again if installation was aborted
+		WFM::CallFunction ("inst_proposal", [GetInstArgs::ButtonsProposal(true,true,"vm")]);
+	    }
+	}
+
+	Wizard::CloseDialog ();
+
+	return ret;
+    }
+
+
+    define boolean startHandler(map options) {
+	y2error("startHandler in not implemented");
+	return false;
+    }
+}
+

@@ -1,0 +1,505 @@
+/**
+ * File:	modules/VM_XEN.ycp
+ * Package:	XEN specific functions and values
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ * $Id:$
+ */
+{
+    module "VM_XEN";
+
+    import "VM_Common";
+    import "Report";
+    import "HTML";
+
+    textdomain "vm";
+
+    list <map <string,any> > default_disks = [ $["size" : 1024, "sparse" : false, "target" : "hda" ] ];
+    global list <map <string,any> > disks = default_disks;
+
+    global string MAC_address = "";
+
+    string domain_prefix = "domain";
+
+    string kernel_path = "";
+
+    string initrd_path = "";
+
+    string xm = "/usr/sbin/xm";
+
+    string img_prefix = "/var/lib/xen/images/";
+
+    global boolean setMemorySize(integer msize)
+    {
+	VM_Common::memory_size = msize;
+	return true;
+    }
+
+    global integer getMemorySize()
+    {
+	return VM_Common::memory_size;
+    }
+
+    global boolean resetMemorySize()
+    {
+	VM_Common::memory_size = VM_Common::default_memory_size;
+	return true;
+    }
+
+    global string getAvailableMemory() {
+	// xm info | grep free_memory
+
+	return "";
+    }
+
+    global boolean setStartMode(string mode)
+    {
+	y2internal("start_mode: %1", mode);
+	VM_Common::start_mode = mode;
+	return true;
+    }
+
+    global string getStartMode()
+    {
+	return VM_Common::start_mode;
+    }
+
+    global boolean resetStartMode()
+    {
+	VM_Common::start_mode = VM_Common::default_start_mode;
+	return true;
+    }
+
+    global boolean setMAC(string mac)
+    {
+	y2internal("MAC address: %1", mac);
+	VM_Common::MAC_address = mac;
+	return true;
+    }
+
+    global string getMAC()
+    {
+	return VM_Common::MAC_address;
+    }
+
+    global boolean resetMAC()
+    {
+	VM_Common::MAC_address= VM_Common::default_MAC;
+	return true;
+    }
+
+    global integer FreeMemory() {
+	// run 'xm info command'
+	string cmd = "/usr/sbin/xm info | grep free_memory";
+
+	map out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2debug("free_memory out: %1", out);
+
+	list<string> output = splitstring(out["stdout"]:"", "\n");
+	string free_line = output[0]:"";
+
+	string msize = regexpsub(free_line, "free_memory[ \t]*:[ \t]*(.*)", "\\1");
+	y2debug("memory size: %1", msize);
+
+	return tointeger(msize);
+    }
+
+    global map<string,any> getOptionsProposal()
+    {
+	list<string> tmp = [];
+
+	// Proposal for virtual machine installation
+	tmp = add (tmp, sformat (_("Name of Virtual Machine: %1"), VM_Common::config_name));
+
+	// Proposal for virtual machine installation
+	tmp = add (tmp, sformat (_("Memory Size: %1 MB"), getMemorySize()));
+
+	y2internal("mode: %1", getStartMode());
+
+	// Proposal for uml installation
+	tmp = add (tmp, sformat (_("Activation: %1"),
+				 VM_Common::start_mode_names[getStartMode()]:_("Unknown")));
+
+	if (VM_Common::extra_args != "")
+	{
+	    // part of proposal text
+	    tmp = add (tmp, sformat (_("Boot Options: %1"), VM_Common::extra_args));
+	}
+
+	map<string,any> ret = $[ "preformatted_proposal" :
+		 HTML::List (tmp)
+	];
+
+
+	// check available free memory
+	integer fm = FreeMemory();
+
+	if (getMemorySize() > fm)
+	{
+	    // error in the installation proposal - don't allow to continue
+	    ret = add(ret, "warning", sformat(_("Not enough free memory (%1MB available)."), fm));
+	    ret = add(ret, "warning_level", `blocker);
+	}
+
+	return ret;
+    }
+
+    global define boolean setDiskConfig(list<map<string,any> > dconf)
+    {
+	disks = dconf;
+	return true;
+    }
+
+    global define list<map<string,any> > getDiskConfig() {
+	return disks;
+    }
+
+    global define boolean resetDiskConfig() {
+	disks = default_disks;
+	return true;
+    }
+
+    global define list<string> getDiskProposal() {
+	list<string> ret = [];
+
+	integer i = 1;
+	foreach (map<string,any> d, VM_XEN::disks, ``{
+	    // Disk name for uml installation proposal
+	    // %1 is a number, %2 size of disk, %3 is "(sparse image)" if it's set
+	    ret = add (ret, sformat (_("Disk /dev/%1: %2 MB %3"), d["target"]:"", d["size"]:0, (d["sparse"]:false) ? _("(sparse file)") : ""));
+	    i = i + 1;
+	});
+
+	return ret;
+    }
+
+    global define string getSourceProposal() {
+	y2debug("source configuration: %1, %2, %3", VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
+	return VM_Common::CreateSourceProposal(VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
+    }
+
+    global define boolean resetSourceConfig() {
+	VM_Common::source_id = VM_Common::ProposeSelection();
+	return true;
+    }
+
+    global define map<string,any> getSourceConfig() {
+	return $[ "source_id" : VM_Common::source_id, "inst_type" : VM_Common::inst_type, "custom_source" : VM_Common::custom_source ];
+    }
+
+    global define string ProposeConfigName()
+    {
+	// start from 1, domain0 is used for the host system
+	integer domain = 1;
+
+	list<string> configs = SCR::Dir(.etc.xen.section);
+
+	while (contains(configs, "/etc/xen/" + domain_prefix + tostring(domain)))
+	{
+	    domain = domain + 1;
+	}
+
+	y2internal("Proposed name: %1", domain_prefix + tostring(domain));
+
+	return domain_prefix + tostring(domain);
+    }
+
+    global define boolean resetConfigName()
+    {
+	VM_Common::config_name = ProposeConfigName();
+	return true;
+    }
+
+    global define boolean setSourceConfig(integer sid, symbol type, string custom) {
+
+	VM_Common::source_id = sid;
+	VM_Common::inst_type = type;
+	VM_Common::custom_source = custom;
+
+	return true;
+    }
+
+    global string getConfigName() {
+	return VM_Common::config_name;
+    }
+
+    global boolean setConfigName(string cname) {
+	VM_Common::config_name = cname;
+	return true;
+    }
+
+    global define string ExtractXENKernelImage(string package, string target) {
+	string tmpdir = VM_Common::GetTmpDir();
+	string cmd = sformat("cd %1; /usr/bin/rpm2cpio %2 | /usr/bin/cpio -idvum './boot/vmlinuz-*-xen'", tmpdir, package);
+
+	map out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2internal("out: %1", out);
+
+	cmd = sformat("/usr/bin/find %1 -type f -name 'vmlinuz-*-xen'", tmpdir + "/boot");
+	out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2internal("out: %1", out);
+
+	list<string> stdout = splitstring(out["stdout"]:"", "\n");
+	string file = stdout[0]:"";
+
+	y2internal("found kernel: %1", file);
+
+	if (file != nil && file != "")
+	{
+	    cmd = sformat("/bin/cp -a %1 %2", file, target);
+	    out = (map)SCR::Execute(.target.bash_output, cmd);
+	    y2internal("out: %1", out);
+
+	    list<string> kpath = splitstring(file, "/");
+
+	    return kpath[size(kpath) - 1]:"";
+	}
+
+	return "";;
+    }
+
+    global define boolean CreateInstallationImage(string kernelpkg, string target) {
+	// get installation package
+	string inst = VM_Common::GetPackage("mkinstallinitrd", "suse/i586");
+	y2internal("image rpm: %1", inst);
+
+	// create the image
+	string cmd = sformat("/usr/sbin/mkinstallinitrd --kernel-rpm %1 %2", kernelpkg, target);
+	map out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2internal("mkinstallinitrd output: %1", out);
+
+	return out["exit"]:1 == 0;
+    }
+
+    boolean WriteOption(path configpath, string optname, string optvalue) {
+	return (boolean)SCR::Write(configpath + topath(optname), optvalue);
+    }
+
+    boolean WriteStringOption(path configpath, string optname, string optvalue) {
+	return WriteOption(configpath, optname, "\"" + optvalue + "\"");
+    }
+
+    string formatDiskConfig(list<map<string,any> > conf, string pref) {
+	string ret = "";
+
+	foreach(map<string,any> d, conf, {
+		string f = pref + "/" + d["target"]:"";
+
+		if (size(ret) > 0)
+		{
+		    ret = ret + ", ";
+		}
+
+		ret = ret + sformat("'file:%1,%2,w'", f, d["target"]:"");
+	    }
+	);
+
+	ret = "[ " + ret + " ]";
+
+	y2milestone("Disk configuration: %1", ret);
+
+	return ret;
+    }
+
+    global define boolean Write() {
+	// TODO check whether the config file already exists
+	y2internal("Writing the config to file %1", "/etc/xen/" + VM_Common::config_name);
+
+	path configpath = .etc.xen.value + topath("/etc/xen/" + VM_Common::config_name);
+
+	boolean ret = WriteOption(configpath, "disk", formatDiskConfig(disks, img_prefix + VM_Common::config_name));
+	ret = ret && WriteOption(configpath, "memory", tostring(VM_Common::memory_size));
+	ret = ret && WriteStringOption(configpath, "kernel", kernel_path);
+
+	ret = ret && WriteStringOption(configpath, "ramdisk", initrd_path);
+
+	ret = ret && WriteStringOption(configpath, "name", VM_Common::config_name);
+
+	ret = ret && WriteStringOption(configpath, "dhcp", "dhcp");
+
+	if (VM_Common::MAC_address != nil && VM_Common::MAC_address != "")
+	{
+	    ret = ret && WriteStringOption(configpath, "vif", sformat("[ 'mac=%1' ]", VM_Common::MAC_address));
+	}
+
+	ret = ret && WriteStringOption(configpath, "restart", "never");
+
+	// set installation source
+	string url = "";
+
+	if (VM_Common::inst_type == `configured)
+	{
+	    map general_data = Pkg::SourceGeneralData (VM_Common::source_id);
+	    url = general_data["url"]:"";
+	}
+	else if (VM_Common::inst_type == `custom)
+	{
+	    url = VM_Common::custom_source;
+	}
+	else if (VM_Common::inst_type == `slp)
+	{
+	    url = "slp://";
+	}
+
+	ret = ret && WriteStringOption(configpath, "extra", "install=" + url);
+
+	// flush the changes
+	ret = ret && SCR::Write(.etc.xen, nil);
+
+	return ret;
+    }
+
+    global define boolean Prepare2() {
+
+	SCR::UnmountAgent(.etc.xen);
+
+	string cmd = "/bin/rm -rf " + "/etc/xen/" + VM_Common::config_name;
+	map out = (map)SCR::Execute(.target.bash_output, cmd);
+
+	path configpath = .etc.xen.value + topath("/etc/xen/" + VM_Common::config_name);
+	boolean ret = true;
+	// TODO upadate config - root device, set default runlevel, remove install= option
+
+//	Write();
+
+	ret = WriteOption(configpath, "disk", formatDiskConfig(disks, img_prefix + VM_Common::config_name));
+	ret = ret && WriteOption(configpath, "memory", tostring(VM_Common::memory_size));
+
+	ret = ret && WriteStringOption(configpath, "kernel", kernel_path);
+
+	ret = ret && WriteStringOption(configpath, "name", VM_Common::config_name);
+
+	ret = ret && WriteStringOption(configpath, "dhcp", "dhcp");
+
+	if (VM_Common::MAC_address != nil && VM_Common::MAC_address != "")
+	{
+	    ret = ret && WriteStringOption(configpath, "vif", sformat("[ 'mac=%1' ]", VM_Common::MAC_address));
+	}
+
+
+//	SCR::Write(configpath + "extra", nil);
+//	SCR::Write(configpath + "restart", nil);
+//	SCR::Write(configpath + "ramdisk", nil);
+//	ret = ret && WriteOption(configpath, "extra", nil);
+//	ret = ret && WriteOption(configpath, "restart", nil);
+//	ret = ret && WriteOption(configpath, "initrd", nil);
+	ret = ret && WriteStringOption(configpath, "root", "/dev/hda2");
+	// flush the changes
+	ret = ret && SCR::Write(.etc.xen, nil);
+
+	return true;
+    }
+
+    boolean CreateDiskImages(string prefix) {
+	boolean ret = true;
+	foreach(map<string,any> disk, disks, {
+		integer imgsize = disk["size"]:1024;
+		boolean sparse = disk["sparse"]:false;
+		string target = disk["target"]:"hda1";
+
+		ret = ret && VM_Common::CreateDiskImage(prefix + "/" + target, imgsize, sparse);
+	    }
+	);
+
+	return ret;
+    }
+
+    global define boolean Prepare() {
+	// build/extract xen kernel and installation initrd, copy them to the target directory
+	string target_dir = img_prefix + VM_Common::config_name;
+	string cmd = "/bin/mkdir -p " + target_dir;
+	map out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2debug("mkdir output: %1", out);
+
+	y2milestone("Extracting XEN kernel from the installation source...");
+	string kpkg = VM_Common::GetPackage("kernel-xen", "suse/i586");
+	kernel_path = ExtractXENKernelImage(kpkg, target_dir + "/");
+	if (kernel_path != "")
+	{
+	    kernel_path = target_dir + "/" + kernel_path;
+	}
+
+	y2milestone("Creating installation ramdisk (initrd)...");
+	CreateInstallationImage(kpkg, target_dir + "/inst-initrd");
+	initrd_path = target_dir + "/inst-initrd";
+	y2internal("kernel: %1, initrd: %2", kernel_path, initrd_path);
+
+	// create disk image file(s)
+	y2milestone("Creating disk images...");
+	CreateDiskImages(target_dir);
+
+	return true;
+    }
+
+    global define boolean Start() {
+	// start the VM in xterm session
+	string cmd = sformat("/usr/bin/xterm -e %1 create -c /etc/xen/%2", xm, VM_Common::config_name);
+	y2internal("command: %1", cmd);
+	integer out = (integer)SCR::Execute(.target.bash, cmd);
+
+	return out == 0;
+    }
+
+    global define string getExtraArgs() {
+	return VM_Common::extra_args;
+    }
+
+    global define boolean setExtraArgs(string args) {
+	VM_Common::extra_args = args;
+	return true;
+    }
+
+    global define boolean resetExtraArgs() {
+	VM_Common::extra_args = "";
+	return true;
+    }
+
+    global define map GetFunctions()
+    {
+	return $[
+	    "setMemorySize" : VM_XEN::setMemorySize,
+	    "getMemorySize" : VM_XEN::getMemorySize,
+	    "resetMemorySize" : VM_XEN::resetMemorySize,
+
+	    "setStartMode" : VM_XEN::setStartMode,
+	    "getStartMode" : VM_XEN::getStartMode,
+	    "resetStartMode" : VM_XEN::resetStartMode,
+
+	    "setMAC" : VM_XEN::setMAC,
+	    "getMAC" : VM_XEN::getMAC,
+	    "resetMAC" : VM_XEN::resetMAC,
+
+	    "setConfigName" : VM_XEN::setConfigName,
+	    "getConfigName" : VM_XEN::getConfigName,
+	    "resetConfigName" : VM_XEN::resetConfigName,
+
+	    "getOptionsProposal" : VM_XEN::getOptionsProposal,
+
+	    "setDiskConfig" : VM_XEN::setDiskConfig,
+	    "getDiskConfig" : VM_XEN::getDiskConfig,
+	    "resetDiskConfig" : VM_XEN::resetDiskConfig,
+	    "getDiskProposal" : VM_XEN::getDiskProposal,
+
+	    "getSourceConfig" : VM_XEN::getSourceConfig,
+	    "setSourceConfig" : VM_XEN::setSourceConfig,
+	    "getSourceProposal" : VM_XEN::getSourceProposal,
+	    "resetSourceConfig" : VM_XEN::resetSourceConfig,
+
+	    "getExtraArgs"	: VM_XEN::getExtraArgs,
+	    "setExtraArgs"	: VM_XEN::setExtraArgs,
+	    "resetExtraArgs"	: VM_XEN::resetExtraArgs,
+
+	    "Write" : VM_XEN::Write,
+	    "Prepare" : VM_XEN::Prepare,
+	    "Prepare2" : VM_XEN::Prepare2,
+	    "Start"	: VM_XEN::Start,
+	];
+    }
+
+    global void VM_XEN() ``{
+	// propose selection
+	resetSourceConfig();
+
+	// propose configuration (domain) name
+	resetConfigName();
+    }
+}

@@ -1,0 +1,205 @@
+/**
+ * Module:	inst_vm_source.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * Purpose:	Ask the user for installation source for uml.
+ *
+ * $Id:$
+ *
+ */
+{
+    textdomain "vm";
+
+    import "VM";
+    import "URL";
+    import "Label";
+    import "Popup";
+    import "Wizard";
+    import "Report";
+
+
+    // screen title for uml source
+    string title = _("Installation Source");
+
+
+    list <integer> sources = Pkg::SourceGetCurrent (false);
+
+    map<string,any> sconfig = VM::GetSourceConfig();
+
+    define term create_item (integer index, integer id) ``{
+        map product_data = Pkg::SourceProductData (id);
+        map general_data = Pkg::SourceGeneralData (id);
+        return `item (`id (index),
+		      product_data["label"]:"unknown",
+		      general_data["url"]:"");
+    }
+
+
+    define void fill_table () ``{
+
+	integer i = 0;
+        list items = [];
+	integer j = -1;
+
+        while (i < size (sources))
+	{
+	    items = add (items, create_item (i, sources[i]:0));
+	    if (sources[i]:0 == sconfig["source_id"]:0)
+		j = i;
+	    i = i + 1;
+        }
+
+        UI::ChangeWidget (`id (`sources), `Items, items);
+	if (j > -1)
+	    UI::ChangeWidget (`id(`sources), `CurrentItem, j);
+    }
+
+    define void updateConfig(map<string,any> conf) {
+	y2debug("updateConfig(%1)", conf);
+	VM::SetSourceConfig(conf["source_id"]:0, conf["inst_type"]:`configured, conf["custom"]:"");
+    }
+
+
+    // build and show dialog
+
+    Wizard::OpenAcceptDialog ();
+
+    integer indent = 3;
+
+    term contents = `VBox(
+			`RadioButtonGroup(`id(`source), `opt(`notify),
+			    `VBox(
+				`VSpacing(0.3),
+				// radio button label
+				`Left(`RadioButton(`id(`configured),  `opt(`notify), _("&Configured Installation Source"), sconfig["inst_type"]:`unknown == `configured)),
+				`VSpacing(0.3),
+				`Left(
+				    `HBox(
+					`HSpacing(indent),
+					`Table(`id(`sources),
+					    // table column heading
+					    `header(_("Name"), _("URL")), [ ]
+					)
+				    )
+				),
+				// push button label
+				// installation source configuration module
+				// is started when it's pressed
+				`PushButton(`id(`inst_src), _("C&onfigure...")),
+				`VSpacing(1),
+
+				`Left(`RadioButton(`id(`custom),  `opt(`notify), _("Custom &Installation Source"), sconfig["inst_type"]:`unknown == `custom)),
+				`Left(
+				    `HBox(
+					`HSpacing(indent),
+					`TextEntry(`id(`custom_source), _("&URL of Installation Source"), sconfig["custom_source"]:"")
+				    )
+				),
+				`VSpacing(1),
+
+				`Left(`RadioButton(`id(`slp),  `opt(`notify), _("&SLP Installation Source"), sconfig["inst_type"]:`unknown == `slp)),
+				`VSpacing(1)
+			    )
+			)
+		    );
+
+    // help text for backup dialog during update 1/7
+    string help_text = _("<P><B>Installation Source</B></P>")
+    + _("<P>Select the installation source from which to install the virtual machine.</P>")
+    + _("<P>Only network installation sources are supported (e.g., FTP or NFS).</P>");
+
+    Wizard::SetContents (title, contents, help_text, (boolean) WFM::Args(0),
+			 (boolean) WFM::Args(1));
+
+    fill_table();
+
+    symbol ret = nil;
+
+    while (true)
+    {
+	// refresh status of the widgets
+	symbol selected = (symbol)(UI::QueryWidget(`id(`source), `CurrentButton));
+	UI::ChangeWidget(`id(`sources), `Enabled, selected == `configured);
+	UI::ChangeWidget(`id(`inst_src), `Enabled, selected == `configured);
+	UI::ChangeWidget(`id(`custom_source), `Enabled, selected == `custom);
+
+	ret = (symbol) Wizard::UserInput ();
+
+	if (ret == `abort && Popup::ConfirmAbort (`painless))
+	    break;
+
+	if (ret == `cancel || ret == `back)
+	    break;
+
+	if (ret == `next)
+	{
+	    // check if selected installation source is valid
+	    integer current = (integer) UI::QueryWidget (`id(`sources),
+							 `CurrentItem);
+
+	    integer current_srcid = sources[current]:0;
+
+	    map general_data = Pkg::SourceGeneralData(current_srcid);
+
+	    symbol selected_type = (symbol)UI::QueryWidget(`id(`source), `CurrentButton);
+	    string selected_custom_source = (string)UI::QueryWidget(`id(`custom_source), `Value);
+
+	    string srcurl = (selected_type == `configured) ? general_data["url"]:"" : selected_custom_source;
+
+	    map parsed_url = URL::Parse(srcurl);
+
+	    if (selected_type == `slp)
+	    {
+		sconfig["inst_type"] = `slp;
+		updateConfig(sconfig);
+		y2debug("Selected SLP installation source");
+		break;
+	    }
+	    else if (!URL::Check(srcurl) || parsed_url["host"]:"" == "")
+	    {
+		Report::Error(_("Entered URL value is not valid."));
+	    }
+	    else if (contains(["ftp", "nfs", "smb", "http"], parsed_url["scheme"]:""))
+	    {
+		y2debug("Selected network source: %1", srcurl);
+		sconfig["inst_type"] = selected_type;
+
+		if (selected_type == `configured)
+		{
+		    sconfig["source_id"] = current_srcid;
+		}
+		else if (selected_type == `custom)
+		{
+		    sconfig["custom"] = selected_custom_source;
+		}
+		else
+		{
+		    y2error("Unknown installation type");
+		}
+
+		updateConfig(sconfig);
+
+		break;
+	    }
+	    else
+	    {
+		Report::Error(_("Only network installation sources
+are supported in the installation."));
+	    }
+	}
+
+	if (ret == `inst_src)
+	{
+	    // start installation source configuration module
+	    WFM::CallFunction("inst_source", []);
+	    // refresh table content
+	    sources = Pkg::SourceGetCurrent(false);
+	    fill_table();
+	}
+    }
+
+    Wizard::CloseDialog ();
+
+    return ret;
+}

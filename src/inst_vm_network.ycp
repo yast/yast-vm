@@ -1,0 +1,86 @@
+/**
+ * Module:	inst_vm_network.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * Purpose:	Ask user for network settings.
+ *
+ * $Id:$
+ *
+ */
+
+{
+    textdomain "vm";
+
+    import "VM";
+    import "Wizard";
+    import "Popup";
+    import "Report";
+
+    define boolean Check_MAC(string mac) ``{
+	return regexpmatch(mac, "^[0-9a-fA-F][0-9a-fA-F](:[0-9a-fA-F][0-9a-fA-F]){5}$");
+    }
+
+    // screen title for uml options
+    string title = _("Network Settings");
+
+    // build and show dialog
+    Wizard::OpenAcceptDialog ();
+
+    term contents = `HVSquash(
+	`VBox(
+
+	    `VSpacing (1),
+
+	    `Left(`TextEntry(`id(`MAC_address),
+		    // text entry label
+		    _("&MAC Address"),
+		    VM::GetMAC()
+		)
+	    )
+	)
+    );
+
+    // help text for uml user settings (1/2)
+    string help_text = _("<p><b>Network Settings</b><br></p>")
+	// help text for uml user settings (2/2)
+	+ _("<p>Each virtual machine has a virtual ethernet network card. The MAC address is a unique identification of the ethernet network card.</p>")
+    ;
+
+    Wizard::SetContents (title, contents, help_text, true, true);
+
+    // allow only valid characters
+    UI::ChangeWidget (`id (`MAC_address), `ValidChars, "0123456789:abcdefABCDEF");
+
+
+    any ret = nil;
+
+    while (ret != `cancel && ret != `back && ret != `next)
+    {
+	ret = Wizard::UserInput ();
+
+	if (ret == `cancel || ret == `back)
+	    break;
+
+	if (ret == `next)
+	{
+	    string MAC_address = (string) UI::QueryWidget (`id(`MAC_address), `Value);
+
+	    if (!Check_MAC(MAC_address))
+	    {
+		// error message
+                Report::Error(_("The MAC address entered is not valid."));
+                UI::SetFocus(`id(`MAC_address));
+		ret = `again;
+	    }
+	    else
+	    {
+		VM::SetMAC(MAC_address);
+	    }
+	}
+    }
+
+    Wizard::CloseDialog();
+
+    return ret;
+}

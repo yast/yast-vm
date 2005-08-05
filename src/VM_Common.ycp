@@ -1,0 +1,152 @@
+/**
+ * File:	modules/VM_Common.ycp
+ * Package:	VM configuration - common function for all virtualization architectures
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * $Id:$
+ */
+{
+    module "VM_Common";
+
+    import "Report";
+    import "Pkg";
+
+    textdomain "vm";
+
+    global integer source_id = 0;
+
+    global symbol inst_type = `configured;
+
+    global string custom_source = "";
+
+    global integer default_memory_size = 256;
+
+    global integer memory_size = default_memory_size;
+
+    global integer number_of_cpus = 1;
+
+    global string default_start_mode = "manual";
+
+    global string start_mode = default_start_mode;
+
+    global string default_MAC = "";
+
+    global string MAC_address = default_MAC;
+
+    global string config_name = "";
+
+    // name for activation mode in uml installation proposal
+    global map start_mode_names = $[ "manual" : _("Manually"), "onboot" : _("On Boot") ];
+
+    global string extra_args = "";
+
+    global integer ProposeSelection () ``{
+	list <integer> sources = Pkg::SourceGetCurrent (false);
+
+	list<map> installed_products = (list<map>)Pkg::TargetProducts();
+	map last_product = $[];
+
+	if (size(installed_products) > 0)
+	{
+	    // select the last installed product
+	    last_product = installed_products[size(installed_products) - 1]:$[];
+	}
+
+	integer sid = nil;
+
+	foreach(integer src, sources, ``{
+		map general_data = Pkg::SourceGeneralData(src);
+		string srcurl = general_data["url"]:"";
+
+		// use only network sources in proposal
+		if (regexpmatch(srcurl, "^(ftp)|(nfs)|(smb)|(http)://"))
+		{
+		    y2milestone("Found network source: %1", src);
+		    sid = src;
+		}
+
+		y2milestone("Pkg::SourceProductData: %1", Pkg::SourceProductData(src));
+	    }
+	);
+
+	return sid;
+    }
+
+    global string CreateSourceProposal(symbol inst_type, integer source_id, string custom) {
+
+	string ret = "";
+
+	if (inst_type == `configured && source_id > 0)
+	{
+	    map product_data = Pkg::SourceProductData (source_id);
+	    map general_data = Pkg::SourceGeneralData (source_id);
+	    ret = product_data["label"]:"unknown" + " (" + general_data["url"]:"" + ")";
+	}
+	else if (inst_type == `custom)
+	{
+	    // installation proposal header
+	    ret = _("Custom Installation Source") + " (" + custom_source + ")";
+	}
+	else if (inst_type == `slp)
+	{
+	    // installation proposal header
+	    ret = _("SLP Installation Source");
+	}
+
+	return ret;
+    }
+
+    // fsize in MB
+    global define boolean CreateDiskImage(string file, integer fsize, boolean sparse) ``{
+	boolean ret = true;
+
+	string dd_options = (sparse) ? (" bs=1 count=1 " + sformat ("seek=%1M", fsize)) : (" bs=1M " + sformat ("count=%1", fsize));
+	string cmd = "/bin/dd if=/dev/zero of=" + file + dd_options;
+
+	y2milestone("Creating disk image %1 (%2MB)", file, fsize);
+	y2debug("dd command: %1", cmd);
+	integer result = (integer) SCR::Execute (.target.bash, cmd);
+
+	if (result != 0)
+	{
+	    y2error("cannot create disk image %1", file);
+	    // try to remove part of the image if it exists
+	    SCR::Execute (.target.bash, "/bin/rm " + file);
+	    ret = false;
+	}
+
+	return ret;
+    }
+
+    global define string GetTmpDir() {
+	// get temporary directory
+	string tmpdir = (string)SCR::Read(.target.tmpdir);
+	if (tmpdir == "" || tmpdir == nil)
+	{
+	    y2warning("Using /tmp directory for temporary files!");
+	    tmpdir = "/tmp";
+	}
+
+	return tmpdir;
+    }
+
+    // uses source_id variable
+    global define string GetPackage(string package, string dir) {
+	// get info about the package (media number)
+	map<string,any> pkginfo = Pkg::PkgProperties(package);
+	y2debug("pkginfo: %1", pkginfo);
+
+	string location = pkginfo["location"]:"";
+	string ret = "";
+
+	// check whether the package was found
+	if (location != "" && location != nil)
+	{
+	    // get local location
+	    ret = Pkg::SourceProvideFile(source_id, pkginfo["medianr"]:0, dir + "/" + pkginfo["location"]:"");
+	}
+
+	return ret;
+    }
+
+}

@@ -1,0 +1,71 @@
+/**
+ * File:
+ *  vm_finish.ycp
+ *
+ * Module:
+ *  Step of base instalaltion finish
+ *
+ * Authors:
+ *  Ladislav Slezak <lslezak@suse.cz>
+ *
+ * $Id:$
+ *
+ */
+
+{
+
+textdomain "uml";
+
+import "Arch";
+import "Report";
+
+any ret = nil;
+string func = "";
+map param = $[];
+
+/* Check arguments */
+if(size(WFM::Args()) > 0 && is(WFM::Args(0), string)) {
+    func = (string)WFM::Args(0);
+    if(size(WFM::Args()) > 1 && is(WFM::Args(1), map))
+	param = (map)WFM::Args(1);
+}
+
+y2milestone ("starting vm_finish");
+y2debug("func=%1", func);
+y2debug("param=%1", param);
+
+if (func == "Info")
+{
+    return (any)$[
+	"steps" : 1,
+	// progress step title
+	"title" : _("Configuring the Virtual Machine..."),
+	// TODO FIXME: use in XEN environment
+	"when" : false ? [ `installation, `update, `autoinst ] : [],
+    ];
+}
+else if (func == "Write")
+{
+	// disable HW services - they are useless and usually failing in a virtual machine
+	list<string> disable_services = ["kbd", "hotplug", "hwscan", "powersaved"];
+	foreach(string s, disable_services, {
+		integer disabled = (integer) SCR::Execute(.target.bash, sformat("/sbin/insserv -r %1", s));
+		y2milestone("insserv - service %1 exit status: %2", s, disabled);
+	    }
+	);
+
+}
+else
+{
+    y2error ("unknown function: %1", func);
+    ret = nil;
+}
+
+y2debug("ret=%1", ret);
+y2milestone("vm_finish finished");
+return ret;
+
+
+} /* EOF */
+
+
