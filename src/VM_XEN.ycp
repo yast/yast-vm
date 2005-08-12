@@ -269,7 +269,7 @@
 	}
 
 	string tmpdir = VM_Common::GetTmpDir();
-	string cmd = sformat("cd %1; /usr/bin/rpm2cpio %2 | /usr/bin/cpio -idvum './usr/lib/install-initrd/*.gz'", tmpdir, inst);
+	string cmd = sformat("cd %1; /usr/bin/rpm2cpio %2 | /usr/bin/cpio -idvum", tmpdir, inst);
 
 	map out = (map)SCR::Execute(.target.bash_output, cmd);
 	y2debug("out: %1", out);
@@ -284,10 +284,8 @@
 	string file = stdout[0]:"";
 	y2internal("found initrd: %1", file);
 
-	// TODO copy the file
-
 	// create the image
-	cmd = sformat("/usr/sbin/mkinstallinitrd --kernel-rpm %1 %2", kernelpkg, target);
+	cmd = sformat("%1/usr/sbin/mkinstallinitrd --kernel-rpm %2 --libdir %3 %4", tmpdir, kernelpkg, tmpdir + "/usr/lib/install-initrd", target);
 	out = (map)SCR::Execute(.target.bash_output, cmd);
 	y2internal("mkinstallinitrd output: %1", out);
 

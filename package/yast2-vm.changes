@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Fri Aug 12 12:24:14 CEST 2005 - lslezak@suse.cz
+
+- fixed creating of an installation initrd (#104339)
+- fixed configuration update after reboot (after first
+  installation stage)
+- 2.12.1
+
+-------------------------------------------------------------------
 Fri Aug 12 09:08:10 CEST 2005 - visnov@suse.cz
 
 - fix textdomain 
