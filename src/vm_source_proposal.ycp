@@ -52,7 +52,7 @@
 		"rich_text_title"	: _("Source"),
 		// this is a menu entry
 		"menu_title"		: _("Installation &Source"),
-		"id"			: "uml_source_stuff"
+		"id"			: "vm_source_stuff"
 	];
     }
 

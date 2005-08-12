@@ -17,7 +17,7 @@
     import "Wizard";
 
 
-    // screen title for uml disks
+    // dialog title - virtual disk configuration
     string title = _("Virtual Disks");
 
     list<map<string,any> > disks = VM::GetDiskConfig();

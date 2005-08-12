@@ -21,7 +21,7 @@
 	return regexpmatch(mac, "^[0-9a-fA-F][0-9a-fA-F](:[0-9a-fA-F][0-9a-fA-F]){5}$");
     }
 
-    // screen title for uml options
+    // screen title for network options
     string title = _("Network Settings");
 
     // build and show dialog
@@ -41,9 +41,9 @@
 	)
     );
 
-    // help text for uml user settings (1/2)
+    // help text for network settings (1/2)
     string help_text = _("<p><b>Network Settings</b><br></p>")
-	// help text for uml user settings (2/2)
+	// help text for network settings (2/2)
 	+ _("<p>Each virtual machine has a virtual ethernet network card. The MAC address is a unique identification of the ethernet network card.</p>")
     ;
 

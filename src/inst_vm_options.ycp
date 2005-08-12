@@ -27,7 +27,7 @@
     term contents = `HVSquash(
 			      `VBox(
 				    // textentry label - virtual machine name
-				    `Left(`TextEntry(`id(`vmname), _("Machine Name"), VM::GetConfigName())),
+				    `Left(`TextEntry(`id(`vmname), _("Machine &Name"), VM::GetConfigName())),
 				    `VSpacing(0.5),
 				    // textentry label - extra parameters for kernel
 				    `Left(`TextEntry(`id(`bootopts), _("Boot &Options"), VM::GetExtraArgs())),
@@ -89,15 +89,22 @@
 	    string boot = (string) UI::QueryWidget (`id(`bootopts), `Value);
 	    string vmname = (string) UI::QueryWidget (`id(`vmname), `Value);
 
+	    // error message: machine name must be unique, entered name is alreadu in use
+	    string error = _("Machine name '%1' is already used.
+Enter another name.");
 
 	    if (mem == nil || mem <= 0)
 	    {
-		// error popup
+		// error popup - entered wrong memory size
 		string message = _("Invalid amount of memory.");
 		Popup::Message (message);
 		continue;
 	    }
 //	    TODO: else if (mem < available memory)
+
+	    // error message: requested memory size is greater that available free memory
+	    string memory_size_error = _("Requested memory size is greater than currently free space.
+There is %1MB free memory available.");
 
 	    VM::SetMemorySize(mem);
 	    y2internal("mode: %1", mode);

@@ -35,7 +35,7 @@
 
     global string config_name = "";
 
-    // name for activation mode in uml installation proposal
+    // activation mode - in virtual machine installation proposal
     global map start_mode_names = $[ "manual" : _("Manually"), "onboot" : _("On Boot") ];
 
     global string extra_args = "";

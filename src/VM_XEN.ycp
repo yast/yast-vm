@@ -115,13 +115,13 @@
 
 	y2internal("mode: %1", getStartMode());
 
-	// Proposal for uml installation
+	// Proposal for virtual machine installation - %1 is a start mode (On boot/Manually)
 	tmp = add (tmp, sformat (_("Activation: %1"),
 				 VM_Common::start_mode_names[getStartMode()]:_("Unknown")));
 
 	if (VM_Common::extra_args != "")
 	{
-	    // part of proposal text
+	    // part of proposal text, %1 are extra kernel options
 	    tmp = add (tmp, sformat (_("Boot Options: %1"), VM_Common::extra_args));
 	}
 
@@ -163,7 +163,7 @@
 
 	integer i = 1;
 	foreach (map<string,any> d, VM_XEN::disks, ``{
-	    // Disk name for uml installation proposal
+	    // Disk name for installation proposal
 	    // %1 is a number, %2 size of disk, %3 is "(sparse image)" if it's set
 	    ret = add (ret, sformat (_("Disk /dev/%1: %2 MB %3"), d["target"]:"", d["size"]:0, (d["sparse"]:false) ? _("(sparse file)") : ""));
 	    i = i + 1;
@@ -259,12 +259,36 @@
 
     global define boolean CreateInstallationImage(string kernelpkg, string target) {
 	// get installation package
-	string inst = VM_Common::GetPackage("mkinstallinitrd", "suse/i586");
+	string inst = VM_Common::GetPackage("install-initrd", "suse/i586");
 	y2internal("image rpm: %1", inst);
 
-	// create the image
-	string cmd = sformat("/usr/sbin/mkinstallinitrd --kernel-rpm %1 %2", kernelpkg, target);
+	if (inst == nil || inst == "")
+	{
+	    y2error("Cannot obtain install-initrd package.");
+	    return false;
+	}
+
+	string tmpdir = VM_Common::GetTmpDir();
+	string cmd = sformat("cd %1; /usr/bin/rpm2cpio %2 | /usr/bin/cpio -idvum './usr/lib/install-initrd/*.gz'", tmpdir, inst);
+
 	map out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2debug("out: %1", out);
+
+	cmd = sformat("/bin/ls -1 %1/*.gz", tmpdir + "/usr/lib/install-initrd");
+	out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2debug("out: %1", out);
+
+	list<string> stdout = splitstring(out["stdout"]:"", "\n");
+	y2debug("found base initrd files: %1", stdout);
+
+	string file = stdout[0]:"";
+	y2internal("found initrd: %1", file);
+
+	// TODO copy the file
+
+	// create the image
+	cmd = sformat("/usr/sbin/mkinstallinitrd --kernel-rpm %1 %2", kernelpkg, target);
+	out = (map)SCR::Execute(.target.bash_output, cmd);
 	y2internal("mkinstallinitrd output: %1", out);
 
 	return out["exit"]:1 == 0;
@@ -352,37 +376,18 @@
 
 	SCR::UnmountAgent(.etc.xen);
 
-	string cmd = "/bin/rm -rf " + "/etc/xen/" + VM_Common::config_name;
-	map out = (map)SCR::Execute(.target.bash_output, cmd);
-
 	path configpath = .etc.xen.value + topath("/etc/xen/" + VM_Common::config_name);
 	boolean ret = true;
-	// TODO upadate config - root device, set default runlevel, remove install= option
 
-//	Write();
+	// upadate config - root device, set default runlevel, remove install= option
+	ret = ret && SCR::Write(configpath + "ramdisk", nil);
+	ret = ret && SCR::Write(configpath + "restart", nil);
+	ret = ret && SCR::Write(configpath + "extra", "3");
 
-	ret = WriteOption(configpath, "disk", formatDiskConfig(disks, img_prefix + VM_Common::config_name));
-	ret = ret && WriteOption(configpath, "memory", tostring(VM_Common::memory_size));
+	// TODO scan disk image
 
-	ret = ret && WriteStringOption(configpath, "kernel", kernel_path);
-
-	ret = ret && WriteStringOption(configpath, "name", VM_Common::config_name);
-
-	ret = ret && WriteStringOption(configpath, "dhcp", "dhcp");
-
-	if (VM_Common::MAC_address != nil && VM_Common::MAC_address != "")
-	{
-	    ret = ret && WriteStringOption(configpath, "vif", sformat("[ 'mac=%1' ]", VM_Common::MAC_address));
-	}
-
-
-//	SCR::Write(configpath + "extra", nil);
-//	SCR::Write(configpath + "restart", nil);
-//	SCR::Write(configpath + "ramdisk", nil);
-//	ret = ret && WriteOption(configpath, "extra", nil);
-//	ret = ret && WriteOption(configpath, "restart", nil);
-//	ret = ret && WriteOption(configpath, "initrd", nil);
 	ret = ret && WriteStringOption(configpath, "root", "/dev/hda2");
+
 	// flush the changes
 	ret = ret && SCR::Write(.etc.xen, nil);
 

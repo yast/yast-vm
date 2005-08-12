@@ -3,7 +3,7 @@
  *
  * Authors:	Ladislav Slezak <lslezak@suse.cz>
  *
- * Purpose:	Ask the user for installation source for uml.
+ * Purpose:	Ask the user for installation source for the virtual machine.
  *
  * $Id:$
  *
@@ -19,7 +19,7 @@
     import "Report";
 
 
-    // screen title for uml source
+    // screen title - installation source configuration
     string title = _("Installation Source");
 
 
