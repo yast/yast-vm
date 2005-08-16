@@ -40,6 +40,8 @@
 
     global string extra_args = "";
 
+    global string root_device = "";
+
     global integer ProposeSelection () ``{
 	list <integer> sources = Pkg::SourceGetCurrent (false);
 
@@ -56,6 +58,11 @@
 
 	foreach(integer src, sources, ``{
 		map general_data = Pkg::SourceGeneralData(src);
+		map product_data = Pkg::SourceProductData(src);
+
+		y2internal("general_data: %1", general_data);
+		y2internal("product_data: %1", product_data);
+
 		string srcurl = general_data["url"]:"";
 
 		// use only network sources in proposal
@@ -134,7 +141,7 @@
     global define string GetPackage(string package, string dir) {
 	// get info about the package (media number)
 	map<string,any> pkginfo = Pkg::PkgProperties(package);
-	y2debug("pkginfo: %1", pkginfo);
+	y2internal("pkginfo: %1", pkginfo);
 
 	string location = pkginfo["location"]:"";
 	string ret = "";
@@ -143,7 +150,7 @@
 	if (location != "" && location != nil)
 	{
 	    // get local location
-	    ret = Pkg::SourceProvideFile(source_id, pkginfo["medianr"]:0, dir + "/" + pkginfo["location"]:"");
+	    ret = Pkg::SourceProvideFile(src_id, pkginfo["medianr"]:0, dir + "/" + pkginfo["location"]:"");
 	}
 
 	return ret;

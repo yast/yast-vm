@@ -96,10 +96,11 @@
 					`TextEntry(`id(`custom_source), _("&URL of Installation Source"), sconfig["custom_source"]:"")
 				    )
 				),
-				`VSpacing(1),
-
-				`Left(`RadioButton(`id(`slp),  `opt(`notify), _("&SLP Installation Source"), sconfig["inst_type"]:`unknown == `slp)),
 				`VSpacing(1)
+
+// TODO: disabled, we need kernel package before starting VM, we MUST know the URL
+//				`Left(`RadioButton(`id(`slp),  `opt(`notify), _("&SLP Installation Source"), sconfig["inst_type"]:`unknown == `slp)),
+//				`VSpacing(1)
 			    )
 			)
 		    );

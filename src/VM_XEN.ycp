@@ -322,6 +322,60 @@
 	return ret;
     }
 
+    define integer IsInstSourceDefined(string url) {
+	list<integer> sources = Pkg::SourceGetCurrent (false);
+	integer ret = -1;
+
+	foreach(integer src, sources, {
+		map general_data = Pkg::SourceGeneralData(src);
+		if (url == general_data["url"]:"")
+		{
+		    ret = src;
+		}
+	    }
+	);
+
+	return ret;
+    }
+
+    define map<integer,boolean> InstSourceStatus() {
+	map<integer,boolean> ret = $[];
+
+	list<integer> sources = Pkg::SourceGetCurrent(false);
+
+	foreach(integer src, sources, {
+		map general_data = Pkg::SourceGeneralData(src);
+		y2internal("general_data: %1", general_data);
+		y2internal("product_data: %1", Pkg::SourceProductData(src));
+		ret[src] = general_data["enabled"]:false;
+	    }
+	);
+
+	return ret;
+    }
+
+    define map<string,string> DisableAllSources() {
+	map<string,string> ret = $[];
+
+	list<integer> sources = Pkg::SourceGetCurrent (false);
+
+	foreach(integer src, sources, {
+		Pkg::SourceSetEnabled(src, false);
+	    }
+	);
+
+	return ret;
+    }
+
+    define void SetSourceState(map<integer,boolean> state) {
+	list<integer> sources = Pkg::SourceGetCurrent (false);
+	foreach(integer src, boolean enabled, state, {
+		Pkg::SourceSetEnabled(src, enabled);
+	    }
+	);
+    }
+
+
     global define boolean Write() {
 	// TODO check whether the config file already exists
 	y2internal("Writing the config to file %1", "/etc/xen/" + VM_Common::config_name);
@@ -362,7 +416,7 @@
 	    url = "slp://";
 	}
 
-	ret = ret && WriteStringOption(configpath, "extra", "install=" + url);
+	ret = ret && WriteStringOption(configpath, "extra", "install=" + url + " " + VM_Common::extra_args);
 
 	// flush the changes
 	ret = ret && SCR::Write(.etc.xen, nil);
@@ -370,7 +424,259 @@
 	return ret;
     }
 
+
+    define list<string> SearchFile(string dir, string name) {
+	list<string> ret = [];
+	string cmd = sformat("cd %1; ls -1 %2", dir, name);
+	map outputmap = (map)SCR::Execute(.target.bash_output, cmd);
+
+	string outputstring = outputmap["stdout"]:"";
+
+	if (outputstring != nil && outputstring != "")
+	{
+	    ret = splitstring(outputstring, "\n");
+	    // remove empty lines
+	    ret = filter(string f, ret, {return f != nil && f != "";});
+	}
+
+	return ret;
+    }
+
+    define list<string> PartitionsInfo(string image) {
+	string cmd = sformat("sfdisk -d -uS %1", image);
+	map outputmap = (map)SCR::Execute(.target.bash_output, cmd);
+
+	string outputstring = outputmap["stdout"]:"";
+
+	list<string> ret = [];
+
+	if (outputstring != nil && outputstring != "")
+	{
+	    ret = splitstring(outputstring, "\n");
+	    // remove empty lines
+	    ret = filter(string f, ret, {return f != nil && f != "";});
+	}
+
+	y2internal("PartitionsInfo (%1): %2", image, ret);
+
+	return ret;
+    }
+
+    define list<map<string,string> > ParsePartitionInfo(list<string> info) {
+	list<map<string,string> > ret = [];
+	y2internal("Parse partition: %1", info);
+
+	if (info != nil)
+	{
+	    foreach(string line, info, {
+		    if (regexpmatch(line, " : start=.*, size=.*, Id="))
+		    {
+			// line contains partition description
+
+			string expr = "(.*)[ \\t]*:[ \\t]*start=[ \\t]*([1234567890]*)[ \\t]*, size=[ \\t]*([1234567890]*)[ \\t]*, Id=[ \\t]*([1234567890abcdefABCDEF]*)";
+
+			string pname = regexpsub(line, expr, "\\1");
+			string pstart = regexpsub(line, expr, "\\2");
+			string psize = regexpsub(line, expr, "\\3");
+			string pid = regexpsub(line, expr, "\\4");
+
+			if (pstart != nil && psize != nil && pid != nil)
+			{
+			    ret = add(ret, $["name" : pname, "start" : pstart, "size" : psize, "id" : pid]);
+			}
+		    }
+		}
+	    );
+	}
+
+	y2internal("Parsed output: %1", ret);
+
+	return ret;
+    }
+
+    define boolean TryMount(string image, integer offset, string mntpoint) {
+	boolean result = (boolean) SCR::Execute(.target.mount, [image, mntpoint], sformat("-o ro,loop,offset=%1", offset));
+	return result;
+    }
+
+    define map<string,list<string> > SearchFiles(map<string,list<string> > search, string prefix) {
+	map<string,list<string> >result = $[];
+
+	// check files
+	foreach(string file, list<string> dirs, search, {
+		boolean found = false;
+
+		foreach(string dir, dirs, {
+			if (!found)
+			{
+			    list<string> foundfiles = SearchFile(prefix + "/" + dir, file);
+
+			    if (size(foundfiles) > 0)
+			    {
+				// directory prefix
+				foundfiles = maplist(string f, foundfiles, {return dir + f;});
+				result[file] = foundfiles;
+				found = true;
+			    }
+			}
+		    }
+		);
+
+
+	    }
+	);
+
+	y2internal("result: %1", result);
+
+	return result;
+    }
+
+    string ParseFstab(string fstab) {
+        map out = (map) SCR::Execute(.target.bash_output, sformat("/bin/grep \" / \" %1 | /usr/bin/cut -f 1 -d \" \"",  fstab));
+	string rdev = "";
+
+	if (out["exit"]:-1 == 0 )
+	{
+	    rdev = (string) (out["stdout"]:"");
+	    list<string> root_dev_list = splitstring(rdev, "\n");
+	    rdev = root_dev_list[0]:"";
+	    y2milestone("Found root device: %1", rdev);
+	}
+	else
+	{
+	    y2error("Cannot read fstab root device entry: %1", out);
+	}
+
+	return rdev;
+    }
+
+    define boolean CopyFile(string source, string target) {
+	y2milestone("copying file %1 to %2", source, target);
+	// -a (archive) = preserve mode and timestamps
+	// -b (backup) = make a backup of the target file
+	return (SCR::Execute(.target.bash, sformat("/bin/cp -a -b %1 %2", source, target))) == 0;
+    }
+
+    define string GetFileNameFromPath(string fname) {
+	string ret = "";
+
+	if (fname != nil)
+	{
+	    list<string> parts = splitstring(fname, "/");
+	    ret = parts[size(parts) - 1]:"";
+	}
+
+	return ret;
+    }
+
+    define void ProcessFoundFile(map<string,list<string> > found, string dir) {
+	if (found != nil && size(found) > 0)
+	{
+	    foreach(string file, list<string> location, found, {
+
+		    if (size(location) > 1)
+		    {
+			y2warning("Using the first location from list: %1", location);
+		    }
+
+		    string filename = dir + "/" + location[0]:"";
+		    string target_dir = img_prefix + VM_Common::config_name;
+
+		    if (file == "fstab")
+		    {
+			// parse fstab file and set root device name
+			VM_Common::root_device = ParseFstab(filename);
+		    }
+		    else if (file == "vmlinuz-*-xen")
+		    {
+			// copy kernel image
+			CopyFile(filename, target_dir);
+			// set kernel name
+			kernel_path = target_dir + "/" + GetFileNameFromPath(filename);
+		    }
+		    else if (file == "initrd-*-xen")
+		    {
+			// copy initrd image
+			CopyFile(filename, target_dir);
+			// set initrd name
+			initrd_path = target_dir + "/" + GetFileNameFromPath(filename);
+		    }
+		    else
+		    {
+			y2warning("Unknown file: %1", file);
+		    }
+		}
+	    );
+	}
+    }
+
+    define void ReadDiskImage(string diskimage)
+    {
+	list<string> pinfo = PartitionsInfo(diskimage);
+	list<map<string,string> > partitions = ParsePartitionInfo(pinfo);
+
+	// leave only Linux partitions
+	partitions = filter(map<string,string> partition, partitions, {return partition["id"]:"" == "83";});
+	y2internal("Linux partitions: %1", partitions);
+
+
+	// create mountpoint directory
+	string tmp = VM_Common::GetTmpDir();
+
+	string mountpoint = tmp + "/mountpoint";
+
+	// create mount point directory
+	SCR::Execute(.target.mkdir, mountpoint);
+
+
+	foreach(map<string,string> partition, partitions, {
+
+	    integer offset = tointeger(partition["start"]:"") * 512;
+
+	    if (offset != nil)
+	    {
+		boolean mounted = TryMount(diskimage, offset, mountpoint);
+
+		if (mounted)
+		{
+		    // search for files
+		    map<string,list<string> > search = $[
+			"vmlinuz-*-xen" : [ "/boot/", "/" ],
+			"initrd-*-xen" : [ "/boot/", "/" ],
+			"fstab" : [ "/etc/", "/" ]
+		    ];
+
+		    map<string,list<string> > found = SearchFiles(search, mountpoint);
+
+		    y2milestone("Search result: %1", found);
+
+		    ProcessFoundFile(found, mountpoint);
+
+		    // unmount the image
+		    SCR::Execute(.target.umount, mountpoint);
+		}
+	    }
+
+	});
+    }
+
+
+    define boolean ReadDiskImages(string prefix) {
+	boolean ret = true;
+
+	foreach(map<string,any> disk, disks, {
+		string target = disk["target"]:"hda";
+		ret = ret && ReadDiskImage(prefix + "/" + target);
+	    }
+	);
+
+	return ret;
+    }
+
+
     global define boolean Prepare2() {
+
+	ReadDiskImages(img_prefix + VM_Common::config_name);
 
 	SCR::UnmountAgent(.etc.xen);
 
@@ -378,13 +684,19 @@
 	boolean ret = true;
 
 	// upadate config - root device, set default runlevel, remove install= option
-	ret = ret && SCR::Write(configpath + "ramdisk", nil);
 	ret = ret && SCR::Write(configpath + "restart", nil);
-	ret = ret && SCR::Write(configpath + "extra", "3");
+	ret = ret && SCR::Write(configpath + "extra", "3 " + VM_Common::extra_args);
 
-	// TODO scan disk image
+	string extra = "3";
+	if (VM_Common::extra_args != "")
+	{
+	    extra = extra + " " + VM_Common::extra_args;
+	}
 
-	ret = ret && WriteStringOption(configpath, "root", "/dev/hda2");
+	ret = ret && WriteStringOption(configpath, "extra", extra);
+	ret = ret && WriteStringOption(configpath, "kernel", kernel_path);
+	ret = ret && WriteStringOption(configpath, "ramdisk", initrd_path);
+	ret = ret && WriteStringOption(configpath, "root", VM_Common::root_device);
 
 	// flush the changes
 	ret = ret && SCR::Write(.etc.xen, nil);
@@ -397,7 +709,7 @@
 	foreach(map<string,any> disk, disks, {
 		integer imgsize = disk["size"]:1024;
 		boolean sparse = disk["sparse"]:false;
-		string target = disk["target"]:"hda1";
+		string target = disk["target"]:"hda";
 
 		ret = ret && VM_Common::CreateDiskImage(prefix + "/" + target, imgsize, sparse);
 	    }
@@ -412,6 +724,41 @@
 	string cmd = "/bin/mkdir -p " + target_dir;
 	map out = (map)SCR::Execute(.target.bash_output, cmd);
 	y2debug("mkdir output: %1", out);
+
+
+	// remember inst source config
+	map<integer,boolean> src_status = InstSourceStatus();
+	integer new_src = -1;
+	y2internal("src_status: %1", src_status);
+
+	// disable all sources
+	DisableAllSources();
+	integer enabled_src = VM_Common::source_id;
+	y2internal("src_status: %1", InstSourceStatus());
+
+	// check whether the custom installation source is already defined
+	if (VM_Common::inst_type == `custom)
+	{
+	    string url = VM_Common::custom_source;
+	    integer src_defined = IsInstSourceDefined(url);
+
+	    if (src_defined < 0)
+	    {
+		// Add a new installation source
+		new_src = Pkg::SourceCreate(url, "");
+		y2milestone("Adding new installation source: %1 = %2", url, new_src);
+		enabled_src = new_src;
+		VM_Common::src_id = new_src;
+		y2internal("src_status: %1", InstSourceStatus());
+	    }
+	}
+
+	// enable the only one (selected) source
+	Pkg::SourceSetEnabled(enabled_src, true);
+	y2internal("enabled src %1: %2", enabled_src, InstSourceStatus());
+
+//	y2internal("TargetInit");
+//	Pkg::TargetInit("/", false);
 
 	y2milestone("Extracting XEN kernel from the installation source...");
 	string kpkg = VM_Common::GetPackage("kernel-xen", "suse/i586");
@@ -429,6 +776,14 @@
 	// create disk image file(s)
 	y2milestone("Creating disk images...");
 	CreateDiskImages(target_dir);
+
+	if (new_src >= 0)
+	{
+	    Pkg::SourceDelete(new_src);
+	}
+
+	// set source statuses back
+	SetSourceState(src_status);
 
 	return true;
     }
