@@ -78,6 +78,7 @@
     VM::Prepare2();
     success = VM::Start();
 
+    VM::Prepare3();
     Progress::Finish ();
 
     return `next;

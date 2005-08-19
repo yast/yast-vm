@@ -16,14 +16,6 @@
 
     include "vm/cmdline.ycp";
 
-    define boolean XENenvironment() {
-	string cmd = "/bin/ls /proc/xen";
-	integer output = (integer)SCR::Execute(.target.bash, cmd);
-	y2milestone("XEN detection exit status: %1", output);
-
-	return output == 0;
-    }
-
     /**
      * Definition of command line mode options
      */
@@ -86,7 +78,7 @@ Start installation in the host system."));
 	return `abort;
     }
 
-    if (!XENenvironment())
+    if (!Arch::is_xen())
     {
 	// we are already in UML, nested virtual machine is not supported
 	Report::Error(_("For installing a XEN virtual machine the system

@@ -150,7 +150,7 @@
 	if (location != "" && location != nil)
 	{
 	    // get local location
-	    ret = Pkg::SourceProvideFile(src_id, pkginfo["medianr"]:0, dir + "/" + pkginfo["location"]:"");
+	    ret = Pkg::SourceProvideFile(source_id, pkginfo["medianr"]:0, dir + "/" + pkginfo["location"]:"");
 	}
 
 	return ret;

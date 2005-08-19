@@ -270,6 +270,10 @@
 	return CallBooleanFunction("Prepare2");
     }
 
+    global boolean Prepare3() {
+	return CallBooleanFunction("Prepare3");
+    }
+
     global boolean Start() {
 	return CallBooleanFunction("Start");
     }

@@ -416,10 +416,22 @@
 	    url = "slp://";
 	}
 
-	ret = ret && WriteStringOption(configpath, "extra", "install=" + url + " " + VM_Common::extra_args);
+	ret = ret && WriteStringOption(configpath, "extra", "TERM=xterm textmode=1 install=" + url + " " + VM_Common::extra_args);
 
 	// flush the changes
 	ret = ret && SCR::Write(.etc.xen, nil);
+
+	if (VM_Common::start_mode == "onboot")
+	{
+	    // create 'auto' link if the VM should be started at boot time
+	    string cmd = "cd /etc/xen/auto; /bin/ln -s ../" + VM_Common::config_name;
+	    integer link_result = (integer)SCR::Execute(.target.bash, cmd);
+
+	    if (link_result != 0)
+	    {
+		y2warning("Cannot set automatic start, link failed (exit code: %1)", link_result);
+	    }
+	}
 
 	return ret;
     }
@@ -685,9 +697,8 @@
 
 	// upadate config - root device, set default runlevel, remove install= option
 	ret = ret && SCR::Write(configpath + "restart", nil);
-	ret = ret && SCR::Write(configpath + "extra", "3 " + VM_Common::extra_args);
 
-	string extra = "3";
+	string extra = "3 TERM=xterm";
 	if (VM_Common::extra_args != "")
 	{
 	    extra = extra + " " + VM_Common::extra_args;
@@ -702,6 +713,21 @@
 	ret = ret && SCR::Write(.etc.xen, nil);
 
 	return true;
+    }
+
+    global define boolean Prepare3() {
+	boolean ret = true;
+	path configpath = .etc.xen.value + topath("/etc/xen/" + VM_Common::config_name);
+
+	SCR::UnmountAgent(.etc.xen);
+
+	// remove TERM option
+	ret = ret && WriteStringOption(configpath, "extra", "3 " + VM_Common::extra_args);
+
+	// flush the changes
+	ret = ret && SCR::Write(.etc.xen, nil);
+
+	return ret;
     }
 
     boolean CreateDiskImages(string prefix) {
@@ -748,7 +774,7 @@
 		new_src = Pkg::SourceCreate(url, "");
 		y2milestone("Adding new installation source: %1 = %2", url, new_src);
 		enabled_src = new_src;
-		VM_Common::src_id = new_src;
+		VM_Common::source_id = new_src;
 		y2internal("src_status: %1", InstSourceStatus());
 	    }
 	}
@@ -756,9 +782,6 @@
 	// enable the only one (selected) source
 	Pkg::SourceSetEnabled(enabled_src, true);
 	y2internal("enabled src %1: %2", enabled_src, InstSourceStatus());
-
-//	y2internal("TargetInit");
-//	Pkg::TargetInit("/", false);
 
 	y2milestone("Extracting XEN kernel from the installation source...");
 	string kpkg = VM_Common::GetPackage("kernel-xen", "suse/i586");
@@ -849,6 +872,7 @@
 	    "Write" : VM_XEN::Write,
 	    "Prepare" : VM_XEN::Prepare,
 	    "Prepare2" : VM_XEN::Prepare2,
+	    "Prepare3" : VM_XEN::Prepare3,
 	    "Start"	: VM_XEN::Start,
 	];
     }

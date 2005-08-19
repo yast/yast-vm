@@ -1,4 +1,17 @@
 -------------------------------------------------------------------
+Fri Aug 19 12:46:23 CEST 2005 - lslezak@suse.cz
+
+- use properly custom installation source
+- mount partitions in virtual disk image
+- search for kernel files, copy them to domain0
+- search for root device name
+- update VM configuration file before starting the 2nd stage
+- create link in /etc/xen/auto when 'on boot' start
+  mode is selected
+- add TERM=xterm kernel option (to have colours in 2nd stage)
+- 2.12.2
+
+-------------------------------------------------------------------
 Fri Aug 12 12:24:14 CEST 2005 - lslezak@suse.cz
 
 - fixed creating of an installation initrd (#104339)
