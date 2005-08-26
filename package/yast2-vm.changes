@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Fri Aug 26 13:30:30 CEST 2005 - lslezak@suse.cz
+
+- fixed layout of the tables (#112971)
+- use arch dependend kernel-xen and install-initrd package
+- reinitialize installtion sources
+- fixed logging
+- 2.12.3
+
+-------------------------------------------------------------------
 Fri Aug 19 12:46:23 CEST 2005 - lslezak@suse.cz
 
 - use properly custom installation source

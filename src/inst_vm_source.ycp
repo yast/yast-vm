@@ -74,14 +74,11 @@
 				// radio button label
 				`Left(`RadioButton(`id(`configured),  `opt(`notify), _("&Configured Installation Source"), sconfig["inst_type"]:`unknown == `configured)),
 				`VSpacing(0.3),
-				`Left(
-				    `HBox(
-					`HSpacing(indent),
-					`Table(`id(`sources),
-					    // table column heading
-					    `header(_("Name"), _("URL")), [ ]
-					)
-				    )
+				`HBox(
+				    `HSpacing(indent),
+				    `Table(`id(`sources),
+					// table column heading
+					`header(_("Name"), _("URL")), [ ])
 				),
 				// push button label
 				// installation source configuration module
@@ -90,11 +87,9 @@
 				`VSpacing(1),
 
 				`Left(`RadioButton(`id(`custom),  `opt(`notify), _("Custom &Installation Source"), sconfig["inst_type"]:`unknown == `custom)),
-				`Left(
-				    `HBox(
-					`HSpacing(indent),
-					`TextEntry(`id(`custom_source), _("&URL of Installation Source"), sconfig["custom_source"]:"")
-				    )
+				`HBox(
+				    `HSpacing(indent),
+				    `TextEntry(`id(`custom_source), _("&URL of Installation Source"), sconfig["custom_source"]:"")
 				),
 				`VSpacing(1)
 

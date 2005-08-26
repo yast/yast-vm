@@ -81,17 +81,16 @@
     Wizard::OpenAcceptDialog ();
 
     term contents = `VBox(
-			  `VBox(
-				`Left(`Table(`id(`disks),
-					     // table - column heading
-					     `header (_("Virtual Device"), `Right(_("Disk Size (MB)")), `Center(_("Sparse File"))), []))
-				),
-			  `HBox(
-				`PushButton (`id (`add), Label::AddButton()),
-				`PushButton (`id (`edit), Label::EditButton()),
-				`PushButton (`id (`delete), Label::DeleteButton())
-				)
-			  );
+			`Table(`id(`disks),
+			    // table - column heading
+			    `header (_("Virtual Device"), `Right(_("Disk Size (MB)")), `Center(_("Sparse File"))), []
+			),
+			`HBox(
+			    `PushButton (`id (`add), Label::AddButton()),
+			    `PushButton (`id (`edit), Label::EditButton()),
+			    `PushButton (`id (`delete), Label::DeleteButton())
+			)
+		    );
 
     // help text for disk setup
     string help_text = _("<P><B>Virtual Disk Setup<B></P>")

@@ -10,6 +10,7 @@
     import "VM_Common";
     import "Report";
     import "HTML";
+    import "Arch";
 
     textdomain "vm";
 
@@ -53,7 +54,7 @@
 
     global boolean setStartMode(string mode)
     {
-	y2internal("start_mode: %1", mode);
+	y2milestone("start_mode: %1", mode);
 	VM_Common::start_mode = mode;
 	return true;
     }
@@ -71,7 +72,7 @@
 
     global boolean setMAC(string mac)
     {
-	y2internal("MAC address: %1", mac);
+	y2milestone("MAC address: %1", mac);
 	VM_Common::MAC_address = mac;
 	return true;
     }
@@ -113,7 +114,7 @@
 	// Proposal for virtual machine installation
 	tmp = add (tmp, sformat (_("Memory Size: %1 MB"), getMemorySize()));
 
-	y2internal("mode: %1", getStartMode());
+	y2milestone("mode: %1", getStartMode());
 
 	// Proposal for virtual machine installation - %1 is a start mode (On boot/Manually)
 	tmp = add (tmp, sformat (_("Activation: %1"),
@@ -198,7 +199,7 @@
 	    domain = domain + 1;
 	}
 
-	y2internal("Proposed name: %1", domain_prefix + tostring(domain));
+	y2milestone("Proposed name: %1", domain_prefix + tostring(domain));
 
 	return domain_prefix + tostring(domain);
     }
@@ -232,22 +233,22 @@
 	string cmd = sformat("cd %1; /usr/bin/rpm2cpio %2 | /usr/bin/cpio -idvum './boot/vmlinuz-*-xen'", tmpdir, package);
 
 	map out = (map)SCR::Execute(.target.bash_output, cmd);
-	y2internal("out: %1", out);
+	y2milestone("out: %1", out);
 
 	cmd = sformat("/usr/bin/find %1 -type f -name 'vmlinuz-*-xen'", tmpdir + "/boot");
 	out = (map)SCR::Execute(.target.bash_output, cmd);
-	y2internal("out: %1", out);
+	y2milestone("out: %1", out);
 
 	list<string> stdout = splitstring(out["stdout"]:"", "\n");
 	string file = stdout[0]:"";
 
-	y2internal("found kernel: %1", file);
+	y2milestone("found kernel: %1", file);
 
 	if (file != nil && file != "")
 	{
 	    cmd = sformat("/bin/cp -a %1 %2", file, target);
 	    out = (map)SCR::Execute(.target.bash_output, cmd);
-	    y2internal("out: %1", out);
+	    y2milestone("out: %1", out);
 
 	    list<string> kpath = splitstring(file, "/");
 
@@ -257,10 +258,31 @@
 	return "";;
     }
 
+    define string PackageArch() {
+	string arch = "";
+
+	if (Arch::i386())
+	{
+	    arch = "i586";
+	}
+	else if (Arch::x86_64())
+	{
+	    arch = "x86_64";
+	}
+	else
+	{
+	    arch = Arch::arch_short();
+	    y2warning("Unknown architecture, using arch=%1", arch);
+	}
+
+	return arch;
+    }
+
     global define boolean CreateInstallationImage(string kernelpkg, string target) {
+	string arch = PackageArch();
 	// get installation package
-	string inst = VM_Common::GetPackage("install-initrd", "suse/i586");
-	y2internal("image rpm: %1", inst);
+	string inst = VM_Common::GetPackage("install-initrd", "suse/" + arch);
+	y2milestone("image rpm: %1", inst);
 
 	if (inst == nil || inst == "")
 	{
@@ -282,12 +304,12 @@
 	y2debug("found base initrd files: %1", stdout);
 
 	string file = stdout[0]:"";
-	y2internal("found initrd: %1", file);
+	y2milestone("found initrd: %1", file);
 
 	// create the image
 	cmd = sformat("%1/usr/sbin/mkinstallinitrd --kernel-rpm %2 --libdir %3 %4", tmpdir, kernelpkg, tmpdir + "/usr/lib/install-initrd", target);
 	out = (map)SCR::Execute(.target.bash_output, cmd);
-	y2internal("mkinstallinitrd output: %1", out);
+	y2milestone("mkinstallinitrd output: %1", out);
 
 	return out["exit"]:1 == 0;
     }
@@ -345,8 +367,8 @@
 
 	foreach(integer src, sources, {
 		map general_data = Pkg::SourceGeneralData(src);
-		y2internal("general_data: %1", general_data);
-		y2internal("product_data: %1", Pkg::SourceProductData(src));
+		y2milestone("general_data: %1", general_data);
+		y2milestone("product_data: %1", Pkg::SourceProductData(src));
 		ret[src] = general_data["enabled"]:false;
 	    }
 	);
@@ -378,7 +400,7 @@
 
     global define boolean Write() {
 	// TODO check whether the config file already exists
-	y2internal("Writing the config to file %1", "/etc/xen/" + VM_Common::config_name);
+	y2milestone("Writing the config to file %1", "/etc/xen/" + VM_Common::config_name);
 
 	path configpath = .etc.xen.value + topath("/etc/xen/" + VM_Common::config_name);
 
@@ -469,14 +491,14 @@
 	    ret = filter(string f, ret, {return f != nil && f != "";});
 	}
 
-	y2internal("PartitionsInfo (%1): %2", image, ret);
+	y2milestone("PartitionsInfo (%1): %2", image, ret);
 
 	return ret;
     }
 
     define list<map<string,string> > ParsePartitionInfo(list<string> info) {
 	list<map<string,string> > ret = [];
-	y2internal("Parse partition: %1", info);
+	y2milestone("Parse partition: %1", info);
 
 	if (info != nil)
 	{
@@ -501,13 +523,15 @@
 	    );
 	}
 
-	y2internal("Parsed output: %1", ret);
+	y2milestone("Parsed output: %1", ret);
 
 	return ret;
     }
 
     define boolean TryMount(string image, integer offset, string mntpoint) {
-	boolean result = (boolean) SCR::Execute(.target.mount, [image, mntpoint], sformat("-o ro,loop,offset=%1", offset));
+	y2milestone("TryMount: image=%1, offset=%2, mntpoint=%3", image, offset, mntpoint);
+	boolean result = (boolean) SCR::Execute(.target.mount, [image, mntpoint], sformat("-o loop,offset=%1", offset));
+	y2milestone("result: %1", result);
 	return result;
     }
 
@@ -538,7 +562,7 @@
 	    }
 	);
 
-	y2internal("result: %1", result);
+	y2milestone("result: %1", result);
 
 	return result;
     }
@@ -629,7 +653,7 @@
 
 	// leave only Linux partitions
 	partitions = filter(map<string,string> partition, partitions, {return partition["id"]:"" == "83";});
-	y2internal("Linux partitions: %1", partitions);
+	y2milestone("Linux partitions: %1", partitions);
 
 
 	// create mountpoint directory
@@ -638,8 +662,8 @@
 	string mountpoint = tmp + "/mountpoint";
 
 	// create mount point directory
-	SCR::Execute(.target.mkdir, mountpoint);
-
+	boolean mcreated = (boolean)SCR::Execute(.target.mkdir, mountpoint);
+	y2milestone("mountpoint created: %1", mcreated);
 
 	foreach(map<string,string> partition, partitions, {
 
@@ -698,7 +722,7 @@
 	// upadate config - root device, set default runlevel, remove install= option
 	ret = ret && SCR::Write(configpath + "restart", nil);
 
-	string extra = "3 TERM=xterm";
+	string extra = "TERM=xterm";
 	if (VM_Common::extra_args != "")
 	{
 	    extra = extra + " " + VM_Common::extra_args;
@@ -721,8 +745,8 @@
 
 	SCR::UnmountAgent(.etc.xen);
 
-	// remove TERM option
-	ret = ret && WriteStringOption(configpath, "extra", "3 " + VM_Common::extra_args);
+	// set extra options
+	ret = ret && WriteStringOption(configpath, "extra", VM_Common::extra_args);
 
 	// flush the changes
 	ret = ret && SCR::Write(.etc.xen, nil);
@@ -755,12 +779,12 @@
 	// remember inst source config
 	map<integer,boolean> src_status = InstSourceStatus();
 	integer new_src = -1;
-	y2internal("src_status: %1", src_status);
+	y2milestone("src_status: %1", src_status);
 
 	// disable all sources
 	DisableAllSources();
 	integer enabled_src = VM_Common::source_id;
-	y2internal("src_status: %1", InstSourceStatus());
+	y2milestone("src_status: %1", InstSourceStatus());
 
 	// check whether the custom installation source is already defined
 	if (VM_Common::inst_type == `custom)
@@ -775,16 +799,22 @@
 		y2milestone("Adding new installation source: %1 = %2", url, new_src);
 		enabled_src = new_src;
 		VM_Common::source_id = new_src;
-		y2internal("src_status: %1", InstSourceStatus());
+		y2milestone("src_status: %1", InstSourceStatus());
 	    }
 	}
 
 	// enable the only one (selected) source
 	Pkg::SourceSetEnabled(enabled_src, true);
-	y2internal("enabled src %1: %2", enabled_src, InstSourceStatus());
+	y2milestone("enabled src %1: %2", enabled_src, InstSourceStatus());
 
-	y2milestone("Extracting XEN kernel from the installation source...");
-	string kpkg = VM_Common::GetPackage("kernel-xen", "suse/i586");
+	// restart sources - use the only one enabled source
+	list sources = Pkg::SourceStartCache(true);
+	y2milestone("Source init: %1", sources);
+
+	string arch = PackageArch();
+	y2milestone("Extracting XEN kernel from the installation source (arch=%1) ...", arch);
+
+	string kpkg = VM_Common::GetPackage("kernel-xen", "suse/" + arch);
 	kernel_path = ExtractXENKernelImage(kpkg, target_dir + "/");
 	if (kernel_path != "")
 	{
@@ -794,7 +824,7 @@
 	y2milestone("Creating installation ramdisk (initrd)...");
 	CreateInstallationImage(kpkg, target_dir + "/inst-initrd");
 	initrd_path = target_dir + "/inst-initrd";
-	y2internal("kernel: %1, initrd: %2", kernel_path, initrd_path);
+	y2milestone("kernel: %1, initrd: %2", kernel_path, initrd_path);
 
 	// create disk image file(s)
 	y2milestone("Creating disk images...");
@@ -813,8 +843,8 @@
 
     global define boolean Start() {
 	// start the VM in xterm session
-	string cmd = sformat("/usr/bin/xterm -e %1 create -c /etc/xen/%2", xm, VM_Common::config_name);
-	y2internal("command: %1", cmd);
+	string cmd = sformat("/usr/bin/xterm -T \"XEN - %2\" -e %1 create -c /etc/xen/%2", xm, VM_Common::config_name);
+	y2milestone("xterm command: %1", cmd);
 	integer out = (integer)SCR::Execute(.target.bash, cmd);
 
 	return out == 0;
