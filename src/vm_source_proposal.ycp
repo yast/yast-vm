@@ -35,6 +35,12 @@
 	VM::GetSourceProposal();
 
 	ret = $[ "preformatted_proposal" : HTML::List([VM::GetSourceProposal()]) ];
+
+	map warn = VM::GetSourceProposalWarning();
+	if (warn != nil && size(warn) > 0)
+	{
+	    ret = union(ret, warn);
+	}
     }
     else if ( func == "AskUser" )
     {

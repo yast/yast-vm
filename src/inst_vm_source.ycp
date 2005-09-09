@@ -145,14 +145,7 @@
 
 	    map parsed_url = URL::Parse(srcurl);
 
-	    if (selected_type == `slp)
-	    {
-		sconfig["inst_type"] = `slp;
-		updateConfig(sconfig);
-		y2debug("Selected SLP installation source");
-		break;
-	    }
-	    else if (!URL::Check(srcurl) || parsed_url["host"]:"" == "")
+	    if (!URL::Check(srcurl) || parsed_url["host"]:"" == "")
 	    {
 		Report::Error(_("Entered URL value is not valid."));
 	    }

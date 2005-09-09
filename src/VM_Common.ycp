@@ -83,7 +83,7 @@
 
 	string ret = "";
 
-	if (inst_type == `configured && source_id > 0)
+	if (inst_type == `configured && source_id != nil && source_id > 0)
 	{
 	    map product_data = Pkg::SourceProductData (source_id);
 	    map general_data = Pkg::SourceGeneralData (source_id);
@@ -100,6 +100,29 @@
 	    ret = _("SLP Installation Source");
 	}
 
+	return ret;
+    }
+
+    global map CreateSourceProposalWarning(symbol inst_type, integer source_id, string custom) {
+
+	map ret = $[];
+
+	if (inst_type == `configured && (source_id == nil || source_id < 0))
+	{
+	    ret = $[ "warning" :
+		    // error message
+		    _("Only network installation sources
+are supported in the installation."),
+		     "warning_level" : `blocker
+	    ];
+	}
+// TODO: check custom installation source - parse URL, try to open it...
+/*	else if (inst_type == `custom)
+	{
+	    // installation proposal header
+	    ret = _("Custom Installation Source") + " (" + custom_source + ")";
+	}
+*/
 	return ret;
     }
 

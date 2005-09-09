@@ -210,6 +210,21 @@
 	return CallStringFunction("getSourceProposal");
     }
 
+    global map GetSourceProposalWarning()
+    {
+	map() toEval = (map())functions["getSourceProposalWarning"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("GetSourceProposalWarning() function is missing!");
+	    return nil;
+	}
+    }
+
     global boolean ResetSource() {
 	return CallBooleanFunction("resetSourceConfig");
     }

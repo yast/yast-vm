@@ -178,6 +178,10 @@
 	return VM_Common::CreateSourceProposal(VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
     }
 
+    global define map getSourceProposalWarning() {
+	return VM_Common::CreateSourceProposalWarning(VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
+    }
+
     global define boolean resetSourceConfig() {
 	VM_Common::source_id = VM_Common::ProposeSelection();
 	return true;
@@ -416,7 +420,7 @@
 
 	if (VM_Common::MAC_address != nil && VM_Common::MAC_address != "")
 	{
-	    ret = ret && WriteStringOption(configpath, "vif", sformat("[ 'mac=%1' ]", VM_Common::MAC_address));
+	    ret = ret && WriteOption(configpath, "vif", sformat("[ 'mac=%1' ]", VM_Common::MAC_address));
 	}
 
 	ret = ret && WriteStringOption(configpath, "restart", "never");
@@ -893,6 +897,7 @@
 	    "getSourceConfig" : VM_XEN::getSourceConfig,
 	    "setSourceConfig" : VM_XEN::setSourceConfig,
 	    "getSourceProposal" : VM_XEN::getSourceProposal,
+	    "getSourceProposalWarning" : VM_XEN::getSourceProposalWarning,
 	    "resetSourceConfig" : VM_XEN::resetSourceConfig,
 
 	    "getExtraArgs"	: VM_XEN::getExtraArgs,
