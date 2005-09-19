@@ -19,6 +19,6 @@ X-SuSE-YaST-AutoinstResource=
 Icon=yast-uml
 Exec=/sbin/yast2 vm
 
-Name=Virtual Machine Installation (XEN)
-GenericName=Install a system into XEN virtual machine
+Name=Virtual Machine Installation (Xen)
+GenericName=Install a system into Xen virtual machine
 X-KDE-SubstituteUID=true

@@ -816,7 +816,7 @@
 	y2milestone("Source init: %1", sources);
 
 	string arch = PackageArch();
-	y2milestone("Extracting XEN kernel from the installation source (arch=%1) ...", arch);
+	y2milestone("Extracting Xen kernel from the installation source (arch=%1) ...", arch);
 
 	string kpkg = VM_Common::GetPackage("kernel-xen", "suse/" + arch);
 	kernel_path = ExtractXENKernelImage(kpkg, target_dir + "/");
@@ -847,7 +847,7 @@
 
     global define boolean Start() {
 	// start the VM in xterm session
-	string cmd = sformat("/usr/bin/xterm -T \"XEN - %2\" -e %1 create -c /etc/xen/%2", xm, VM_Common::config_name);
+	string cmd = sformat("/usr/bin/xterm -T \"Xen - %2\" -e %1 create -c /etc/xen/%2", xm, VM_Common::config_name);
 	y2milestone("xterm command: %1", cmd);
 	integer out = (integer)SCR::Execute(.target.bash, cmd);
 

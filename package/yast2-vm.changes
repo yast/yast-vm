@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Mon Sep 19 09:34:47 CEST 2005 - lslezak@suse.cz
+
+- fixed 'Xen' spelling (#117226)
+
+-------------------------------------------------------------------
 Fri Sep  9 11:32:13 CEST 2005 - lslezak@suse.cz
 
 - write vif option properly into VM configuration file (#115791)
