@@ -20,13 +20,15 @@
 
 
     list <string> progress_stages = [
-				     // progress stages
+				     // progress stage
+				     _("Install packages"),
+				     // progress stage
 				     _("Prepare virtual machine environment"),
-				     // progress stages
+				     // progress stage
 				     _("Write virtual machine configuration"),
-				     // progress stages
+				     // progress stage
 				     _("Start installation"),
-				     // progress stages
+				     // progress stage
 				     _("Finish installation"),
     ];
 
@@ -54,10 +56,24 @@
 
     Progress::NextStage ();
 
-    boolean success = VM::Prepare();
+    boolean success = VM::InstallPackages();
+
+    // part of an error message
+    string abortmsg = _("The installation will be aborted.");
 
     if (!success)
     {
+	Report::Error(_("Cannot install required packages.") + "\n" + abortmsg);
+	return `abort;
+    }
+
+    Progress::NextStage ();
+
+    success = VM::Prepare();
+
+    if (!success)
+    {
+	Report::Error(_("Cannot prepare virtual machine environment.") + "\n" + abortmsg);
 	return `abort;
     }
 
@@ -66,19 +82,39 @@
     success = VM::Write();
     if (!success)
     {
+	Report::Error(_("Cannot write configuration of the virtual machine.") + "\n" + abortmsg);
 	return `abort;
     }
 
     Progress::NextStage ();
 
     success = VM::Start();
+    if (!success)
+    {
+	Report::Error(_("Cannot start the virtual machine.") + "\n" + abortmsg);
+	return `abort;
+    }
 
     Progress::NextStage ();
 
     VM::Prepare2();
+    if (!success)
+    {
+	Report::Error(_("Cannot prepare the virtual machine for reboot.") + "\n" + abortmsg);
+	return `abort;
+    }
     success = VM::Start();
+    if (!success)
+    {
+	return `abort;
+    }
 
     VM::Prepare3();
+    if (!success)
+    {
+	Report::Error(_("Cannot update configuration of the virtual machine."));
+	return `abort;
+    }
     Progress::Finish ();
 
     return `next;

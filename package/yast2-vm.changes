@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Sep 27 11:21:31 CEST 2005 - lslezak@suse.cz
+
+- install required X packages (xorg-x11, xterm) (#117660)
+- write option ioemu for emulated disk (#117711)
+- version 2.13.0
+
+-------------------------------------------------------------------
 Mon Sep 19 09:34:47 CEST 2005 - lslezak@suse.cz
 
 - fixed 'Xen' spelling (#117226)

@@ -337,7 +337,7 @@
 		    ret = ret + ", ";
 		}
 
-		ret = ret + sformat("'file:%1,%2,w'", f, d["target"]:"");
+		ret = ret + sformat("'file:%1,ioemu:%2,w'", f, d["target"]:"");
 	    }
 	);
 
@@ -868,6 +868,10 @@
 	return true;
     }
 
+    global define boolean InstallPackages() {
+	return VM_Common::InstallPackages(["xterm", "xorg-x11"]);
+    }
+
     global define map GetFunctions()
     {
 	return $[
@@ -909,6 +913,7 @@
 	    "Prepare2" : VM_XEN::Prepare2,
 	    "Prepare3" : VM_XEN::Prepare3,
 	    "Start"	: VM_XEN::Start,
+	    "InstallPackages" : VM_XEN::InstallPackages
 	];
     }
 

@@ -32,11 +32,7 @@
 
 	if (ret == `next)
 	{
-	    while (WFM::CallFunction ("inst_vm_kickoff", [false, false]) == `abort)
-	    {
-		// start proposal again if installation was aborted
-		WFM::CallFunction ("inst_proposal", [GetInstArgs::ButtonsProposal(true,true,"vm")]);
-	    }
+	    WFM::CallFunction ("inst_vm_kickoff", [false, false]);
 	}
 
 	Wizard::CloseDialog ();

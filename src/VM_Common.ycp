@@ -10,6 +10,7 @@
 
     import "Report";
     import "Pkg";
+    import "Package";
 
     textdomain "vm";
 
@@ -177,6 +178,10 @@ are supported in the installation."),
 	}
 
 	return ret;
+    }
+
+    global define boolean InstallPackages(list<string> packages) {
+	return Package::InstallAll(packages);
     }
 
 }

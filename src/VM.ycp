@@ -292,4 +292,8 @@
     global boolean Start() {
 	return CallBooleanFunction("Start");
     }
+
+    global boolean InstallPackages() {
+	return CallBooleanFunction("InstallPackages");
+    }
 }

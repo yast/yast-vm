@@ -29,11 +29,6 @@ module_DATA =				\
 	VM_Common.ycp			\
 	VM.ycp
 
-vm:
-	ln -sf . vm
-
-ycpchook = vm
-
 EXTRA_DIST = $(client_DATA) $(ynclude_DATA) $(module_DATA) $(desktop_DATA)
 
 include $(top_srcdir)/Makefile.am.common
