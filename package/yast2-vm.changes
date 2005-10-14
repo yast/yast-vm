@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Oct 14 09:30:02 CEST 2005 - lslezak@suse.cz
+
+- moved generic code to VM_Common::
+- proposal definition is part of the package
+- version 2.13.1
+
+-------------------------------------------------------------------
 Tue Sep 27 11:21:31 CEST 2005 - lslezak@suse.cz
 
 - install required X packages (xorg-x11, xterm) (#117660)

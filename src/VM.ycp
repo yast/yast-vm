@@ -8,7 +8,6 @@
 {
     module "VM";
 
-    import "Report";
     import "VM_XEN";
 
     textdomain "vm";

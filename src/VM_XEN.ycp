@@ -10,14 +10,11 @@
     import "VM_Common";
     import "Report";
     import "HTML";
-    import "Arch";
 
     textdomain "vm";
 
     list <map <string,any> > default_disks = [ $["size" : 1024, "sparse" : false, "target" : "hda" ] ];
     global list <map <string,any> > disks = default_disks;
-
-    global string MAC_address = "";
 
     string domain_prefix = "domain";
 
@@ -44,12 +41,6 @@
     {
 	VM_Common::memory_size = VM_Common::default_memory_size;
 	return true;
-    }
-
-    global string getAvailableMemory() {
-	// xm info | grep free_memory
-
-	return "";
     }
 
     global boolean setStartMode(string mode)
@@ -232,58 +223,8 @@
 	return true;
     }
 
-    global define string ExtractXENKernelImage(string package, string target) {
-	string tmpdir = VM_Common::GetTmpDir();
-	string cmd = sformat("cd %1; /usr/bin/rpm2cpio %2 | /usr/bin/cpio -idvum './boot/vmlinuz-*-xen'", tmpdir, package);
-
-	map out = (map)SCR::Execute(.target.bash_output, cmd);
-	y2milestone("out: %1", out);
-
-	cmd = sformat("/usr/bin/find %1 -type f -name 'vmlinuz-*-xen'", tmpdir + "/boot");
-	out = (map)SCR::Execute(.target.bash_output, cmd);
-	y2milestone("out: %1", out);
-
-	list<string> stdout = splitstring(out["stdout"]:"", "\n");
-	string file = stdout[0]:"";
-
-	y2milestone("found kernel: %1", file);
-
-	if (file != nil && file != "")
-	{
-	    cmd = sformat("/bin/cp -a %1 %2", file, target);
-	    out = (map)SCR::Execute(.target.bash_output, cmd);
-	    y2milestone("out: %1", out);
-
-	    list<string> kpath = splitstring(file, "/");
-
-	    return kpath[size(kpath) - 1]:"";
-	}
-
-	return "";;
-    }
-
-    define string PackageArch() {
-	string arch = "";
-
-	if (Arch::i386())
-	{
-	    arch = "i586";
-	}
-	else if (Arch::x86_64())
-	{
-	    arch = "x86_64";
-	}
-	else
-	{
-	    arch = Arch::arch_short();
-	    y2warning("Unknown architecture, using arch=%1", arch);
-	}
-
-	return arch;
-    }
-
     global define boolean CreateInstallationImage(string kernelpkg, string target) {
-	string arch = PackageArch();
+	string arch = VM_Common::PackageArch();
 	// get installation package
 	string inst = VM_Common::GetPackage("install-initrd", "suse/" + arch);
 	y2milestone("image rpm: %1", inst);
@@ -337,7 +278,7 @@
 		    ret = ret + ", ";
 		}
 
-		ret = ret + sformat("'file:%1,ioemu:%2,w'", f, d["target"]:"");
+		ret = ret + sformat("'file:%1,%2,w'", f, d["target"]:"");
 	    }
 	);
 
@@ -347,60 +288,6 @@
 
 	return ret;
     }
-
-    define integer IsInstSourceDefined(string url) {
-	list<integer> sources = Pkg::SourceGetCurrent (false);
-	integer ret = -1;
-
-	foreach(integer src, sources, {
-		map general_data = Pkg::SourceGeneralData(src);
-		if (url == general_data["url"]:"")
-		{
-		    ret = src;
-		}
-	    }
-	);
-
-	return ret;
-    }
-
-    define map<integer,boolean> InstSourceStatus() {
-	map<integer,boolean> ret = $[];
-
-	list<integer> sources = Pkg::SourceGetCurrent(false);
-
-	foreach(integer src, sources, {
-		map general_data = Pkg::SourceGeneralData(src);
-		y2milestone("general_data: %1", general_data);
-		y2milestone("product_data: %1", Pkg::SourceProductData(src));
-		ret[src] = general_data["enabled"]:false;
-	    }
-	);
-
-	return ret;
-    }
-
-    define map<string,string> DisableAllSources() {
-	map<string,string> ret = $[];
-
-	list<integer> sources = Pkg::SourceGetCurrent (false);
-
-	foreach(integer src, sources, {
-		Pkg::SourceSetEnabled(src, false);
-	    }
-	);
-
-	return ret;
-    }
-
-    define void SetSourceState(map<integer,boolean> state) {
-	list<integer> sources = Pkg::SourceGetCurrent (false);
-	foreach(integer src, boolean enabled, state, {
-		Pkg::SourceSetEnabled(src, enabled);
-	    }
-	);
-    }
-
 
     global define boolean Write() {
 	// TODO check whether the config file already exists
@@ -463,23 +350,6 @@
     }
 
 
-    define list<string> SearchFile(string dir, string name) {
-	list<string> ret = [];
-	string cmd = sformat("cd %1; ls -1 %2", dir, name);
-	map outputmap = (map)SCR::Execute(.target.bash_output, cmd);
-
-	string outputstring = outputmap["stdout"]:"";
-
-	if (outputstring != nil && outputstring != "")
-	{
-	    ret = splitstring(outputstring, "\n");
-	    // remove empty lines
-	    ret = filter(string f, ret, {return f != nil && f != "";});
-	}
-
-	return ret;
-    }
-
     define list<string> PartitionsInfo(string image) {
 	string cmd = sformat("sfdisk -d -uS %1", image);
 	map outputmap = (map)SCR::Execute(.target.bash_output, cmd);
@@ -532,13 +402,6 @@
 	return ret;
     }
 
-    define boolean TryMount(string image, integer offset, string mntpoint) {
-	y2milestone("TryMount: image=%1, offset=%2, mntpoint=%3", image, offset, mntpoint);
-	boolean result = (boolean) SCR::Execute(.target.mount, [image, mntpoint], sformat("-o loop,offset=%1", offset));
-	y2milestone("result: %1", result);
-	return result;
-    }
-
     define map<string,list<string> > SearchFiles(map<string,list<string> > search, string prefix) {
 	map<string,list<string> >result = $[];
 
@@ -549,7 +412,7 @@
 		foreach(string dir, dirs, {
 			if (!found)
 			{
-			    list<string> foundfiles = SearchFile(prefix + "/" + dir, file);
+			    list<string> foundfiles = VM_Common::SearchFile(prefix + "/" + dir, file);
 
 			    if (size(foundfiles) > 0)
 			    {
@@ -571,44 +434,6 @@
 	return result;
     }
 
-    string ParseFstab(string fstab) {
-        map out = (map) SCR::Execute(.target.bash_output, sformat("/bin/grep \" / \" %1 | /usr/bin/cut -f 1 -d \" \"",  fstab));
-	string rdev = "";
-
-	if (out["exit"]:-1 == 0 )
-	{
-	    rdev = (string) (out["stdout"]:"");
-	    list<string> root_dev_list = splitstring(rdev, "\n");
-	    rdev = root_dev_list[0]:"";
-	    y2milestone("Found root device: %1", rdev);
-	}
-	else
-	{
-	    y2error("Cannot read fstab root device entry: %1", out);
-	}
-
-	return rdev;
-    }
-
-    define boolean CopyFile(string source, string target) {
-	y2milestone("copying file %1 to %2", source, target);
-	// -a (archive) = preserve mode and timestamps
-	// -b (backup) = make a backup of the target file
-	return (SCR::Execute(.target.bash, sformat("/bin/cp -a -b %1 %2", source, target))) == 0;
-    }
-
-    define string GetFileNameFromPath(string fname) {
-	string ret = "";
-
-	if (fname != nil)
-	{
-	    list<string> parts = splitstring(fname, "/");
-	    ret = parts[size(parts) - 1]:"";
-	}
-
-	return ret;
-    }
-
     define void ProcessFoundFile(map<string,list<string> > found, string dir) {
 	if (found != nil && size(found) > 0)
 	{
@@ -625,21 +450,21 @@
 		    if (file == "fstab")
 		    {
 			// parse fstab file and set root device name
-			VM_Common::root_device = ParseFstab(filename);
+			VM_Common::root_device = VM_Common::ParseFstab(filename);
 		    }
 		    else if (file == "vmlinuz-*-xen")
 		    {
 			// copy kernel image
-			CopyFile(filename, target_dir);
+			VM_Common::CopyFile(filename, target_dir);
 			// set kernel name
-			kernel_path = target_dir + "/" + GetFileNameFromPath(filename);
+			kernel_path = target_dir + "/" + VM_Common::GetFileNameFromPath(filename);
 		    }
 		    else if (file == "initrd-*-xen")
 		    {
 			// copy initrd image
-			CopyFile(filename, target_dir);
+			VM_Common::CopyFile(filename, target_dir);
 			// set initrd name
-			initrd_path = target_dir + "/" + GetFileNameFromPath(filename);
+			initrd_path = target_dir + "/" + VM_Common::GetFileNameFromPath(filename);
 		    }
 		    else
 		    {
@@ -675,7 +500,7 @@
 
 	    if (offset != nil)
 	    {
-		boolean mounted = TryMount(diskimage, offset, mountpoint);
+		boolean mounted = VM_Common::TryMount(diskimage, offset, mountpoint);
 
 		if (mounted)
 		{
@@ -758,7 +583,7 @@
 	return ret;
     }
 
-    boolean CreateDiskImages(string prefix) {
+    define boolean CreateDiskImages(string prefix) {
 	boolean ret = true;
 	foreach(map<string,any> disk, disks, {
 		integer imgsize = disk["size"]:1024;
@@ -772,7 +597,7 @@
 	return ret;
     }
 
-    global define boolean Prepare() {
+    global define boolean Prepare(/*string target_dir, string kernel_name*/) {
 	// build/extract xen kernel and installation initrd, copy them to the target directory
 	string target_dir = img_prefix + VM_Common::config_name;
 	string cmd = "/bin/mkdir -p " + target_dir;
@@ -781,20 +606,20 @@
 
 
 	// remember inst source config
-	map<integer,boolean> src_status = InstSourceStatus();
+	map<integer,boolean> src_status = VM_Common::InstSourceStatus();
 	integer new_src = -1;
 	y2milestone("src_status: %1", src_status);
 
 	// disable all sources
-	DisableAllSources();
+	VM_Common::DisableAllSources();
 	integer enabled_src = VM_Common::source_id;
-	y2milestone("src_status: %1", InstSourceStatus());
+	y2milestone("src_status: %1", VM_Common::InstSourceStatus());
 
 	// check whether the custom installation source is already defined
 	if (VM_Common::inst_type == `custom)
 	{
 	    string url = VM_Common::custom_source;
-	    integer src_defined = IsInstSourceDefined(url);
+	    integer src_defined = VM_Common::IsInstSourceDefined(url);
 
 	    if (src_defined < 0)
 	    {
@@ -803,23 +628,23 @@
 		y2milestone("Adding new installation source: %1 = %2", url, new_src);
 		enabled_src = new_src;
 		VM_Common::source_id = new_src;
-		y2milestone("src_status: %1", InstSourceStatus());
+		y2milestone("src_status: %1", VM_Common::InstSourceStatus());
 	    }
 	}
 
 	// enable the only one (selected) source
 	Pkg::SourceSetEnabled(enabled_src, true);
-	y2milestone("enabled src %1: %2", enabled_src, InstSourceStatus());
+	y2milestone("enabled src %1: %2", enabled_src, VM_Common::InstSourceStatus());
 
 	// restart sources - use the only one enabled source
 	list sources = Pkg::SourceStartCache(true);
 	y2milestone("Source init: %1", sources);
 
-	string arch = PackageArch();
+	string arch = VM_Common::PackageArch();
 	y2milestone("Extracting Xen kernel from the installation source (arch=%1) ...", arch);
 
 	string kpkg = VM_Common::GetPackage("kernel-xen", "suse/" + arch);
-	kernel_path = ExtractXENKernelImage(kpkg, target_dir + "/");
+	kernel_path = VM_Common::ExtractKernelImage(kpkg, target_dir + "/", "./boot/vmlinuz-*-xen", "vmlinuz-*-xen");
 	if (kernel_path != "")
 	{
 	    kernel_path = target_dir + "/" + kernel_path;
@@ -840,7 +665,7 @@
 	}
 
 	// set source statuses back
-	SetSourceState(src_status);
+	VM_Common::SetSourceState(src_status);
 
 	return true;
     }

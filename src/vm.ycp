@@ -78,7 +78,8 @@ Start installation in the host system."));
 	return `abort;
     }
 
-    if (!Arch::is_xen())
+    // FIXME!!
+    if (false && !Arch::is_xen())
     {
 	// we are already in UML, nested virtual machine is not supported
 	Report::Error(_("For installing a Xen virtual machine the system
@@ -105,6 +106,10 @@ Xen installation cannot be started.
     import "VM";
     // TODO set virtualization type here
     VM::SetVMMtype("xen");
+
+    // initialize ProductControl module (load custom control file)
+    import "VM_Common";
+    VM_Common::InitProductControl();
 
     any ret = CommandLine::Run(cmdline);
 

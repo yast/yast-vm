@@ -11,6 +11,8 @@
     import "Report";
     import "Pkg";
     import "Package";
+    import "Arch";
+    import "ProductControl";
 
     textdomain "vm";
 
@@ -184,4 +186,179 @@ are supported in the installation."),
 	return Package::InstallAll(packages);
     }
 
+    global define boolean CopyFile(string source, string target) {
+	y2milestone("copying file %1 to %2", source, target);
+	// -a (archive) = preserve mode and timestamps
+	// -b (backup) = make a backup of the target file
+	return (SCR::Execute(.target.bash, sformat("/bin/cp -a -b %1 %2", source, target))) == 0;
+    }
+
+    global define string PackageArch() {
+	string arch = "";
+
+	if (Arch::i386())
+	{
+	    arch = "i586";
+	}
+	else if (Arch::x86_64())
+	{
+	    arch = "x86_64";
+	}
+	else
+	{
+	    arch = Arch::arch_short();
+	    y2warning("Unknown architecture, using arch=%1", arch);
+	}
+
+	return arch;
+    }
+
+
+    global define string GetFileNameFromPath(string fname) {
+	string ret = "";
+
+	if (fname != nil)
+	{
+	    list<string> parts = splitstring(fname, "/");
+	    ret = parts[size(parts) - 1]:"";
+	}
+
+	return ret;
+    }
+
+    // kernel_filename = "./boot/vmlinuz-*-xen"
+    // kernel_regexp = "vmlinuz-*-xen"
+    // Extract kernel image from RPM file
+    global define string ExtractKernelImage(string package, string target, string kernel_filename, string kernel_regexp) {
+	string tmpdir = VM_Common::GetTmpDir();
+	string cmd = sformat("cd %1; /usr/bin/rpm2cpio %2 | /usr/bin/cpio -idvum '%3'", tmpdir, package, kernel_filename);
+
+	map out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2milestone("out: %1", out);
+
+	cmd = sformat("/usr/bin/find %1 -type f -name '%2'", tmpdir + "/boot", kernel_regexp);
+	out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2milestone("out: %1", out);
+
+	list<string> stdout = splitstring(out["stdout"]:"", "\n");
+	string file = stdout[0]:"";
+
+	y2milestone("found kernel: %1", file);
+
+	if (file != nil && file != "")
+	{
+	    CopyFile(file, target);
+	    return GetFileNameFromPath(file);
+	}
+
+	return "";;
+    }
+
+    global define map<integer,boolean> InstSourceStatus() {
+	map<integer,boolean> ret = $[];
+
+	list<integer> sources = Pkg::SourceGetCurrent(false);
+
+	foreach(integer src, sources, {
+		map general_data = Pkg::SourceGeneralData(src);
+		y2milestone("general_data: %1", general_data);
+		y2milestone("product_data: %1", Pkg::SourceProductData(src));
+		ret[src] = general_data["enabled"]:false;
+	    }
+	);
+
+	return ret;
+    }
+
+    global define map<string,string> DisableAllSources() {
+	map<string,string> ret = $[];
+
+	list<integer> sources = Pkg::SourceGetCurrent (false);
+
+	foreach(integer src, sources, {
+		Pkg::SourceSetEnabled(src, false);
+	    }
+	);
+
+	return ret;
+    }
+
+    global define void SetSourceState(map<integer,boolean> state) {
+	list<integer> sources = Pkg::SourceGetCurrent (false);
+	foreach(integer src, boolean enabled, state, {
+		Pkg::SourceSetEnabled(src, enabled);
+	    }
+	);
+    }
+
+    global define integer IsInstSourceDefined(string url) {
+	list<integer> sources = Pkg::SourceGetCurrent (false);
+	integer ret = -1;
+
+	foreach(integer src, sources, {
+		map general_data = Pkg::SourceGeneralData(src);
+		if (url == general_data["url"]:"")
+		{
+		    ret = src;
+		}
+	    }
+	);
+
+	return ret;
+    }
+
+
+    global define string ParseFstab(string fstab) {
+        map out = (map) SCR::Execute(.target.bash_output, sformat("/bin/grep \" / \" %1 | /usr/bin/cut -f 1 -d \" \"",  fstab));
+	string rdev = "";
+
+	if (out["exit"]:-1 == 0 )
+	{
+	    rdev = (string) (out["stdout"]:"");
+	    list<string> root_dev_list = splitstring(rdev, "\n");
+	    rdev = root_dev_list[0]:"";
+	    y2milestone("Found root device: %1", rdev);
+	}
+	else
+	{
+	    y2error("Cannot read fstab root device entry: %1", out);
+	}
+
+	return rdev;
+    }
+
+    global define list<string> SearchFile(string dir, string name) {
+	list<string> ret = [];
+	string cmd = sformat("cd %1; ls -1 %2", dir, name);
+	map outputmap = (map)SCR::Execute(.target.bash_output, cmd);
+
+	string outputstring = outputmap["stdout"]:"";
+
+	if (outputstring != nil && outputstring != "")
+	{
+	    ret = splitstring(outputstring, "\n");
+	    // remove empty lines
+	    ret = filter(string f, ret, {return f != nil && f != "";});
+	}
+
+	return ret;
+    }
+
+    global define boolean TryMount(string image, integer offset, string mntpoint) {
+	y2milestone("TryMount: image=%1, offset=%2, mntpoint=%3", image, offset, mntpoint);
+	boolean result = (boolean) SCR::Execute(.target.mount, [image, mntpoint], sformat("-o loop,offset=%1", offset));
+	y2milestone("result: %1", result);
+	return result;
+    }
+
+    global string vm_control_file = "/usr/share/YaST2/control/vm_install.xml";
+
+    global void InitProductControl() {
+	ProductControl::custom_control_file = vm_control_file;
+
+	if (!ProductControl::Init())
+	{
+	    Report::Error(sformat(_("Control file %1 was not found."), ProductControl::custom_control_file));
+	}
+    }
 }
