@@ -27,27 +27,16 @@
 	if (force_reset)
 	{
 	    // reset user settings and propose new values
-	    VM::ResetMAC();
+	    VM::ResetNetworkProposal();
 	}
 
+	ret = $[ "preformatted_proposal" : HTML::List(VM::GetNetworkProposal()) ];
 
-	list<string> proposal = [];
-
-	string mac = VM::GetMAC();
-	if (mac == nil || mac == "")
+	map warn = VM::GetNetworkProposalWarning();
+	if (warn != nil && size(warn) > 0)
 	{
-	    // part of proposal - MAC address is not specified, assign random
-	    mac = _("Random MAC address");
+	    ret = union(ret, warn);
 	}
-
-	proposal = [
-	    // Proposal item - MAC adress of network card in the virtual machine
-	    sformat (_("MAC Address of Virtual Network Card: %1"), mac),
-	];
-
-	ret = $[ "preformatted_proposal" :
-		 HTML::List (proposal)
-	];
     }
     else if (func == "AskUser")
     {

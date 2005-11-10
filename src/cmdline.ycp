@@ -18,6 +18,7 @@
     import "Progress";
     import "Wizard";
     import "GetInstArgs";
+    import "VM";
 
     textdomain "vm";
 
@@ -28,7 +29,7 @@
 
 	// calling inst_proposal
 	symbol ret = (symbol) WFM::CallFunction ("inst_proposal", 
-                [GetInstArgs::ButtonsProposal(true,true,"vm")]);
+                [GetInstArgs::ButtonsProposal(true,true,VM::GetVMMtype())]);
 
 	if (ret == `next)
 	{

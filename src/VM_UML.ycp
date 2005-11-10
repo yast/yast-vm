@@ -1,0 +1,808 @@
+/**
+ * File:	modules/UML.ycp
+ * Package:	UML configuration
+ * Summary:	UML installation module
+ * Authors:	Arvin Schnell <arvin@suse.de>
+ *
+ * $Id: UML.ycp 22797 2005-03-24 15:09:57Z lslezak $
+ */
+{
+    module "VM_UML";
+
+    import "Users";
+    import "Report";
+    import "VM_Common";
+    import "HTML";
+    import "Directory";
+
+    textdomain "vm";
+
+    list<map<string,any> > default_disks = [ $["size" : 1024, "sparse" : false] ];
+    global list<map<string,any> > disks = default_disks;
+
+    global string username = "";
+
+    global string homedir = "";
+
+    global string tap_device = "";
+
+    global string eth_device = "eth0";
+
+    string kernel_path = "";
+
+    string kernel_file = "";
+
+    string initrd_path = "";
+
+    path umlpath = .uml.options;
+
+    string start_option = "";
+
+    /**
+     *
+     */
+    define void register_options_file () ``{
+        string scr_file = (string)(SCR::Read (.target.tmpdir)) + "/uml_option.scr";
+        SCR::Write (.target.string, scr_file,
+		    sformat ("%1\n\n`ag_ini(`SysConfigFile(\"%2\"))\n", umlpath,
+			     sformat ("/etc/sysconfig/uml/%1.conf", VM_UML::username)));
+        SCR::RegisterAgent (umlpath, scr_file);
+    }
+
+    /**
+     *
+     */
+    define void unregister_options_file () ``{
+
+	SCR::Write (umlpath, nil);
+	SCR::UnregisterAgent (umlpath);
+
+	// The options file must not be owned by the UML user.  Otherwise it
+	// would be possible the change it from the UML instance which would
+	// be a security hole.
+	SCR::Execute (.target.bash, sformat ("/bin/chown root:root /etc/sysconfig/uml/%1.conf",
+					     VM_UML::username));
+	SCR::Execute (.target.bash, sformat ("/bin/chmod 0644 /etc/sysconfig/uml/%1.conf",
+					     VM_UML::username));
+    }
+
+
+    global define string propose_username() ``{
+
+	string userprefix = "uml";
+	integer index = 0;
+	// limit number of user names for trying
+	integer maxindex = 100;
+	string ret = nil;
+
+	while (index < maxindex && ret == nil)
+	{
+	    string user = sformat("%1%2", userprefix, index);
+
+	    // check whether user already exists
+	    string error = Users::CheckUsername(user);
+
+	    if (error == "")
+	    {
+		ret = user;
+	    }
+	    else
+	    {
+		y2error("Error: %1", error);
+	    }
+
+	    index = index + 1;
+	}
+
+	return ret;
+    }
+
+    global define string propose_homedir(string user_name) ``{
+	return (user_name != nil) ? (Users::GetDefaultHome("local") + user_name) : nil;
+    }
+
+    global define boolean CreateTunGroup() ``{
+	string error = Users::CheckGroupname("tun");
+	boolean ret = false;
+
+	y2debug("check group name: '%1'", error);
+	if (error == "")
+	{
+	    Users::ResetCurrentGroup();
+
+	    // create "tun" group
+	    map<string, any> grp = Users::GetCurrentGroup();
+	    grp["cn"] = "tun";
+	    grp["type"] = "local";
+
+	    ret = Users::AddGroup(grp) == "";
+	    y2debug("Users::AddGroup: %1", ret);
+
+	    if (ret == true)
+	    {
+		ret = Users::CommitGroup();
+	    }
+
+	    return ret;
+	}
+
+	y2debug("Created 'tun' group: %1", ret);
+	return true;
+    }
+
+    /**
+     * Create specified UML user account in the system.
+     * @return boolean true on success
+     */
+    global define boolean CreateUser() ``{
+
+	if (CreateTunGroup() == false)
+	{
+	    Report::Error(_("Cannot create group \"tun\"."));
+	    return false;
+	}
+
+	map<string,any> user = $[
+	    "homedirectory" : homedir,
+	    "userpassword"  : "",
+	    "create_home"   : true,
+	    "loginshell"    : "/bin/false",
+	    "no_skeleton"   : true,
+	    "username"      : username,
+	    "groupname"     : "tun",
+	    "grouplist"     : $["tun":1],
+	    "type"          : "local"
+	];
+
+	boolean ret = false;
+
+	y2debug("Creating user: %1", user);
+
+
+	Users::ResetCurrentUser ();
+
+	if (Users::AddUser(user) == "")
+	{
+	    Users::CommitUser();
+
+	    // don't show progress
+	    Users::SetGUI(false);
+	    ret = Users::Write() == "";
+	    // enable reporting of errors
+	    Users::SetGUI(true);
+	}
+	else
+	{
+	    Report::Error (sformat(_("Cannot create account for user %1."),
+				   username));
+	}
+
+	return ret;
+    }
+
+
+    global void UserInitialize() ``{
+	// initialize Users:: module
+	Users::SetGUI(false);
+	Users::Read();
+
+	// propose user name and home directory
+	username = propose_username();
+	homedir = propose_homedir(username);
+    }
+
+    global string propose_MAC_address() ``{
+	// use hostname and disk image file name for MAC address proposal
+	// each UML machine on network should have different MAC address
+	map<string,any> h_out = (map<string,any>)SCR::Execute(.target.bash_output, "/bin/hostname");
+	string host_n = mergestring(splitstring(h_out["stdout"]:"", "\n"), "");
+	string command = sformat("echo %1 | md5sum", homedir + "/ubd0" + host_n);
+	map<string,any> out = (map<string,any>)SCR::Execute(.target.bash_output, command);
+	list<string> result= splitstring(out["stdout"]:"", "\n");
+
+	y2debug("result[0]: %1", result[0]:"");
+	string ret = regexpsub(result[0]:"", "^(..)(..)(..)(..).*", "fe:fd:\\1:\\2:\\3:\\4");
+
+	return ret;
+    }
+
+    global void NetworkInitialize() ``{
+	tap_device = username;
+	VM_Common::MAC_address = propose_MAC_address();
+    }
+
+    global boolean setMAC(string mac)
+    {
+	y2milestone("MAC address: %1", mac);
+
+	// reset random flag
+	if (VM_Common::MAC_address != mac)
+	{
+	    VM_Common::random_MAC = false;
+	}
+
+	VM_Common::MAC_address = mac;
+	return true;
+    }
+
+    global string getMAC()
+    {
+	return VM_Common::MAC_address;
+    }
+
+    global boolean resetMAC()
+    {
+	VM_Common::MAC_address = propose_MAC_address();
+	return true;
+    }
+
+    global boolean setMemorySize(integer msize)
+    {
+	VM_Common::memory_size = msize;
+	return true;
+    }
+
+    global integer getMemorySize()
+    {
+	return VM_Common::memory_size;
+    }
+
+    global boolean resetMemorySize()
+    {
+	VM_Common::memory_size = VM_Common::default_memory_size;
+	return true;
+    }
+
+    global boolean setStartMode(string mode)
+    {
+	y2milestone("start_mode: %1", mode);
+	VM_Common::start_mode = mode;
+	return true;
+    }
+
+    global string getStartMode()
+    {
+	return VM_Common::start_mode;
+    }
+
+    global boolean resetStartMode()
+    {
+	VM_Common::start_mode = VM_Common::default_start_mode;
+	return true;
+    }
+
+    global map<string,any> getOptionsProposal()
+    {
+	list<string> tmp = [];
+
+	// Proposal for virtual machine installation
+	tmp = add (tmp, sformat (_("Name of Virtual Machine: %1"), VM_Common::config_name));
+
+	// Proposal for virtual machine installation
+	tmp = add (tmp, sformat (_("Memory Size: %1 MB"), getMemorySize()));
+
+	y2milestone("mode: %1", getStartMode());
+
+	// Proposal for virtual machine installation - %1 is a start mode (On boot/Manually)
+	tmp = add (tmp, sformat (_("Activation: %1"),
+				 VM_Common::start_mode_names[getStartMode()]:_("Unknown")));
+
+	if (VM_Common::extra_args != "")
+	{
+	    // part of proposal text, %1 are extra kernel options
+	    tmp = add (tmp, sformat (_("Boot Options: %1"), VM_Common::extra_args));
+	}
+
+	map<string,any> ret = $[ "preformatted_proposal" :
+		 HTML::List (tmp)
+	];
+
+	return ret;
+    }
+
+    global define list<string> getDiskProposal() {
+	list<string> ret = [];
+
+	integer i = 1;
+	foreach (map<string,any> m, VM_UML::disks, ``{
+	    // Disk name for uml installation proposal
+	    // %1 is a number, %2 size of disk, %3 is "(sparse image)" if it's set
+	    ret = add (ret, sformat (_("Disk %1: %2 MB %3"), i, m["size"]:0, (m["sparse"]:false) ? _("(sparse file)") : ""));
+	    i = i + 1;
+	});
+
+	return ret;
+    }
+
+    global define string getSourceProposal() {
+	y2debug("source configuration: %1, %2, %3", VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
+	return VM_Common::CreateSourceProposal(VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
+    }
+
+    global define map getSourceProposalWarning() {
+	return VM_Common::CreateSourceProposalWarning(VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
+    }
+
+    global define boolean resetSourceConfig() {
+	VM_Common::source_id = VM_Common::ProposeSelection();
+	return true;
+    }
+
+    global define map<string,any> getSourceConfig() {
+	return $[ "source_id" : VM_Common::source_id, "inst_type" : VM_Common::inst_type, "custom_source" : VM_Common::custom_source ];
+    }
+
+    global define list<string> getNetworkProposal() {
+	list<string> proposal = [];
+
+	string mac = VM_Common::getMACproposal();
+
+	proposal = [
+	    // Proposal item - TAP device name
+	    sformat (_("Network Device: %1"), tap_device),
+	    // Proposal item - MAC adress of network card in the virtual machine
+	    sformat (_("MAC Address of Virtual Network Card: %1"), mac),
+	];
+
+	return proposal;
+    }
+
+    global define map getNetworkProposalWarning() {
+	map<string,any> ret = $[];
+
+	if (VM_UML::tap_device == nil || VM_UML::tap_device == "" || VM_Common::MAC_address == nil || VM_Common::MAC_address == "")
+	{
+	    // error in the installation proposal - don't allow to continue
+	    ret = add(ret, "warning", _("Network configuration is not valid."));
+	    ret = add(ret, "warning_level", `blocker);
+	}
+
+	return ret;
+    }
+
+    global define boolean setSourceConfig(integer sid, symbol type, string custom) {
+
+	VM_Common::source_id = sid;
+	VM_Common::inst_type = type;
+	VM_Common::custom_source = custom;
+
+	return true;
+    }
+
+    define string ProposeConfigName() ``{
+
+	string userprefix = "uml";
+	integer index = 0;
+	// limit number of user names for trying
+	integer maxindex = 100;
+	string ret = nil;
+
+	while (index < maxindex && ret == nil)
+	{
+	    string user = sformat("%1%2", userprefix, index);
+
+	    // check whether user already exists
+	    string error = Users::CheckUsername(user);
+
+	    if (error == "")
+	    {
+		ret = user;
+	    }
+	    else
+	    {
+		y2error("Error: %1", error);
+	    }
+
+	    index = index + 1;
+	}
+
+	return ret;
+    }
+
+
+    global define boolean resetConfigName()
+    {
+	VM_Common::config_name = ProposeConfigName();
+	return true;
+    }
+
+    global string getConfigName() {
+	return VM_Common::config_name;
+    }
+
+    global boolean setConfigName(string cname) {
+	VM_Common::config_name = cname;
+	return true;
+    }
+
+    global define string getExtraArgs() {
+	return VM_Common::extra_args;
+    }
+
+    global define boolean setExtraArgs(string args) {
+	VM_Common::extra_args = args;
+	return true;
+    }
+
+    global define boolean resetExtraArgs() {
+	VM_Common::extra_args = "";
+	return true;
+    }
+
+    global define boolean setDiskConfig(list<map<string,any> > dconf)
+    {
+	disks = dconf;
+	return true;
+    }
+
+    global define list<map<string,any> > getDiskConfig() {
+	return disks;
+    }
+
+    global define boolean resetDiskConfig() {
+	disks = default_disks;
+	return true;
+    }
+
+    global define string getTapDevice() {
+	return tap_device;
+    }
+
+    global define boolean InstallPackages() {
+	return VM_Common::InstallPackages(["xterm", "xorg-x11", "uml-utilities", "bridge-utils"]);
+    }
+
+    define boolean CreateDiskImages(string prefix) {
+	boolean ret = true;
+
+	integer num = 0;
+
+	foreach(map<string,any> disk, disks, {
+		integer imgsize = disk["size"]:1024;
+		boolean sparse = disk["sparse"]:false;
+
+		ret = ret && VM_Common::CreateDiskImage(prefix + "/ubd" + tostring(num), imgsize, sparse);
+
+		num = num + 1;
+	    }
+	);
+
+	return ret;
+    }
+
+    define boolean setXaccess(string user, boolean enable) {
+	map echo = (map) SCR::Execute(.target.bash_output, "echo -n $HOME");
+	string home = echo["stdout"]:"";
+
+	// check whether .xauth dir exists
+	if (SCR::Read(.target.size, home + "/.xauth") < 0)
+	{
+	    y2milestone(".xauth doesn't exist");
+
+	    // the directory doesn't exist, nothing to disable
+	    if (enable == false)
+	    {
+		return true;
+	    }
+
+	    SCR::Execute(.target.mkdir, home + "/.xauth");
+	}
+
+	string xexport = (string) SCR::Read(.target.string, home + "/.xauth/export");
+	list<string> exports = [];
+
+	if (xexport != nil)
+	{
+	    exports = splitstring(xexport, "\n");
+	}
+
+	// filter out empty lines
+//	exports = filter(string e, exports, {return e != "";});
+
+	boolean changed = false;
+
+	if (enable == true)
+	{
+	    if (!contains(exports, user))
+	    {
+		exports = add(exports, user);
+		changed = true;
+	    }
+	}
+	else if (enable == false)
+	{
+	    if (contains(exports, username))
+	    {
+		exports = filter(string e, exports, {
+			return e != user;
+		    }
+		);
+
+		changed = true;
+	    }
+	}
+
+	// write changes
+	if (changed == true && exports != nil)
+	{
+	    y2milestone("changed exports to: %1", exports);
+	    return (boolean) SCR::Write(.target.string, home + "/.xauth/export", mergestring(exports, "\n"));
+	}
+
+	return true;
+    }
+
+    /**
+     *
+     */
+    define boolean set_start_option() ``{
+	string url = "";
+
+	if (VM_Common::inst_type == `configured)
+	{
+	    map general_data = Pkg::SourceGeneralData(VM_Common::source_id);
+	    url = general_data["url"]:"";
+	}
+	else if (VM_Common::inst_type == `custom)
+	{
+	    url = VM_Common::custom_source;
+	}
+	else if (VM_Common::inst_type == `slp)
+	{
+	    url = "slp://";
+	}
+
+	start_option = " install=" + url;
+    }
+
+
+    global define boolean Prepare(/*string target_dir, string kernel_name*/) {
+	// build/extract xen kernel and installation initrd, copy them to the target directory
+	string target_dir = homedir;
+	string cmd = "/bin/mkdir -p " + target_dir;
+	map out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2debug("mkdir output: %1", out);
+
+
+	// remember inst source config
+	map<integer,boolean> src_status = VM_Common::InstSourceStatus();
+	integer new_src = -1;
+	y2milestone("src_status: %1", src_status);
+
+	// disable all sources
+	VM_Common::DisableAllSources();
+	integer enabled_src = VM_Common::source_id;
+	y2milestone("src_status: %1", VM_Common::InstSourceStatus());
+
+	// check whether the custom installation source is already defined
+	if (VM_Common::inst_type == `custom)
+	{
+	    string url = VM_Common::custom_source;
+	    integer src_defined = VM_Common::IsInstSourceDefined(url);
+
+	    if (src_defined < 0)
+	    {
+		// Add a new installation source
+		new_src = Pkg::SourceCreate(url, "");
+		y2milestone("Adding new installation source: %1 = %2", url, new_src);
+		enabled_src = new_src;
+		VM_Common::source_id = new_src;
+		y2milestone("src_status: %1", VM_Common::InstSourceStatus());
+	    }
+	}
+
+	// enable the only one (selected) source
+	Pkg::SourceSetEnabled(enabled_src, true);
+	y2milestone("enabled src %1: %2", enabled_src, VM_Common::InstSourceStatus());
+
+	// restart sources - use the only one enabled source
+	list sources = Pkg::SourceStartCache(true);
+	y2milestone("Source init: %1", sources);
+
+	string arch = VM_Common::PackageArch();
+	y2milestone("Extracting Xen kernel from the installation source (arch=%1) ...", arch);
+
+	string kpkg = VM_Common::GetPackage("kernel-um", "suse/" + arch);
+
+	kernel_file = VM_Common::ExtractKernelImage(kpkg, target_dir + "/", "./boot/linux-*-um", "linux-*-um");
+	kernel_path = kernel_file;
+
+	if (kernel_path != "")
+	{
+	    kernel_path = target_dir + "/" + kernel_path;
+	}
+
+	y2milestone("Creating installation ramdisk (initrd)...");
+	VM_Common::CreateInstallationImage(kpkg, target_dir + "/inst-initrd");
+	initrd_path = target_dir + "/inst-initrd";
+	y2milestone("kernel: %1, initrd: %2", kernel_path, initrd_path);
+
+	// create disk image file(s)
+	y2milestone("Creating disk images...");
+	CreateDiskImages(target_dir);
+
+	if (new_src >= 0)
+	{
+	    Pkg::SourceDelete(new_src);
+	}
+
+	// set source statuses back
+	VM_Common::SetSourceState(src_status);
+
+	// create the user
+	if (!CreateUser())
+	{
+	    Report::Error (sformat (_("Cannot create UML user %1."), username));
+	    return false;
+	}
+
+	// fix file ownership and permissions
+	SCR::Execute (.target.bash, sformat("/bin/chown %1:users %2", username, kernel_path));
+	SCR::Execute (.target.bash, sformat("/bin/chmod 0700 %1", kernel_path));
+
+	SCR::Execute (.target.bash, sformat("/bin/chown %1:users %2", username, initrd_path));
+	SCR::Execute (.target.bash, sformat("/bin/chmod 0600 %1", initrd_path));
+
+	// enable X access
+	setXaccess(username, true);
+
+	set_start_option();
+
+	return true;
+    }
+
+    global define boolean Write() ``{
+
+	register_options_file();
+
+	SCR::Write (add (umlpath, "MEMORY"), VM_Common::memory_size);
+	SCR::Write (add (umlpath, "NCPUS"), VM_Common::number_of_cpus);
+
+	SCR::Write (add (umlpath, "STARTMODE"), VM_Common::start_mode);
+
+	SCR::Write (add (umlpath, "USERNAME"), VM_UML::username);
+	SCR::Write (add (umlpath, "HOMEDIR"), VM_UML::homedir);
+
+	SCR::Write (add (umlpath, "TAP_DEVICE"), VM_UML::tap_device);
+	SCR::Write (add (umlpath, "MAC_ADDRESS"), VM_Common::MAC_address);
+
+	// connect virtual UML ethernet device to real device
+	SCR::Write (add (umlpath, "ETH_DEVICE"), VM_UML::eth_device);
+
+	SCR::Write (add (umlpath, "EXTRA_ARGS"), VM_Common::extra_args);
+
+	SCR::Write (add (umlpath, "KERNEL"), kernel_file);
+
+	SCR::Write (add (umlpath, "INITRD"), "inst-initrd");
+
+	unregister_options_file();
+
+	return true;
+    }
+    /**
+     * Write ROOT_DEVICE variable into sysconfig file
+     * @param root_device ROOT_DEVICE value
+     */
+    define boolean WriteRootDevice(string root_device)
+    {
+	boolean ret = false;
+	register_options_file();
+
+	ret = (boolean)SCR::Write(add(umlpath, "ROOT_DEVICE"), root_device);
+
+	unregister_options_file();
+
+	return ret;
+    }
+
+    global define boolean Start() {
+	// start the VM in xterm session
+	string uml_command = "cd " + homedir + " ; " +
+	    Directory::ybindir + "/start-uml " +
+	    "/etc/sysconfig/uml/" + username + ".conf";
+
+	y2milestone("Starting UML VM (%1)...", uml_command + start_option);
+	return SCR::Execute(.target.bash, uml_command + start_option) == 0;
+    }
+
+    global define boolean Prepare2() {
+	// reset installation URL
+	start_option = " install=";
+
+	map out = (map) SCR::Execute(.target.bash_output, sformat("/bin/grep \" / \" %1 | /usr/bin/cut -f 1 -d \" \"",  homedir + "/mtab"));
+	string root_device = "";
+
+	if (out["exit"]:-1 == 0 )
+	{
+	     root_device = (string) (out["stdout"]:"");
+	     list<string> root_dev_list = splitstring(root_device, "\n");
+	     root_device = root_dev_list[0]:"";
+	}
+	else
+	{
+	    return false;
+	}
+
+	y2milestone("UML root device: %1", root_device);
+
+	// write detected root device to sysconfig file
+	return WriteRootDevice(root_device);
+    }
+
+
+    global define boolean Prepare3() {
+	// disable X access
+	setXaccess(username, true);
+	return true;
+    }
+
+    global define map GetFunctions()
+    {
+	return $[
+	    "setMemorySize" : VM_UML::setMemorySize,
+	    "getMemorySize" : VM_UML::getMemorySize,
+	    "resetMemorySize" : VM_UML::resetMemorySize,
+
+	    "setStartMode" : VM_UML::setStartMode,
+	    "getStartMode" : VM_UML::getStartMode,
+	    "resetStartMode" : VM_UML::resetStartMode,
+
+	    "setMAC" : VM_UML::setMAC,
+	    "getMAC" : VM_UML::getMAC,
+	    "resetMAC" : VM_UML::resetMAC,
+
+	    "setConfigName" : VM_UML::setConfigName,
+	    "getConfigName" : VM_UML::getConfigName,
+	    "resetConfigName" : VM_UML::resetConfigName,
+
+	    "getOptionsProposal" : VM_UML::getOptionsProposal,
+
+	    "setDiskConfig" : VM_UML::setDiskConfig,
+	    "getDiskConfig" : VM_UML::getDiskConfig,
+	    "resetDiskConfig" : VM_UML::resetDiskConfig,
+	    "getDiskProposal" : VM_UML::getDiskProposal,
+
+	    "getSourceConfig" : VM_UML::getSourceConfig,
+	    "setSourceConfig" : VM_UML::setSourceConfig,
+	    "getSourceProposal" : VM_UML::getSourceProposal,
+	    "getSourceProposalWarning" : VM_UML::getSourceProposalWarning,
+	    "resetSourceConfig" : VM_UML::resetSourceConfig,
+
+	    "getNetworkProposal" : VM_UML::getNetworkProposal,
+	    "getNetworkProposalWarning" : VM_UML::getNetworkProposalWarning,
+
+	    "getExtraArgs"	: VM_UML::getExtraArgs,
+	    "setExtraArgs"	: VM_UML::setExtraArgs,
+	    "resetExtraArgs"	: VM_UML::resetExtraArgs,
+
+	    "getTapDevice"	: VM_UML::getTapDevice,
+
+	    "Write" : VM_UML::Write,
+
+	    // prepare
+	    "Prepare" : VM_UML::Prepare,
+
+	    // called before starting the 2nd stage
+	    "Prepare2" : VM_UML::Prepare2,
+
+	    // update the configuration after installation
+	    "Prepare3" : VM_UML::Prepare3,
+
+	    // start the VM
+	    "Start"	: VM_UML::Start,
+	    "InstallPackages" : VM_UML::InstallPackages
+	];
+    }
+
+    global void VM_UML() ``{
+	// propose selection
+	resetSourceConfig();
+
+	// propose configuration (domain) name
+	resetConfigName();
+
+	UserInitialize();
+
+	NetworkInitialize();
+    }
+}

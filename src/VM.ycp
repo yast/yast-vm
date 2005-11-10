@@ -8,8 +8,6 @@
 {
     module "VM";
 
-    import "VM_XEN";
-
     textdomain "vm";
 
 
@@ -62,7 +60,14 @@
     global boolean SetVMMtype(string vmm) {
 	if (vmm == "xen")
 	{
+	    import "VM_XEN";
 	    functions = VM_XEN::GetFunctions();
+	    vmmtype = vmm;
+	}
+	else if (vmm == "uml")
+	{
+	    import "VM_UML";
+	    functions = VM_UML::GetFunctions();
 	    vmmtype = vmm;
 	}
 	else
@@ -111,8 +116,26 @@
 	return CallBooleanFunction("resetMemorySize");
     }
 
+    global boolean ResetNetworkProposal() {
+	return CallBooleanFunction("resetNetworkProposal");
+    }
+
     global string GetStartMode() {
 	return CallStringFunction("getStartMode");
+    }
+
+    global list<string> GetNetworkProposal() {
+	list<string>() toEval = (list<string>())functions["getNetworkProposal"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("getNetworkProposal() function is missing!");
+	    return nil;
+	}
     }
 
     global boolean SetStartMode(string smode) {
@@ -224,6 +247,21 @@
 	}
     }
 
+    global map GetNetworkProposalWarning()
+    {
+	map() toEval = (map())functions["getNetworkProposalWarning"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("GetNetworkProposalWarning() function is missing!");
+	    return nil;
+	}
+    }
+
     global boolean ResetSource() {
 	return CallBooleanFunction("resetSourceConfig");
     }
@@ -295,4 +333,9 @@
     global boolean InstallPackages() {
 	return CallBooleanFunction("InstallPackages");
     }
+
+    global string GetTapDevice() {
+	return CallStringFunction("getTapDevice");
+    }
+
 }

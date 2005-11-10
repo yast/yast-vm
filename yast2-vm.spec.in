@@ -1,9 +1,13 @@
 @HEADER-COMMENT@
 
-# neededforbuild  yast2-devel-packages
+# neededforbuild  yast2-devel-packages yast2-perl-bindings perl-Digest-SHA1 perl-gettext yast2-users
 
 @HEADER@
-Requires:	yast2 yast2-installation
+Requires:	yast2 yast2-installation yast2-users
+
+# UML support has been move into this package
+Obsoletes:	yast2-uml
+Provides:	yast2-uml
 
 Summary:	Start installation in a Virtual Machine
 
@@ -15,6 +19,8 @@ Summary:	Start installation in a Virtual Machine
 @BUILD@
 
 @INSTALL@
+mkdir $RPM_BUILD_ROOT/sbin
+ln -sf ../etc/init.d/uml $RPM_BUILD_ROOT/sbin/rcuml
 
 @CLEAN@
 
@@ -31,3 +37,8 @@ Summary:	Start installation in a Virtual Machine
 %dir /usr/share/YaST2/control
 /usr/share/YaST2/control/vm_install.xml
 %doc @docdir@
+@clientdir@/uml*.ycp
+@clientdir@/inst_uml*.ycp
+@ybindir@/start-uml
+/etc/init.d/uml
+/sbin/rcuml

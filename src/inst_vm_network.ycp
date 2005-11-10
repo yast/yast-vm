@@ -32,6 +32,15 @@
 
 	    `VSpacing (1),
 
+	    // set tap device name for UML VM
+	    (VM::GetVMMtype() == "uml") ?
+	    `Left(`TextEntry(`id(`tap_device),
+		    // text entry label
+		    _("TAP &Device Name"),
+		    VM::GetTapDevice()
+		)
+	    ) : `Empty(),
+
 	    `Left(`TextEntry(`id(`MAC_address),
 		    // text entry label
 		    _("&MAC Address"),

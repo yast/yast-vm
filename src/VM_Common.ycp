@@ -36,6 +36,8 @@
 
     global string MAC_address = default_MAC;
 
+    global boolean random_MAC = true;
+
     global string config_name = "";
 
     // activation mode - in virtual machine installation proposal
@@ -361,4 +363,61 @@ are supported in the installation."),
 	    Report::Error(sformat(_("Control file %1 was not found."), ProductControl::custom_control_file));
 	}
     }
+
+    global define string getMACproposal() {
+	string mac = "";
+
+	if (random_MAC == true) {
+	    // part of proposal - MAC address is not specified, assign random
+	    mac = _("Random MAC address");
+
+	    if (MAC_address != nil && MAC_address != "")
+	    {
+		// add proposed value
+		mac = sformat("%1 (Proposed value '%2')", mac, MAC_address);
+	    }
+	}
+	else {
+	    mac = MAC_address;
+	}
+
+	return mac;
+    }
+
+    global define boolean CreateInstallationImage(string kernelpkg, string target) {
+	string arch = VM_Common::PackageArch();
+	// get installation package
+	string inst = VM_Common::GetPackage("install-initrd", "suse/" + arch);
+	y2milestone("image rpm: %1", inst);
+
+	if (inst == nil || inst == "")
+	{
+	    y2error("Cannot obtain install-initrd package.");
+	    return false;
+	}
+
+	string tmpdir = VM_Common::GetTmpDir();
+	string cmd = sformat("cd %1; /usr/bin/rpm2cpio %2 | /usr/bin/cpio -idvum", tmpdir, inst);
+
+	map out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2debug("out: %1", out);
+
+	cmd = sformat("/bin/ls -1 %1/*.gz", tmpdir + "/usr/lib/install-initrd");
+	out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2debug("out: %1", out);
+
+	list<string> stdout = splitstring(out["stdout"]:"", "\n");
+	y2debug("found base initrd files: %1", stdout);
+
+	string file = stdout[0]:"";
+	y2milestone("found initrd: %1", file);
+
+	// create the image
+	cmd = sformat("%1/usr/sbin/mkinstallinitrd --kernel-rpm %2 --libdir %3 %4", tmpdir, kernelpkg, tmpdir + "/usr/lib/install-initrd", target);
+	out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2milestone("mkinstallinitrd output: %1", out);
+
+	return out["exit"]:1 == 0;
+    }
+
 }

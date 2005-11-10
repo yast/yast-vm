@@ -1,0 +1,105 @@
+/**
+ * File:	include/vm/vm.ycp
+ * Module:	Installation in a virtual machine
+ * Summary:	Main virtual machine installation
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * $Id$
+ */
+
+{
+    textdomain "vm";
+
+    import "Report";
+    import "Arch";
+    import "CommandLine";
+
+    include "vm/cmdline.ycp";
+
+    /**
+     * Definition of command line mode options
+     */
+    map cmdline = $[
+	// help text
+	"help"      : _("Start installation in a virtual machine"),
+	"id"        : "vm",
+	"guihandler": GUIhandler,
+	"actions"   : $[
+	    "start" : $[
+		// command description
+		"help"      : _("Start installation"),
+		"handler"   : startHandler
+	    ]
+	],
+	"options" : $[
+	    "install" : $[
+		"type"      : "string",
+		// option description
+		"help"      : _("URL of installation source ")
+	    ],
+	    "mem" : $[
+		"type"      : "string",
+		// option description
+		"help"      : _("Memory size used by the virtual machine")
+	    ],
+	    "startmode" : $[
+		"type"      : "string",
+		// option description
+		"help"      : _("Start mode of the installed virtual machine (manual,onboot)")
+	    ],
+	    "disk" : $[
+		"type"      : "string",
+		// option description
+		"help"      : _("Size of virtual disk (image size)")
+	    ],
+	    "sparse" : $[
+		"type"      : "string",
+		// option description
+		"help"      : _("Create sparse disk image file")
+	    ],
+	    "MAC" : $[
+		"type"      : "string",
+		// option description
+		"help"      : _("MAC address of the virtual ethernet card")
+	    ],
+	],
+	"mappings" : $[
+	    "start" : ["install", "mem", "startmode", "disk", "sparse", "MAC"]
+	]
+    ];
+
+    // TODO check whether VM can be started
+    if (Arch::is_uml () == true)
+    {
+	// we are already in UML, nested virtual machine is not supported
+	Report::Error(_("Virtual machine installation cannot be started inside UML machine.
+Start installation in the host system."));
+
+	return `abort;
+    }
+
+    // check whether X window system is accessible
+    // the installation runs in xterm, we need access to a X server
+    integer exit_status = (integer) SCR::Execute(.target.bash, "/usr/X11R6/bin/xdpyinfo");
+    y2milestone("X check exit status: %1", exit_status);
+
+    if (exit_status != 0)
+    {
+	Report::Error(_("Virtual machine installation requires access to a graphical environment."));
+
+	return `abort;
+    }
+
+    // initialize to xen VM type
+    import "VM";
+    // TODO set virtualization type here
+    VM::SetVMMtype("uml");
+
+    // initialize ProductControl module (load custom control file)
+    import "VM_Common";
+    VM_Common::InitProductControl();
+
+    any ret = CommandLine::Run(cmdline);
+
+    return `next;
+}

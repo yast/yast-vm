@@ -22,7 +22,6 @@
 
     list<map<string,any> > disks = VM::GetDiskConfig();
 
-
     define map<string,any> ask_size (string device, integer s, boolean sparse) ``{
 
 	UI::OpenDialog (`opt(`decorated),
@@ -34,8 +33,10 @@
 					_("&Disk Size in MB:"),
 					["512", "1024", "2048", "4096"]),
 			      `VSpacing(0.8),
-			      // label - disk device widget (enter /dev/hda1, /dev/sdb3...)
-			      `HSquash(`TextEntry(`id(`device), _("&Virtual Disk Device"), device)),
+			      (VM::GetVMMtype() == "xen") ?
+				  // label - disk device widget (enter /dev/hda1, /dev/sdb3...)
+				  `HSquash(`TextEntry(`id(`device), _("&Virtual Disk Device"), device))
+			      : `Empty(),
 			      `VSpacing(0.8),
 			      `CheckBox(`id(`sparse), _("Create &Sparse Image File"), sparse),
 			      `VSpacing(1),
@@ -56,13 +57,18 @@
 
 	boolean sparse_file = (boolean) UI::QueryWidget (`id(`sparse), `Value);
 
-	string dev = (string) UI::QueryWidget (`id(`device), `Value);
+	string dev = (VM::GetVMMtype() == "xen") ? (string) UI::QueryWidget (`id(`device), `Value) : "";
 
 	UI::CloseDialog ();
 
-	y2debug("ret: %1", $[ "size" : s, "sparse" : sparse_file, "target" : device]);
+	map<string,any> ret = $[ "size" : s, "sparse" : sparse_file];
 
-	return $[ "size" : s, "sparse" : sparse_file, "target" : dev ];
+	if (VM::GetVMMtype() == "xen") {
+	    ret = add(ret, "target", dev);
+	}
+
+	y2debug("ret: %1", ret);
+	return ret;
     }
 
     define void refresh_table(list<map<string,any> > disks)
@@ -70,7 +76,13 @@
 	integer id_cnt = 0;
 	list <term> d = [];
 	foreach (map<string,any> m, disks, ``{
-	    d = add(d, `item (`id(id_cnt), m["target"]:"", m["size"]:0, (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
+	    if (VM::GetVMMtype() == "xen") {
+		d = add(d, `item (`id(id_cnt), m["target"]:"", m["size"]:0, (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
+	    }
+	    else if (VM::GetVMMtype() == "uml") {
+		d = add(d, `item (`id(id_cnt), m["size"]:0, (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
+	    }
+
 	    id_cnt = id_cnt + 1;
 	});
 	UI::ChangeWidget (`id(`disks), `Items, d);
@@ -78,12 +90,18 @@
 
     // build and show dialog
 
-    Wizard::OpenAcceptDialog ();
+    Wizard::OpenAcceptDialog();
+
+    term heading = (VM::GetVMMtype() == "uml") ?
+		// table - column heading
+		`header (`Right(_("Disk Size (MB)")), `Center(_("Sparse File")))
+	    :
+		// table - column heading
+		`header (_("Virtual Device"), `Right(_("Disk Size (MB)")), `Center(_("Sparse File")));
 
     term contents = `VBox(
 			`Table(`id(`disks),
-			    // table - column heading
-			    `header (_("Virtual Device"), `Right(_("Disk Size (MB)")), `Center(_("Sparse File"))), []
+			    heading, []
 			),
 			`HBox(
 			    `PushButton (`id (`add), Label::AddButton()),
