@@ -27,16 +27,18 @@ ln -sf ../etc/init.d/uml $RPM_BUILD_ROOT/sbin/rcuml
 %files
 %defattr(-,root,root)
 @clientdir@/vm*.ycp
+@clientdir@/xen.ycp
 @clientdir@/inst_vm*.ycp
 @moduledir@/VM*.ycp
 @moduledir@/VM*.ybc
-@desktopdir@/vm.desktop
+@desktopdir@/xen.desktop
 %dir @yncludedir@/vm
 @yncludedir@/vm/*
 @scrconfdir@/*.scr
 %dir /usr/share/YaST2/control
 /usr/share/YaST2/control/vm_install.xml
 %doc @docdir@
+@desktopdir@/uml.desktop
 @clientdir@/uml*.ycp
 @clientdir@/inst_uml*.ycp
 @ybindir@/start-uml

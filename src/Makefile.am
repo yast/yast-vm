@@ -5,7 +5,7 @@
 yncludedir = @yncludedir@/vm
 
 client_DATA =				\
-	vm.ycp				\
+	xen.ycp				\
 	uml.ycp				\
 	vm_source_proposal.ycp		\
 	vm_options_proposal.ycp		\
@@ -25,7 +25,8 @@ client_DATA =				\
 ynclude_DATA = cmdline.ycp
 
 desktop_DATA =				\
-	vm.desktop
+	xen.desktop			\
+	uml.desktop
 
 module_DATA =				\
 	VM_XEN.ycp			\

@@ -107,7 +107,7 @@ Enter another name.");
 There is %1MB free memory available.");
 
 	    VM::SetMemorySize(mem);
-	    y2internal("mode: %1", mode);
+	    y2milestone("start mode: %1", mode);
 	    VM::SetStartMode(mode);
 	    VM::SetConfigName(vmname);
 	    VM::SetExtraArgs(boot);

@@ -68,7 +68,7 @@
 	]
     ];
 
-    // TODO check whether VM can be started
+    // check whether VM can be started
     if (Arch::is_uml () == true)
     {
 	// we are already in UML, nested virtual machine is not supported
@@ -78,8 +78,7 @@ Start installation in the host system."));
 	return `abort;
     }
 
-    // FIXME!!
-    if (false && !Arch::is_xen())
+    if (!Arch::is_xen())
     {
 	// we are already in UML, nested virtual machine is not supported
 	Report::Error(_("For installing a Xen virtual machine the system

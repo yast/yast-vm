@@ -12,9 +12,8 @@
 {
     textdomain "vm";
 
-    import "VM_UML";
+    import "VM";
     import "Wizard";
-    import "Popup";
     import "Users";
     import "UsersCache";	// ?? required for initialization of the module
     import "Report";
@@ -31,14 +30,14 @@
 	    `Left(`TextEntry(`id(`username),
 		    // text entry label
 		    _("&Login Name"),
-		    VM_UML::username
+		    VM::GetUserName()
 		)
 	    ),
 	    `VSpacing(1),
 	    `Left(`TextEntry(`id(`homedir),
 		    // text entry label
 		    _("&Home Directory"),
-		    VM_UML::homedir
+		    VM::GetHomeDir()
 		)
 	    )
 	)
@@ -89,8 +88,8 @@
 	    }
 	    else
 	    {
-		VM_UML::username = username;
-		VM_UML::homedir = homedir;
+		VM::SetUserName(username);
+		VM::SetHomeDir(homedir);
 	    }
 	}
     }

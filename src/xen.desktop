@@ -6,7 +6,7 @@ X-KDE-ModuleType=Library
 X-KDE-RootOnly=true
 X-KDE-HasReadOnlyMode=true
 X-KDE-Library=yast2
-X-SuSE-YaST-Call=vm
+X-SuSE-YaST-Call=xen
 
 X-SuSE-YaST-Group=Software
 X-SuSE-YaST-Argument=
@@ -17,7 +17,7 @@ X-SuSE-YaST-SortKey=
 X-SuSE-YaST-AutoinstResource=
 
 Icon=yast-uml
-Exec=/sbin/yast2 vm
+Exec=/sbin/yast2 xen
 
 Name=Virtual Machine Installation (Xen)
 GenericName=Install a system into Xen virtual machine

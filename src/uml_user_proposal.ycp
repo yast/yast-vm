@@ -12,7 +12,7 @@
 {
     textdomain "vm";
 
-    import "VM_UML";
+    import "VM";
     import "HTML";
 
     string func = (string) WFM::Args (0);
@@ -27,21 +27,23 @@
 	if (force_reset)
 	{
 	    // reset user settings and propose new values
-	    VM_UML::UserInitialize();
+	    VM::ResetUserName();
 	}
 
+	string username = VM::GetUserName();
+	string homedir = VM::GetHomeDir();
 	list<string> proposal = [
 	    // Proposal for uml user name
-	    sformat (_("User Name: %1"), VM_UML::username),
+	    sformat (_("User Name: %1"), username),
 	   // Proposal for home directory of uml user
-	    sformat (_("Home Directory: %1"), VM_UML::homedir)
+	    sformat (_("Home Directory: %1"), homedir)
 	];
 
 	ret = $[ "preformatted_proposal" :
 		 HTML::List (proposal)
 	];
 
-	if (VM_UML::username == nil || VM_UML::username == "" || VM_UML::homedir == nil || VM_UML::homedir == "")
+	if (username == nil || username == "" || homedir == nil || homedir == "")
 	{
 	    // don't allow to continue
 	    ret = add(ret, "warning", _("User name or home directory is not valid."));

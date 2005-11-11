@@ -37,15 +37,25 @@
 		// option description
 		"help"      : _("URL of installation source ")
 	    ],
+	    "user" : $[
+		"type"      : "string",
+		// option description
+		"help"      : _("Set the username that runs UML ")
+	    ],
+	    "home" : $[
+		"type"      : "string",
+		// option description
+		"help"      : _("Home directory location of UML user")
+	    ],
 	    "mem" : $[
 		"type"      : "string",
 		// option description
-		"help"      : _("Memory size used by the virtual machine")
+		"help"      : _("Memory size used by UML machine")
 	    ],
 	    "startmode" : $[
 		"type"      : "string",
 		// option description
-		"help"      : _("Start mode of the installed virtual machine (manual,onboot)")
+		"help"      : _("Start mode of the installed UML machine (manual,onboot)")
 	    ],
 	    "disk" : $[
 		"type"      : "string",
@@ -60,11 +70,16 @@
 	    "MAC" : $[
 		"type"      : "string",
 		// option description
-		"help"      : _("MAC address of the virtual ethernet card")
+		"help"      : _("MAC address of the virtual UML ethernet card")
 	    ],
+	    "netif" : $[
+		"type"      : "string",
+		// option description
+		"help"      : _("Connect UML to this network interface (eth0, eth1, etc.)")
+	    ]
 	],
 	"mappings" : $[
-	    "start" : ["install", "mem", "startmode", "disk", "sparse", "MAC"]
+	    "start" : ["install", "user", "home", "mem", "startmode", "disk", "sparse", "MAC", "netif"]
 	]
     ];
 

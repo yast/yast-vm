@@ -182,6 +182,27 @@
 	return CallBooleanFunction("resetMAC");
     }
 
+    global boolean SetHomeDir(string home) {
+	return CallBooleanStringFunction("setHomeDir", home);
+    }
+
+    global string GetHomeDir() {
+	return CallStringFunction("getHomeDir");
+    }
+
+    global boolean SetUserName(string user) {
+	return CallBooleanStringFunction("setUserName", user);
+    }
+
+    global string GetUserName() {
+	return CallStringFunction("getUserName");
+    }
+
+    global boolean ResetUserName() {
+	return CallBooleanFunction("resetUserName");
+    }
+
+
     global list<map<string,any> > GetDiskConfig() {
 	list<map<string,any> >() toEval = (list<map<string,any> >())functions["getDiskConfig"]:nil;
 
@@ -336,6 +357,18 @@
 
     global string GetTapDevice() {
 	return CallStringFunction("getTapDevice");
+    }
+
+    global boolean SetTapDevice(string tap) {
+	return CallBooleanStringFunction("setTapDevice", tap);
+    }
+
+    global string GetNetDevice() {
+	return CallStringFunction("getNetDevice");
+    }
+
+    global boolean SetNetDevice(string net) {
+	return CallBooleanStringFunction("setNetDevice", net);
     }
 
 }

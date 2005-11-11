@@ -20,13 +20,13 @@
     list<map<string,any> > default_disks = [ $["size" : 1024, "sparse" : false] ];
     global list<map<string,any> > disks = default_disks;
 
-    global string username = "";
+    string username = "";
 
-    global string homedir = "";
+    string homedir = "";
 
-    global string tap_device = "";
+    string tap_device = "";
 
-    global string eth_device = "eth0";
+    string eth_device = "eth0";
 
     string kernel_path = "";
 
@@ -448,6 +448,20 @@
 	return tap_device;
     }
 
+    global define boolean setTapDevice(string tap) {
+	tap_device = tap;
+	return true;
+    }
+
+    global define string getNetDevice() {
+	return tap_device;
+    }
+
+    global define boolean setNetDevice(string net) {
+	eth_device = net;
+	return true;
+    }
+
     global define boolean InstallPackages() {
 	return VM_Common::InstallPackages(["xterm", "xorg-x11", "uml-utilities", "bridge-utils"]);
     }
@@ -655,6 +669,8 @@
 
 	register_options_file();
 
+	SCR::Write (add (umlpath, "UMID"), VM_Common::config_name);
+
 	SCR::Write (add (umlpath, "MEMORY"), VM_Common::memory_size);
 	SCR::Write (add (umlpath, "NCPUS"), VM_Common::number_of_cpus);
 
@@ -736,6 +752,33 @@
 	return true;
     }
 
+    global define boolean setHomeDir(string home) {
+	homedir = home;
+	return true;
+    }
+
+    global define string getHomeDir() {
+	return homedir;
+    }
+
+    global define boolean setUserName(string name) {
+	username = name;
+	return true;
+    }
+
+    global define string getUserName() {
+	return username;
+    }
+
+
+    global define boolean resetUserName()
+    {
+	UserInitialize();
+	return true;
+    }
+
+
+
     global define map GetFunctions()
     {
 	return $[
@@ -776,6 +819,14 @@
 	    "resetExtraArgs"	: VM_UML::resetExtraArgs,
 
 	    "getTapDevice"	: VM_UML::getTapDevice,
+	    "setTapDevice"	: VM_UML::setTapDevice,
+
+	    "setHomeDir"	: VM_UML::setHomeDir,
+	    "getHomeDir"	: VM_UML::getHomeDir,
+
+	    "setUserName"	: VM_UML::setUserName,
+	    "getUserName"	: VM_UML::getUserName,
+	    "resetUserName"	: VM_UML::resetUserName,
 
 	    "Write" : VM_UML::Write,
 

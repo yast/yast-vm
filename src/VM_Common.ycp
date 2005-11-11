@@ -65,8 +65,8 @@
 		map general_data = Pkg::SourceGeneralData(src);
 		map product_data = Pkg::SourceProductData(src);
 
-		y2internal("general_data: %1", general_data);
-		y2internal("product_data: %1", product_data);
+		y2milestone("general_data: %1", general_data);
+		y2milestone("product_data: %1", product_data);
 
 		string srcurl = general_data["url"]:"";
 
@@ -169,7 +169,7 @@ are supported in the installation."),
     global define string GetPackage(string package, string dir) {
 	// get info about the package (media number)
 	map<string,any> pkginfo = Pkg::PkgProperties(package);
-	y2internal("pkginfo: %1", pkginfo);
+	y2milestone("pkginfo: %1", pkginfo);
 
 	string location = pkginfo["location"]:"";
 	string ret = "";

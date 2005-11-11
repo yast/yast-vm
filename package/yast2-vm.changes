@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Fri Nov 11 10:30:05 CET 2005 - lslezak@suse.cz
+
+- added command line mode support
+- merged UML functionality (yast2-uml package can be dropped)
+- uml - configure UMID option, um-host-install-initrd package
+  is not used any more (#96323)
+- version 2.13.2
+
+-------------------------------------------------------------------
 Fri Oct 14 09:30:02 CEST 2005 - lslezak@suse.cz
 
 - moved generic code to VM_Common::

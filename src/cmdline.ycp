@@ -28,8 +28,8 @@
 	Wizard::SetDesktopIcon ("vm");
 
 	// calling inst_proposal
-	symbol ret = (symbol) WFM::CallFunction ("inst_proposal", 
-                [GetInstArgs::ButtonsProposal(true,true,VM::GetVMMtype())]);
+	symbol ret = (symbol) WFM::CallFunction ("inst_proposal",
+                [GetInstArgs::ButtonsProposal(true, true, VM::GetVMMtype())]);
 
 	if (ret == `next)
 	{
@@ -43,7 +43,95 @@
 
 
     define boolean startHandler(map options) {
-	y2error("startHandler in not implemented");
+	boolean ret = false;
+
+	if (haskey(options, "vm")) {
+	    if (!VM::SetVMMtype(options["vm"]:""))
+	    {
+		CommandLine::Print(sformat(_("Cannot set VMM type to: %1"), options["vm"]:""));
+		return false;
+	    }
+	}
+	else
+	{
+	    CommandLine::Print(_("Mandatory option 'vm' is missing."));
+	    return false;
+	}
+
+	// set installation source options
+	if (haskey(options, "install")) {
+	    VM::SetSourceConfig(nil, `custom, options["install"]:"");
+	}
+
+	// set user related options
+	if (haskey(options, "user")) {
+	    VM::SetUserName(options["user"]:"");
+	    VM::SetTapDevice(options["user"]:"");
+	}
+	if (haskey(options, "home")) {
+	    VM::SetHomeDir(options["home"]:"");
+	}
+
+	// set disk image options
+	if (haskey(options, "disk") || haskey(options, "sparse")) {
+	    string diskopt = options["disk"]:"";
+	    string sparseopt = options["sparse"]:"";
+	    string targetopt = options["target"]:"";
+
+	    list<string> disksizes = splitstring(diskopt, ",");
+	    list<string> sparse = splitstring(sparseopt, ",");
+	    list<string> target = splitstring(targetopt, ",");
+
+	    list <map <string,any> > diskconfig = [];
+
+	    integer disksizes_size = size(disksizes);
+	    integer sparse_size = size(sparse);
+
+	    if (size(disksizes) > 0 || size(sparse) > 0)
+	    {
+		integer index = 0;
+		integer maxindex = (disksizes_size > sparse_size) ? disksizes_size - 1 : sparse_size - 1;
+
+		while (index <= maxindex)
+		{
+		    integer disksizeopt = tointeger(disksizes[index]:"1024");
+		    boolean sparseopt = tointeger(sparse[index]:"0") == 1;
+
+		    diskconfig = add(diskconfig, $["size" : disksizeopt, "sparse" : sparseopt]);
+
+		    index = index + 1;
+		}
+
+		VM::SetDiskConfig(diskconfig);
+	    }
+	}
+
+	// the other options
+	if (haskey(options, "mem")) {
+	    VM::SetMemorySize(tointeger(options["mem"]:"256"));
+	}
+	if (haskey(options, "startmode")) {
+	    VM::SetStartMode(options["startmode"]:"");
+	}
+	if (haskey(options, "MAC")) {
+	    VM::SetMAC(options["MAC"]:"");
+	}
+	if (haskey(options, "netif")) {
+	    VM::SetNetDevice(options["netif"]:"");
+	}
+
+	// disable progress
+	Progress::off();
+
+	// TODO: still needed?
+	// initialize package manager - otherwise Pkg::PkgGetFilelist returns empty list
+	Pkg::TargetInit("/", false);
+
+	// start VM installation
+	symbol result = (symbol)WFM::CallFunction("inst_vm_kickoff", [false, false]);
+
+	return result == `next;
+
 	return false;
     }
 }

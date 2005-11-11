@@ -92,7 +92,14 @@
 	string msize = regexpsub(free_line, "free_memory[ \t]*:[ \t]*(.*)", "\\1");
 	y2debug("memory size: %1", msize);
 
-	return tointeger(msize);
+	integer ret = tointeger(msize);
+
+	if (ret == nil)
+	{
+	    ret = 0;
+	}
+
+	return ret;
     }
 
     global map<string,any> getOptionsProposal()

@@ -86,6 +86,12 @@
 	    {
 		VM::SetMAC(MAC_address);
 	    }
+
+	    if (VM::GetVMMtype() == "uml") {
+		string tap = (string) UI::QueryWidget (`id(`tap_device), `Value);
+		VM::SetTapDevice(tap);
+	    }
+
 	}
     }
 
