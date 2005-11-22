@@ -26,6 +26,9 @@
 
     string img_prefix = "/var/lib/xen/images/";
 
+    string restart_default = "onreboot";
+    string restart = restart_default;
+
     global boolean setMemorySize(integer msize)
     {
 	VM_Common::memory_size = msize;
@@ -40,6 +43,25 @@
     global boolean resetMemorySize()
     {
 	VM_Common::memory_size = VM_Common::default_memory_size;
+	return true;
+    }
+
+    global boolean setRestart(string mode) {
+	if (contains([ "always", "never", "onreboot" ], mode))
+	{
+	    restart = mode;
+	    return true;
+	}
+
+	return false;
+    }
+
+    global string getRestart() {
+	return restart;
+    }
+
+    global boolean resetRestart() {
+	restart = restart_default;
 	return true;
     }
 
@@ -92,6 +114,11 @@
 	string msize = regexpsub(free_line, "free_memory[ \t]*:[ \t]*(.*)", "\\1");
 	y2debug("memory size: %1", msize);
 
+	if (msize == nil)
+	{
+	    msize = "0";
+	}
+
 	integer ret = tointeger(msize);
 
 	if (ret == nil)
@@ -123,6 +150,17 @@
 	    // part of proposal text, %1 are extra kernel options
 	    tmp = add (tmp, sformat (_("Boot Options: %1"), VM_Common::extra_args));
 	}
+
+	if (VM_Common::extra_inst_args != "")
+	{
+	    // part of proposal text, %1 are extra kernel options used for the first stage only
+	    tmp = add (tmp, sformat (_("Additional Installation Options: %1"), VM_Common::extra_inst_args));
+	}
+
+	// Proposal for virtual machine installation
+	tmp = add (tmp, sformat (_("Restart Mode: %1"),
+	    // restart mode is not known
+	    VM_Common::restart_mapping[restart]:_("Unknown") ));
 
 	map<string,any> ret = $[ "preformatted_proposal" :
 		 HTML::List (tmp)
@@ -327,7 +365,19 @@
 	    url = "slp://";
 	}
 
-	ret = ret && WriteStringOption(configpath, "extra", "TERM=xterm textmode=1 install=" + url + " " + VM_Common::extra_args);
+	string extra_arg = "TERM=xterm textmode=1 install=" + url;
+
+	// add boot options
+	if (VM_Common::extra_args != "") {
+	    extra_arg = extra_arg + " " + VM_Common::extra_args;
+	}
+
+	// add installation boot options
+	if (VM_Common::extra_inst_args != "") {
+	    extra_arg = extra_arg + " " + VM_Common::extra_inst_args;
+	}
+
+	ret = ret && WriteStringOption(configpath, "extra", extra_arg);
 
 	// flush the changes
 	ret = ret && SCR::Write(.etc.xen, nil);
@@ -575,6 +625,9 @@
 	// set extra options
 	ret = ret && WriteStringOption(configpath, "extra", VM_Common::extra_args);
 
+	// set restart option
+	ret = ret && WriteStringOption(configpath, "restart", restart);
+
 	// flush the changes
 	ret = ret && SCR::Write(.etc.xen, nil);
 
@@ -691,6 +744,20 @@
 	return true;
     }
 
+    global define string getExtraInstArgs() {
+	return VM_Common::extra_inst_args;
+    }
+
+    global define boolean setExtraInstArgs(string args) {
+	VM_Common::extra_inst_args = args;
+	return true;
+    }
+
+    global define boolean resetExtraInstArgs() {
+	VM_Common::extra_inst_args = "";
+	return true;
+    }
+
     global define boolean InstallPackages() {
 	return VM_Common::InstallPackages(["xterm", "xorg-x11"]);
     }
@@ -705,6 +772,10 @@
 	    "setStartMode" : VM_XEN::setStartMode,
 	    "getStartMode" : VM_XEN::getStartMode,
 	    "resetStartMode" : VM_XEN::resetStartMode,
+
+	    "setRestart" : VM_XEN::setRestart,
+	    "getRestart" : VM_XEN::getRestart,
+	    "resetRestart" : VM_XEN::resetRestart,
 
 	    "setMAC" : VM_XEN::setMAC,
 	    "getMAC" : VM_XEN::getMAC,
@@ -730,6 +801,11 @@
 	    "getExtraArgs"	: VM_XEN::getExtraArgs,
 	    "setExtraArgs"	: VM_XEN::setExtraArgs,
 	    "resetExtraArgs"	: VM_XEN::resetExtraArgs,
+
+	    "getExtraInstArgs"	: VM_XEN::getExtraInstArgs,
+	    "setExtraInstArgs"	: VM_XEN::setExtraInstArgs,
+	    "resetExtraInstArgs"	: VM_XEN::resetExtraInstArgs,
+
 
 //	    "resetNe"	: VM_XEN::resetNet,
 	    "getNetworkProposal" : VM_XEN::getNetworkProposal,

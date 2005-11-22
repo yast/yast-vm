@@ -158,6 +158,18 @@
 	return CallBooleanFunction("resetExtraArgs");
     }
 
+    global string GetExtraInstArgs() {
+	return CallStringFunction("getExtraInstArgs");
+    }
+
+    global boolean SetExtraInstArgs(string args) {
+	return CallBooleanStringFunction("setExtraInstArgs", args);
+    }
+
+    global boolean ResetExtraInstArgs() {
+	return CallBooleanFunction("resetExtraInstArgs");
+    }
+
     global string GetConfigName() {
 	return CallStringFunction("getConfigName");
     }
@@ -371,4 +383,15 @@
 	return CallBooleanStringFunction("setNetDevice", net);
     }
 
+    global string GetRestart() {
+	return CallStringFunction("getRestart");
+    }
+
+    global boolean SetRestart(string mode) {
+	return CallBooleanStringFunction("setRestart", mode);
+    }
+
+    global boolean ResetRestart() {
+	return CallBooleanFunction("resetRestart");
+    }
 }

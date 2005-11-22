@@ -293,6 +293,12 @@
 	    tmp = add (tmp, sformat (_("Boot Options: %1"), VM_Common::extra_args));
 	}
 
+	if (VM_Common::extra_inst_args != "")
+	{
+	    // part of proposal text, %1 are extra kernel options used for the first stage only
+	    tmp = add (tmp, sformat (_("Additional Installation Options: %1"), VM_Common::extra_inst_args));
+	}
+
 	map<string,any> ret = $[ "preformatted_proposal" :
 		 HTML::List (tmp)
 	];
@@ -685,7 +691,15 @@
 	// connect virtual UML ethernet device to real device
 	SCR::Write (add (umlpath, "ETH_DEVICE"), VM_UML::eth_device);
 
-	SCR::Write (add (umlpath, "EXTRA_ARGS"), VM_Common::extra_args);
+	string args = VM_Common::extra_args;
+
+	// add installation options
+	if (VM_Common::extra_inst_args != "")
+	{
+	    args = args + " " + VM_Common::extra_inst_args;
+	}
+
+	SCR::Write (add (umlpath, "EXTRA_ARGS"), args);
 
 	SCR::Write (add (umlpath, "KERNEL"), kernel_file);
 
@@ -741,6 +755,13 @@
 
 	y2milestone("UML root device: %1", root_device);
 
+	// remove installatino options from the config file
+	if (VM_Common::extra_inst_args != "") {
+	    register_options_file();
+	    SCR::Write (add (umlpath, "EXTRA_ARGS"), VM_Common::extra_args);
+	    unregister_options_file();
+	}
+
 	// write detected root device to sysconfig file
 	return WriteRootDevice(root_device);
     }
@@ -774,6 +795,20 @@
     global define boolean resetUserName()
     {
 	UserInitialize();
+	return true;
+    }
+
+    global define string getExtraInstArgs() {
+	return VM_Common::extra_inst_args;
+    }
+
+    global define boolean setExtraInstArgs(string args) {
+	VM_Common::extra_inst_args = args;
+	return true;
+    }
+
+    global define boolean resetExtraInstArgs() {
+	VM_Common::extra_inst_args = "";
 	return true;
     }
 
@@ -817,6 +852,10 @@
 	    "getExtraArgs"	: VM_UML::getExtraArgs,
 	    "setExtraArgs"	: VM_UML::setExtraArgs,
 	    "resetExtraArgs"	: VM_UML::resetExtraArgs,
+
+	    "getExtraInstArgs"	: VM_UML::getExtraInstArgs,
+	    "setExtraInstArgs"	: VM_UML::setExtraInstArgs,
+	    "resetExtraInstArgs"	: VM_UML::resetExtraInstArgs,
 
 	    "getTapDevice"	: VM_UML::getTapDevice,
 	    "setTapDevice"	: VM_UML::setTapDevice,

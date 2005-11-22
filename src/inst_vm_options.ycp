@@ -32,6 +32,9 @@
 				    // textentry label - extra parameters for kernel
 				    `Left(`TextEntry(`id(`bootopts), _("Boot &Options"), VM::GetExtraArgs())),
 				    `VSpacing(0.5),
+				    // textentry label - extra installation parameters for kernel
+				    `Left(`TextEntry(`id(`bootinstopts), _("Additional Installation &Boot Options"), VM::GetExtraInstArgs())),
+				    `VSpacing(0.5),
 				    `Left(`ComboBox(`id(`memory), `opt(`editable),
 						    // combobox label
 						    _("&Memory Size in MB:"),
@@ -51,7 +54,25 @@
 						     `item(`id("manual"), _("Manually")),
 						     // combobox item
 						     `item(`id("onboot"), _("On Boot")),
-						     ]))///,
+						     ])),
+				    (VM::GetVMMtype() == "xen") ?
+					`VBox(
+					    `VSpacing(0.5),
+					    `Left(`ComboBox(`id(`restart),
+							    // combobox label
+							    _("Re&start the virtual machine"),
+							    [
+							     // combobox item
+							     `item(`id("always"), VM_Common::restart_mapping["always"]:"", VM::GetRestart() == "always"),
+							     // combobox item
+							     `item(`id("never"), VM_Common::restart_mapping["never"]:"", VM::GetRestart() == "never"),
+							     // combobox item
+							     `item(`id("onreboot"), VM_Common::restart_mapping["onreboot"]:"", VM::GetRestart() == "onreboot"),
+							     ])
+					    )
+					)
+				    :
+					`Empty()
 				    )
 			      );
 
@@ -87,6 +108,7 @@
 //	    integer tmp2 = tointeger ((string) UI::QueryWidget (`id(`ncpus), `Value));
 	    string mode = (string) UI::QueryWidget (`id(`startmode), `Value);
 	    string boot = (string) UI::QueryWidget (`id(`bootopts), `Value);
+	    string bootinst = (string) UI::QueryWidget (`id(`bootinstopts), `Value);
 	    string vmname = (string) UI::QueryWidget (`id(`vmname), `Value);
 
 	    // error message: machine name must be unique, entered name is alreadu in use
@@ -111,6 +133,12 @@ There is %1MB free memory available.");
 	    VM::SetStartMode(mode);
 	    VM::SetConfigName(vmname);
 	    VM::SetExtraArgs(boot);
+	    VM::SetExtraInstArgs(bootinst);
+
+	    if (VM::GetVMMtype() == "xen") {
+		string restart = (string) UI::QueryWidget (`id(`restart), `Value);
+		VM::SetRestart(restart);
+	    }
 
 	    break;
 	}
