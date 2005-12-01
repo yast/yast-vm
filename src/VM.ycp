@@ -247,6 +247,38 @@
 	return CallBooleanFunction("resetDiskConfig");
     }
 
+    global list<map<string,string> > GetNetworkConfig() {
+	list<map<string,string> >() toEval = (list<map<string,string> >())functions["getNetworkConfig"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("getNetworkConfig() function is missing!");
+	    return nil;
+	}
+    }
+
+    global boolean SetNetworkConfig(list<map<string,string> > net) {
+	boolean(list<map<string,string> >) toEval = (boolean(list<map<string,string> >))functions["setNetworkConfig"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(net);
+	}
+	else
+	{
+	    y2error("setNetworkConfig() function is missing!");
+	    return nil;
+	}
+    }
+
+    global boolean ResetNetworkConfig() {
+	return CallBooleanFunction("resetNetworkConfig");
+    }
+
     global list<string> GetDiskProposal() {
 	list<string>() toEval = (list<string>())functions["getDiskProposal"]:nil;
 

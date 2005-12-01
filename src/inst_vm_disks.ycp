@@ -15,72 +15,347 @@
     import "Label";
     import "Popup";
     import "Wizard";
-
+    import "Report";
+    import "Sequencer";
 
     // dialog title - virtual disk configuration
     string title = _("Virtual Disks");
 
     list<map<string,any> > disks = VM::GetDiskConfig();
 
-    define map<string,any> ask_size (string device, integer s, boolean sparse) ``{
+    integer selected_disk = nil;
 
-	UI::OpenDialog (`opt(`decorated),
+    define map<string,any> ask_size (string device, integer s, boolean sparse, boolean ro) ``{
+
+	map<string,any> ret = nil;
+
+	term contents =
+
+	`Frame(_("Disk configuration"),
+		`MarginBox(1.5, 0.2,
 			// heading in a popup dialog
-			`VBox(`Heading(_("Size of Virtual Disk") ),
-			      `VSpacing(0.5),
-			      `ComboBox(`id(`size), `opt(`editable),
+			`VBox(
+			      `ComboBox(`id(`size), `opt(`editable,`hstretch),
 					// combobox label
 					_("&Disk Size in MB:"),
 					["512", "1024", "2048", "4096"]),
-			      `VSpacing(0.8),
+			      `VSpacing(0.5),
 			      (VM::GetVMMtype() == "xen") ?
 				  // label - disk device widget (enter /dev/hda1, /dev/sdb3...)
-				  `HSquash(`TextEntry(`id(`device), _("&Virtual Disk Device"), device))
+				  `TextEntry(`id(`device), `opt(`hstretch), _("&Virtual Disk Device"), device)
 			      : `Empty(),
-			      `VSpacing(0.8),
-			      `CheckBox(`id(`sparse), _("Create &Sparse Image File"), sparse),
-			      `VSpacing(1),
-			      `HBox(
-				    `PushButton(`id(`ok), `opt(`default), Label::OKButton()),
-				    `PushButton(`id(`cancel), Label::CancelButton())
-				    )
-			      )
-			);
+
+			      `VBox(
+
+			      `VSpacing(0.5),
+			      `Left(`CheckBox(`id(`ro), _("&Read Only Access"), ro)),
+			      `VSpacing(0.5),
+			      `Left(`CheckBox(`id(`sparse), _("Create &Sparse Image File"), sparse)),
+			      `VSpacing(0.2)
+			      ))
+			));
+
+	Wizard::SetContents(_("Virtual Disk Configuration"), contents, "help_text", true, true);
 
 	UI::ChangeWidget (`id(`size), `ValidChars, "0123456789");
 	UI::ChangeWidget (`id(`size), `Value, tostring (s));
 
-	if ((symbol) UI::UserInput() == `ok)
-	    s = tointeger ((string) UI::QueryWidget (`id(`size), `Value));
-	else
-	    s = -1;
+	symbol ui = `dummy;
+	while(!contains([`next, `accept, `back, `abort, `cancel], ui))
+	{
+	    ui = (symbol) UI::UserInput();
+	    y2internal("ui: %1", ui);
 
-	boolean sparse_file = (boolean) UI::QueryWidget (`id(`sparse), `Value);
+	    if (ui == `next || ui == `accept)
+	    {
+		boolean sparse_file = (boolean) UI::QueryWidget (`id(`sparse), `Value);
+		string dev = (VM::GetVMMtype() == "xen") ? (string) UI::QueryWidget (`id(`device), `Value) : "";
+		string sz = (string)UI::QueryWidget (`id(`size), `Value);
+		integer sz_int = tointeger(sz) ;
+		boolean new_ro = (boolean) UI::QueryWidget (`id(`ro), `Value);
 
-	string dev = (VM::GetVMMtype() == "xen") ? (string) UI::QueryWidget (`id(`device), `Value) : "";
+		if (dev == nil || dev == "")
+		{
+		    // error message
+		    Report::Error(_("Device name cannot be empty."));
+		    ui = `again;
+		}
+		else if (sz_int == nil)
+		{
+		    // error message
+		    Report::Error(_("Device size is invalid."));
+		    ui = `again;
+		}
+		else
+		{
+		    ret = $[ "size" : sz_int, "sparse" : sparse_file, "type" : "loop-create", "ro" : new_ro ];
 
-	UI::CloseDialog ();
-
-	map<string,any> ret = $[ "size" : s, "sparse" : sparse_file];
-
-	if (VM::GetVMMtype() == "xen") {
-	    ret = add(ret, "target", dev);
+		    if (VM::GetVMMtype() == "xen") {
+			ret = add(ret, "target", dev);
+			ret = add(ret, "source", dev);
+		    }
+		}
+	    }
 	}
 
 	y2debug("ret: %1", ret);
 	return ret;
     }
 
+    define map<string,any> UseLoopBackDialog(string device, string source, boolean ro) ``{
+
+	map<string,any> ret = nil;
+
+	term contents = `Frame(_("Disk configuration"),
+	    `MarginBox(1.5, 0.2,
+		// heading in a popup dialog
+		`VBox(
+		    `HBox(
+			`TextEntry(`id(`source), `opt(`hstretch), _("&Disk Image File"), source),
+			`HSpacing(1),
+			`VBox(
+			    `Label(""),
+			    `PushButton(`id(`select_file), _("Select Image..."))
+			)
+		    ),
+		    `VSpacing(0.5),
+		    (VM::GetVMMtype() == "xen") ?
+			// label - disk device widget (enter /dev/hda1, /dev/sdb3...)
+			`TextEntry(`id(`device), `opt(`hstretch), _("&Virtual Disk Device"), device)
+		    : `Empty(),
+
+		    `VSpacing(0.5),
+		    `Left(`CheckBox(`id(`ro), _("&Read Only Access"), ro)),
+		    `VSpacing(0.2)
+		)
+	    )
+	);
+
+	Wizard::SetContents(_("Virtual Disk Configuration"), contents, "help_text", true, true);
+
+	symbol ui = `dummy;
+	while(!contains([`next, `accept, `back, `abort, `cancel], ui))
+	{
+	    ui = (symbol) UI::UserInput();
+	    string new_src = (string) UI::QueryWidget (`id(`source), `Value);
+
+	    if (ui == `next || ui == `accept)
+	    {
+		string dev = (VM::GetVMMtype() == "xen") ? (string) UI::QueryWidget (`id(`device), `Value) : "";
+		boolean new_ro = (boolean) UI::QueryWidget (`id(`ro), `Value);
+
+		if (dev == nil || dev == "")
+		{
+		    // error message
+		    Report::Error(_("Device name cannot be empty."));
+		    ui = `again;
+		}
+		else if (new_src == nil || new_src == "")
+		{
+		    // error message
+		    Report::Error(_("Source file name is missing."));
+		    ui = `again;
+		}
+		else
+		{
+		    // check whether the file exists
+		    if ((integer)SCR::Read(.target.size, new_src) < 0)
+		    {
+			// %1 is file name
+			Report::Error(sformat(_("File %1 doesn't exist."), new_src));
+			continue;
+		    }
+		    ret = $[ "source" : new_src, "type" : "loop-use", "ro" : new_ro ];
+
+		    if (VM::GetVMMtype() == "xen") {
+			ret = add(ret, "target", dev);
+		    }
+		}
+	    }
+	    else if (ui == `select_file)
+	    {
+		new_src = UI::AskForExistingFile(new_src, "*", _("Select Disk Image"));
+
+		if (new_src != nil)
+		{
+		    UI::ChangeWidget(`id(`source), `Value, new_src);
+		}
+	    }
+	}
+
+	y2debug("ret: %1", ret);
+	return ret;
+    }
+
+    /**
+     * Popup dialog - disk configuration
+     * @param device target device in a VM
+     * @param phys source (physical) device (in dom0)
+     * @param ro true = read only access, false = read/write access
+     */
+    define map<string,any> ask_disk(string device, string phys, boolean ro) ``{
+
+	list<map> devmap = (list<map>)SCR::Read(.proc.partitions);
+	y2milestone("current partitions (/proc/partitions): %1", devmap);
+
+	list<string> devs = [];
+
+	if (devmap != nil)
+	{
+	    foreach(map d, devmap, {
+		    string name = d["name"]:"";
+
+		    if (name != nil && name != "")
+		    {
+			devs = add(devs, name);
+		    }
+		}
+	    );
+	}
+
+	term contents =
+
+	`Frame(_("Disk configuration"),
+		`MarginBox(2, 0.3,
+			// heading in a popup dialog
+			`VBox(
+			    `ComboBox(`id(`phys), `opt(`editable, `hstretch), _("Physical Device (Source)"), devs),
+			    `VSpacing(0.8),
+			    // label - disk device widget (enter /dev/hda1, /dev/sdb3...)
+			    `TextEntry(`id(`device), `opt(`hstretch), _("&Virtual Machine Device (Target)"), device),
+
+			    `VSpacing(1),
+			    `Left(`CheckBox(`id(`ro), _("&Read Only Access"), ro)),
+			    `VSpacing(0.8)
+			  )
+		    ));
+
+	Wizard::SetContents(_("Virtual Disk Configuration"), contents, "help_text", true, true);
+	UI::ChangeWidget(`id(`phys), `Value, phys);
+
+	symbol s = `dummy;
+	string new_dev = "";
+	string new_phys = "";
+
+	while(!contains([`next, `back, `abort, `cancel], s))
+	{
+	    s = (symbol) UI::UserInput();
+
+	    if (s == `next)
+	    {
+		new_dev = (string) UI::QueryWidget (`id(`device), `Value);
+		new_phys = (string) UI::QueryWidget (`id(`phys), `Value);
+
+		if (new_phys == "" || new_dev == "")
+		{
+		    // error message
+		    Report::Error(_("Device name cannot be empty."));
+		    s = `again;
+		}
+	    }
+	}
+
+	boolean new_ro = (boolean) UI::QueryWidget (`id(`ro), `Value);
+
+//	UI::CloseDialog();
+
+	if (s != `next)
+	{
+	    return nil;
+	}
+
+	map<string,any> ret = $[ "source" : new_phys, "target" : new_dev, "ro" : new_ro, "type" : "phys" ];
+
+	y2debug("ret: %1", ret);
+	return ret;
+    }
+
+    /**
+     * Popup dialog - disk configuration
+     * @param device target device in a VM
+     * @param phys source (physical) device (in dom0)
+     * @param ro true = read only access, false = read/write access
+     */
+    define symbol LoopbackTypeDialog() {
+
+	term contents =
+	    `Frame(_("Disk Image"),
+		`MarginBox(2, 0.3,
+		    // heading in a popup dialog
+		    `RadioButtonGroup(`id(`rbg),
+			`VBox(
+			    `VSpacing(1),
+			    `Left(`RadioButton(`id(`create), _("&Create New Disk Image"), true)),
+			    `VSpacing(1),
+			    `Left(`RadioButton(`id(`use), _("&Use Existing Disk Image"))),
+			    `VSpacing(0.8)
+			)
+		    )
+		)
+	    );
+
+	Wizard::SetContents(_("Configuration of Disk Image"), contents, "help_text", true, true);
+
+	symbol s = `dummy;
+
+	while(!contains([`next, `back, `abort, `cancel], s))
+	{
+	    s = (symbol) UI::UserInput();
+	}
+
+	if (s == `next)
+	{
+	    s = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton);
+	}
+
+	return s;
+    }
+
+
     define void refresh_table(list<map<string,any> > disks)
     {
 	integer id_cnt = 0;
 	list <term> d = [];
+	list<map> devmap = (list<map>)SCR::Read(.proc.partitions);
+
+	map<string,integer> device_sizes = $[];
+
+	foreach(map device, devmap, {
+		string name = device["name"]:"";
+		integer sz = device["size"]:0;
+
+		if (name != nil && name != "")
+		{
+		    device_sizes = add(device_sizes, name, sz);
+		}
+	    }
+	);
+
+	y2milestone("device_sizes: %1", device_sizes);
+
 	foreach (map<string,any> m, disks, ``{
+
+	    string sz = "";
+
+	    if (haskey(m, "size"))
+	    {
+		sz = tostring(m["size"]:0);
+	    }
+
+	    y2internal("disk: %1", m);
+
+	    if (m["type"]:"" == "phys")
+	    {
+		// get size of the device, it's in sectors (512B)   (x*0.5 = x*512/1024)
+		sz = tostring((device_sizes[m["source"]:""]:0) / 1024);
+	    }
+	    y2internal("sz: %1", sz);
+
 	    if (VM::GetVMMtype() == "xen") {
-		d = add(d, `item (`id(id_cnt), m["target"]:"", m["size"]:0, (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
+		d = add(d, `item (`id(id_cnt), m["target"]:"", m["source"]:"", sz, (m["ro"]:false) ? UI::Glyph(`CheckMark) : "", (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
 	    }
 	    else if (VM::GetVMMtype() == "uml") {
-		d = add(d, `item (`id(id_cnt), m["size"]:0, (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
+		d = add(d, `item (`id(id_cnt), m["size"]:0, (m["ro"]:false) ? UI::Glyph(`CheckMark) : "", (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
 	    }
 
 	    id_cnt = id_cnt + 1;
@@ -88,23 +363,24 @@
 	UI::ChangeWidget (`id(`disks), `Items, d);
     }
 
+define symbol DiskOverview() {
     // build and show dialog
-
-    Wizard::OpenAcceptDialog();
 
     term heading = (VM::GetVMMtype() == "uml") ?
 		// table - column heading
 		`header (`Right(_("Disk Size (MB)")), `Center(_("Sparse File")))
 	    :
 		// table - column heading
-		`header (_("Virtual Device"), `Right(_("Disk Size (MB)")), `Center(_("Sparse File")));
+		`header (_("Virtual Device"), _("Source"), `Right(_("Disk Size (MB)")), `Center(_("Read Only")), `Center(_("Sparse File")));
 
     term contents = `VBox(
 			`Table(`id(`disks),
 			    heading, []
 			),
 			`HBox(
-			    `PushButton (`id (`add), Label::AddButton()),
+			    // add dots - %1 is translated 'Add' button label
+			    `MenuButton (sformat(_("%1..."), Label::AddButton()),
+				[ `item(`id(`add_loop), _("Add Loopback Device...")), `item(`id(`add_phys), _("Add Physical Device...")) ]),
 			    `PushButton (`id (`edit), Label::EditButton()),
 			    `PushButton (`id (`delete), Label::DeleteButton())
 			)
@@ -118,8 +394,8 @@ The content of each virtual disk is stored in a file in the host system.</P>
 
     // TODO: add sparse option help text
 
-    Wizard::SetContents (title, contents, help_text, (boolean) WFM::Args(0),
-			 (boolean) WFM::Args(1));
+    Wizard::SetContents (title, contents, help_text, true, true);
+    Wizard::SetNextButton(`next, Label::OKButton());
 
     refresh_table(disks);
 
@@ -127,41 +403,18 @@ The content of each virtual disk is stored in a file in the host system.</P>
 
     while (true)
     {
-	ret = (symbol) Wizard::UserInput ();
+	ret = (symbol) Wizard::UserInput();
 
 	if (ret == `abort && Popup::ConfirmAbort (`painless))
 	    break;
 
-	if (ret == `cancel || ret == `back)
+	if (ret == `cancel || ret == `back || ret == `add_loop || ret == `add_phys)
 	    break;
-
-	if (ret == `add)
-	{
-	    map<string,any> m = ask_size ("", 1024, false);
-
-	    integer s = m["size"]:-1;
-	    if (s >= 0)
-	    {
-		disks = add(disks, m);
-		refresh_table(disks);
-	    }
-	}
 
 	if (ret == `edit)
 	{
-	    integer id = (integer) UI::QueryWidget (`id(`disks), `CurrentItem);
-	    if (id != nil)
-	    {
-		map<string,any> d = disks[id]:$[];
-		d = ask_size(d["target"]:"", d["size"]:0, d["sparse"]:false);
-
-		if (d["size"]:0 > 0)
-		{
-		    disks[id] = d;
-
-		    refresh_table(disks);
-		}
-	    }
+	    selected_disk = (integer) UI::QueryWidget (`id(`disks), `CurrentItem);
+	    break;
 	}
 
 	if (ret == `delete)
@@ -201,7 +454,145 @@ The content of each virtual disk is stored in a file in the host system.</P>
 	}
     }
 
-    Wizard::CloseDialog ();
+    Wizard::RestoreNextButton();
+
+    return ret;
+}
+
+
+symbol AddLoopBack() {
+    map<string,any> m = ask_size("", 1024, false, false);
+    symbol ret = `back;
+
+    if (m != nil)
+    {
+	disks = add(disks, m);
+	ret = `next;
+    }
+
+    y2milestone("AddLoopBack: %1", ret);
+
+    return ret;
+}
+
+symbol AddImageLoopBack() {
+    map<string,any> m = UseLoopBackDialog("", "", false);
+    symbol ret = `back;
+
+    if (m != nil)
+    {
+	disks = add(disks, m);
+	ret = `next;
+    }
+
+    y2milestone("AddImageLoopBack: %1", ret);
+
+    return ret;
+}
+
+symbol AddPhysical() {
+    map<string,any> m = ask_disk("hda", "", true);
+
+    symbol ret = `back;
+
+    if (m != nil)
+    {
+	disks = add(disks, m);
+	ret = `next;
+    }
+
+    y2milestone("AddPhysical: %1", ret);
+
+    return ret;
+}
+
+symbol EditDisk() {
+    if (selected_disk != nil)
+    {
+	// check whether the current disk is physical or loopback mounted
+
+	map<string,any> d = disks[selected_disk]:$[];
+
+	if (d["type"]:"" == "phys")
+	{
+	    d = ask_disk(d["target"]:"", d["source"]:"", d["ro"]:true);
+	}
+	else if (d["type"]:"" == "loop-create")
+	{
+	    d = ask_size(d["target"]:"", d["size"]:0, d["sparse"]:false, d["ro"]:false);
+	}
+	else if (d["type"]:"" == "loop-use")
+	{
+	    d = UseLoopBackDialog(d["target"]:"", d["source"]:"", d["ro"]:false);
+	}
+	else
+	{
+	    y2error("Unknown disk type %1", d["type"]:"");
+	}
+
+	if (d != nil)
+	{
+	    disks[selected_disk] = d;
+	}
+    }
+
+    return `next;
+}
+
+
+    Wizard::OpenNextBackDialog();
+
+    map aliases = $[
+	    "DiskOverview"	: ``(DiskOverview()),
+	    "AddLoopBack"	: ``(AddLoopBack()),
+	    "AddImageLoopBack"	: ``(AddImageLoopBack()),
+	    "LoopBackType"	: ``(LoopbackTypeDialog()),
+	    "AddPhysical"	: ``(AddPhysical()),
+	    "EditDisk"		: ``(EditDisk()),
+	];
+
+    map sequence = $[
+	    "ws_start"	: "DiskOverview",
+	    "DiskOverview"	:
+		$[
+		    `next	    :	`next,
+		    `add_loop	    :	"LoopBackType",
+		    `add_phys	    :	"AddPhysical",
+		    `edit	    :	"EditDisk",
+		    `abort	    :   `abort
+		],
+	    "LoopBackType"	:
+		$[
+		    `create	    :	"AddLoopBack",
+		    `use	    :   "AddImageLoopBack",
+		    `abort	    :   `abort
+		],
+	    "AddLoopBack"	:
+		$[
+		    `next	    :	"DiskOverview",
+		    `abort	    :   `abort
+		],
+	    "AddImageLoopBack"	:
+		$[
+		    `next	    :	"DiskOverview",
+		    `abort	    :   `abort
+		],
+	    "AddPhysical"	:
+		$[
+		    `next	    :	"DiskOverview",
+		    `abort	    :   `abort
+		],
+	    "EditDisk"	:
+		$[
+		    `next	    :	"DiskOverview",
+		    `abort	    :   `abort
+		]
+	    ];
+
+
+    symbol ret = Sequencer::Run(aliases, sequence);
+
+    Wizard::CloseDialog();
 
     return ret;
 }

@@ -13,8 +13,19 @@
 
     textdomain "vm";
 
-    list <map <string,any> > default_disks = [ $["size" : 1024, "sparse" : false, "target" : "hda" ] ];
+    // source : "hda" = relative image file name (in /var/lib/xen/images/$config_name directory)
+    //          "/xen/image/hda" = absolute file name of the image
+    // type : "loop-create" - loopback device - create the image,
+    //        "loop-use" - loopback device - use existing image,
+    //        "phys" - use physical system partition or LVM volume group
+    // target - virtual device in the VM
+    // ro - read-only flag
+    // size - size of the image (when type is "loop-create")
+    list <map <string,any> > default_disks = [ $["size" : 1024, "sparse" : false, "target" : "hda", "type" : "loop-create", "source" : "hda", "ro" : false ] ];
     global list <map <string,any> > disks = default_disks;
+
+    list <map <string,string> > default_network = [ $[ "mac" : "", "bridge": ""] ];
+    global list <map <string,string> > network = default_network;
 
     string domain_prefix = "domain";
 
@@ -80,24 +91,6 @@
     global boolean resetStartMode()
     {
 	VM_Common::start_mode = VM_Common::default_start_mode;
-	return true;
-    }
-
-    global boolean setMAC(string mac)
-    {
-	y2milestone("MAC address: %1", mac);
-	VM_Common::MAC_address = mac;
-	return true;
-    }
-
-    global string getMAC()
-    {
-	return VM_Common::MAC_address;
-    }
-
-    global boolean resetMAC()
-    {
-	VM_Common::MAC_address= VM_Common::default_MAC;
 	return true;
     }
 
@@ -195,14 +188,73 @@
 	return true;
     }
 
+    global define boolean setNetworkConfig(list<map<string,string> > net)
+    {
+	network = net;
+	return true;
+    }
+
+    global define list<map<string,string> > getNetworkConfig() {
+	return network;
+    }
+
+    global define boolean resetNetworkConfig() {
+	network = default_network;
+	return true;
+    }
+
     global define list<string> getDiskProposal() {
 	list<string> ret = [];
 
 	integer i = 1;
 	foreach (map<string,any> d, VM_XEN::disks, ``{
+
+	    string option = "";
+
+	    if (d["sparse"]:false == true)
+	    {
+		option = _("Sparse File");
+	    }
+
+	    if (d["ro"]:false == true)
+	    {
+		string ro_option = _("Read Only");
+
+		if (option != "")
+		{
+		    option = sformat(_("%1, %2"), option, ro_option);
+		}
+		else
+		{
+		    option = ro_option;
+		}
+	    }
+
+	    if (option != "")
+	    {
+		// %1 are options, e.g. Read only
+		option = sformat(_("(%1)"), option);
+	    }
+
+	    string descr = "";
+
+	    if (d["type"]:"" == "phys")
+	    {
+		// %1 = disk, e.g. /dev/hda4
+		descr = sformat(_("Use Disk %1"), "/dev/" + d["source"]:"");
+	    }
+	    else if (d["type"]:"" == "loop-create")
+	    {
+		descr = sformat(_("Create %1 MB Image"), tostring(d["size"]:0));
+	    }
+	    else if (d["type"]:"" == "loop-use")
+	    {
+		descr = sformat(_("Use Image %1"), d["source"]:"");
+	    }
+
 	    // Disk name for installation proposal
 	    // %1 is a number, %2 size of disk, %3 is "(sparse image)" if it's set
-	    ret = add (ret, sformat (_("Disk /dev/%1: %2 MB %3"), d["target"]:"", d["size"]:0, (d["sparse"]:false) ? _("(sparse file)") : ""));
+	    ret = add (ret, sformat (_("Disk /dev/%1: %2 %3"), d["target"]:"", descr, option));
 	    i = i + 1;
 	});
 
@@ -228,13 +280,9 @@
     }
 
     global define list<string> getNetworkProposal() {
-	list<string> proposal = [];
-
-	string mac = VM_Common::getMACproposal();
-
-	proposal = [
-	    // Proposal item - MAC adress of network card in the virtual machine
-	    sformat (_("MAC Address of Virtual Network Card: %1"), mac),
+	list<string> proposal = [
+	    // Proposal item - %1 is number of virtual network card the virtual machine
+	    sformat (_("Number of Virtual Network Cards: %1"), size(network)),
 	];
 
 	return proposal;
@@ -307,20 +355,104 @@
 	string ret = "";
 
 	foreach(map<string,any> d, conf, {
-		string f = pref + "/" + d["target"]:"";
-
 		if (size(ret) > 0)
 		{
 		    ret = ret + ", ";
 		}
 
-		ret = ret + sformat("'file:%1,%2,w'", f, d["target"]:"");
+		string rw_mode = (d["ro"]:true) ? "r" : "w";
+
+		if (d["type"]:"" == "phys")
+		{
+		    ret = ret + sformat("'phy:%1,%2,%3'", d["source"]:"", d["target"]:"", rw_mode);
+		}
+		else if (d["type"]:"" == "loop-create")
+		{
+		    string f = pref + "/" + d["target"]:"";
+		    ret = ret + sformat("'file:%1,%2,%3'", f, d["target"]:"", rw_mode);
+		}
+		else if (d["type"]:"" == "loop-use")
+		{
+		    ret = ret + sformat("'file:%1,%2,%3'", d["source"]:"", d["target"]:"", rw_mode);
+		}
 	    }
 	);
 
 	ret = "[ " + ret + " ]";
 
 	y2milestone("Disk configuration: %1", ret);
+
+	return ret;
+    }
+
+    string GetVIF(list<map<string,string> > conf)
+    {
+	string ret = "";
+
+	if (conf == nil || size(conf) == 0)
+	{
+	    return nil;
+	}
+
+	boolean first = true;
+	boolean all_default = true;
+	foreach(map<string,string> c, conf, {
+		string iface = "";
+
+		string mac = c["mac"]:"";
+		string bridge = c["bridge"]:"";
+
+		if (mac != "" || bridge != "")
+		{
+		    all_default = false;
+		}
+
+		if (mac != "")
+		{
+		    iface = "mac=" + mac;
+		}
+
+		if (bridge == "" && mac == "")
+		{
+		    // both options use default - set at least default bridge name
+		    // because Xen doesn't accept empty option
+		    bridge = "xenbr0";
+		}
+
+		if (bridge == "")
+		{
+		    if (iface != "")
+		    {
+			iface = iface + ", ";
+		    }
+
+		    iface = iface + "bridge=" + bridge;
+		}
+
+		iface = "'" + iface + "'";
+
+		if (first)
+		{
+		    first = false;
+		}
+		else
+		{
+		    ret = ret + ", ";
+		}
+
+		ret = ret + iface;
+	    }
+	);
+
+	if (all_default)
+	{
+	    // all options have default value - return nil, no configuration is needed
+	    ret = nil;
+	}
+	else
+	{
+	    ret = "[ " + ret + " ]";
+	}
 
 	return ret;
     }
@@ -341,9 +473,13 @@
 
 	ret = ret && WriteStringOption(configpath, "dhcp", "dhcp");
 
-	if (VM_Common::MAC_address != nil && VM_Common::MAC_address != "")
+	ret = ret && WriteOption(configpath, "nics", tostring(size(network)));
+
+	string vif = GetVIF(network);
+
+	if (vif != nil)
 	{
-	    ret = ret && WriteOption(configpath, "vif", sformat("[ 'mac=%1' ]", VM_Common::MAC_address));
+	    ret = ret && WriteOption(configpath, "vif", GetVIF(network));
 	}
 
 	ret = ret && WriteStringOption(configpath, "restart", "never");
@@ -637,11 +773,14 @@
     define boolean CreateDiskImages(string prefix) {
 	boolean ret = true;
 	foreach(map<string,any> disk, disks, {
-		integer imgsize = disk["size"]:1024;
-		boolean sparse = disk["sparse"]:false;
-		string target = disk["target"]:"hda";
+		if (disk["type"]:"" == "loop-create")
+		{
+		    integer imgsize = disk["size"]:1024;
+		    boolean sparse = disk["sparse"]:false;
+		    string target = disk["target"]:"hda";
 
-		ret = ret && VM_Common::CreateDiskImage(prefix + "/" + target, imgsize, sparse);
+		    ret = ret && VM_Common::CreateDiskImage(prefix + "/" + target, imgsize, sparse);
+		}
 	    }
 	);
 
@@ -777,10 +916,6 @@
 	    "getRestart" : VM_XEN::getRestart,
 	    "resetRestart" : VM_XEN::resetRestart,
 
-	    "setMAC" : VM_XEN::setMAC,
-	    "getMAC" : VM_XEN::getMAC,
-	    "resetMAC" : VM_XEN::resetMAC,
-
 	    "setConfigName" : VM_XEN::setConfigName,
 	    "getConfigName" : VM_XEN::getConfigName,
 	    "resetConfigName" : VM_XEN::resetConfigName,
@@ -806,8 +941,9 @@
 	    "setExtraInstArgs"	: VM_XEN::setExtraInstArgs,
 	    "resetExtraInstArgs"	: VM_XEN::resetExtraInstArgs,
 
-
-//	    "resetNe"	: VM_XEN::resetNet,
+	    "setNetworkConfig" : VM_XEN::setNetworkConfig,
+	    "getNetworkConfig" : VM_XEN::getNetworkConfig,
+	    "resetNetworkConfig" : VM_XEN::resetNetworkConfig,
 	    "getNetworkProposal" : VM_XEN::getNetworkProposal,
 	    "getNetworkProposalWarning" : VM_XEN::getNetworkProposalWarning,
 
