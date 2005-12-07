@@ -32,7 +32,7 @@
 	    VM::ResetSource();
 	}
 
-	ret = $[ "preformatted_proposal" : HTML::List([VM::GetSourceProposal()]) ];
+	ret = $[ "preformatted_proposal" : HTML::List(VM::GetSourceProposal()) ];
 
 	map warn = VM::GetSourceProposalWarning();
 	if (warn != nil && size(warn) > 0)
@@ -53,9 +53,9 @@
     {
 	ret = $[
 		// this is a heading
-		"rich_text_title"	: _("Source"),
+		"rich_text_title"	: _("Operating System"),
 		// this is a menu entry
-		"menu_title"		: _("Installation &Source"),
+		"menu_title"		: _("Operating &System"),
 		"id"			: "vm_source_stuff"
 	];
     }

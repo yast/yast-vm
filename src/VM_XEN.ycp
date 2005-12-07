@@ -261,7 +261,7 @@
 	return ret;
     }
 
-    global define string getSourceProposal() {
+    global define list<string> getSourceProposal() {
 	y2debug("source configuration: %1, %2, %3", VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
 	return VM_Common::CreateSourceProposal(VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
     }
@@ -272,6 +272,10 @@
 
     global define boolean resetSourceConfig() {
 	VM_Common::source_id = VM_Common::ProposeSelection();
+
+	// reset custom kernel and initrd image setting
+	VM_Common::SetKernelImage("");
+	VM_Common::SetInitrdImage("");
 	return true;
     }
 
@@ -586,11 +590,11 @@
 	return ret;
     }
 
-    define map<string,list<string> > SearchFiles(map<string,list<string> > search, string prefix) {
+    define map<string,list<string> > SearchFiles(map<string,list<string> > search_map, string prefix) {
 	map<string,list<string> >result = $[];
 
 	// check files
-	foreach(string file, list<string> dirs, search, {
+	foreach(string file, list<string> dirs, search_map, {
 		boolean found = false;
 
 		foreach(string dir, dirs, {
@@ -793,57 +797,66 @@
 	string cmd = "/bin/mkdir -p " + target_dir;
 	map out = (map)SCR::Execute(.target.bash_output, cmd);
 	y2debug("mkdir output: %1", out);
-
-
-	// remember inst source config
-	map<integer,boolean> src_status = VM_Common::InstSourceStatus();
 	integer new_src = -1;
-	y2milestone("src_status: %1", src_status);
+	map<integer,boolean> src_status = $[];
 
-	// disable all sources
-	VM_Common::DisableAllSources();
-	integer enabled_src = VM_Common::source_id;
-	y2milestone("src_status: %1", VM_Common::InstSourceStatus());
-
-	// check whether the custom installation source is already defined
-	if (VM_Common::inst_type == `custom)
+	// extract kernel and initrd image
+	if (VM_Common::GetCustomKernel() == false)
 	{
-	    string url = VM_Common::custom_source;
-	    integer src_defined = VM_Common::IsInstSourceDefined(url);
+	    // remember inst source config
+	    src_status = VM_Common::InstSourceStatus();
+	    y2milestone("src_status: %1", src_status);
 
-	    if (src_defined < 0)
+	    // disable all sources
+	    VM_Common::DisableAllSources();
+	    integer enabled_src = VM_Common::source_id;
+	    y2milestone("src_status: %1", VM_Common::InstSourceStatus());
+
+	    // check whether the custom installation source is already defined
+	    if (VM_Common::inst_type == `custom)
 	    {
-		// Add a new installation source
-		new_src = Pkg::SourceCreate(url, "");
-		y2milestone("Adding new installation source: %1 = %2", url, new_src);
-		enabled_src = new_src;
-		VM_Common::source_id = new_src;
-		y2milestone("src_status: %1", VM_Common::InstSourceStatus());
+		string url = VM_Common::custom_source;
+		integer src_defined = VM_Common::IsInstSourceDefined(url);
+
+		if (src_defined < 0)
+		{
+		    // Add a new installation source
+		    new_src = Pkg::SourceCreate(url, "");
+		    y2milestone("Adding new installation source: %1 = %2", url, new_src);
+		    enabled_src = new_src;
+		    VM_Common::source_id = new_src;
+		    y2milestone("src_status: %1", VM_Common::InstSourceStatus());
+		}
 	    }
+
+	    // enable the only one (selected) source
+	    Pkg::SourceSetEnabled(enabled_src, true);
+	    y2milestone("enabled src %1: %2", enabled_src, VM_Common::InstSourceStatus());
+
+	    // restart sources - use the only one enabled source
+	    list sources = Pkg::SourceStartCache(true);
+	    y2milestone("Source init: %1", sources);
+
+	    string arch = VM_Common::PackageArch();
+	    y2milestone("Extracting Xen kernel from the installation source (arch=%1) ...", arch);
+
+	    string kpkg = VM_Common::GetPackage("kernel-xen", "suse/" + arch);
+	    kernel_path = VM_Common::ExtractKernelImage(kpkg, target_dir + "/", "./boot/vmlinuz-*-xen", "vmlinuz-*-xen");
+	    if (kernel_path != "")
+	    {
+		kernel_path = target_dir + "/" + kernel_path;
+	    }
+
+	    y2milestone("Creating installation ramdisk (initrd)...");
+	    VM_Common::CreateInstallationImage(kpkg, target_dir + "/inst-initrd");
+	    initrd_path = target_dir + "/inst-initrd";
+	    y2milestone("kernel: %1, initrd: %2", kernel_path, initrd_path);
 	}
-
-	// enable the only one (selected) source
-	Pkg::SourceSetEnabled(enabled_src, true);
-	y2milestone("enabled src %1: %2", enabled_src, VM_Common::InstSourceStatus());
-
-	// restart sources - use the only one enabled source
-	list sources = Pkg::SourceStartCache(true);
-	y2milestone("Source init: %1", sources);
-
-	string arch = VM_Common::PackageArch();
-	y2milestone("Extracting Xen kernel from the installation source (arch=%1) ...", arch);
-
-	string kpkg = VM_Common::GetPackage("kernel-xen", "suse/" + arch);
-	kernel_path = VM_Common::ExtractKernelImage(kpkg, target_dir + "/", "./boot/vmlinuz-*-xen", "vmlinuz-*-xen");
-	if (kernel_path != "")
+	else
 	{
-	    kernel_path = target_dir + "/" + kernel_path;
+	    kernel_path = VM_Common::GetKernelImage();
+	    initrd_path = VM_Common::GetInitrdImage();
 	}
-
-	y2milestone("Creating installation ramdisk (initrd)...");
-	VM_Common::CreateInstallationImage(kpkg, target_dir + "/inst-initrd");
-	initrd_path = target_dir + "/inst-initrd";
-	y2milestone("kernel: %1, initrd: %2", kernel_path, initrd_path);
 
 	// create disk image file(s)
 	y2milestone("Creating disk images...");
@@ -940,6 +953,15 @@
 	    "getExtraInstArgs"	: VM_XEN::getExtraInstArgs,
 	    "setExtraInstArgs"	: VM_XEN::setExtraInstArgs,
 	    "resetExtraInstArgs"	: VM_XEN::resetExtraInstArgs,
+
+	    "getKernelImage"	: VM_Common::GetKernelImage,
+	    "setKernelImage"	: VM_Common::SetKernelImage,
+
+	    "getInitrdImage"	: VM_Common::GetInitrdImage,
+	    "setInitrdImage"	: VM_Common::SetInitrdImage,
+
+	    "getCustomKernel"	: VM_Common::GetCustomKernel,
+	    "setCustomKernel"	: VM_Common::SetCustomKernel,
 
 	    "setNetworkConfig" : VM_XEN::setNetworkConfig,
 	    "getNetworkConfig" : VM_XEN::getNetworkConfig,

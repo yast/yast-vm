@@ -320,7 +320,7 @@
 	return ret;
     }
 
-    global define string getSourceProposal() {
+    global define list<string> getSourceProposal() {
 	y2debug("source configuration: %1, %2, %3", VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
 	return VM_Common::CreateSourceProposal(VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
     }

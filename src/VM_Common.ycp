@@ -49,6 +49,12 @@
 
     global string root_device = "";
 
+    string custom_kernel = "";
+
+    string custom_initrd = "";
+
+    boolean use_custom_kernel = false;
+
     global map<string, string> restart_mapping = $[
 	 // restart mode - when the virtual machine is restarted
 	 "always" : _("Always"),
@@ -58,6 +64,34 @@
 	 "onreboot" : _("On reboot")
     ];
 
+    global define string GetKernelImage() {
+	return custom_kernel;
+    }
+
+    global define boolean SetKernelImage(string im) {
+	custom_kernel = im;
+	return true;
+    }
+
+    global define string GetInitrdImage() {
+	return custom_initrd;
+    }
+
+    global define boolean SetInitrdImage(string im) {
+	custom_initrd = im;
+	return true;
+    }
+
+    global define boolean SetCustomKernel(boolean use_custom)
+    {
+	use_custom_kernel = use_custom;
+	return true;
+    }
+
+    global define boolean GetCustomKernel()
+    {
+	return use_custom_kernel;
+    }
 
     global integer ProposeSelection () ``{
 	list <integer> sources = Pkg::SourceGetCurrent (false);
@@ -96,25 +130,44 @@
 	return sid;
     }
 
-    global string CreateSourceProposal(symbol inst_type, integer source_id, string custom) {
+    global list<string> CreateSourceProposal(symbol inst_type, integer source_id, string custom)
+    {
+	list<string> ret = [];
 
-	string ret = "";
+	if (use_custom_kernel)
+	{
+	    // %1 = kernel image file
+	    ret = [ sformat(_("Kernel Image: %1"), custom_kernel) ];
 
-	if (inst_type == `configured && source_id != nil && source_id > 0)
-	{
-	    map product_data = Pkg::SourceProductData (source_id);
-	    map general_data = Pkg::SourceGeneralData (source_id);
-	    ret = product_data["label"]:"unknown" + " (" + general_data["url"]:"" + ")";
+	    if (custom_initrd != "")
+	    {
+		// %1 = intrd file name
+		ret = add(ret, sformat(_("RAM Disk Image: %1"), custom_initrd));
+	    }
 	}
-	else if (inst_type == `custom)
+	else
 	{
-	    // installation proposal header
-	    ret = _("Custom Installation Source") + " (" + custom_source + ")";
-	}
-	else if (inst_type == `slp)
-	{
-	    // installation proposal header
-	    ret = _("SLP Installation Source");
+	    string desc = "";
+
+	    if (inst_type == `configured && source_id != nil && source_id > 0)
+	    {
+		map product_data = Pkg::SourceProductData (source_id);
+		map general_data = Pkg::SourceGeneralData (source_id);
+		desc = product_data["label"]:"unknown" + " (" + general_data["url"]:"" + ")";
+	    }
+	    else if (inst_type == `custom)
+	    {
+		// installation proposal header
+		desc =  _("Custom Installation Source") + " (" + custom_source + ")";
+	    }
+	    else if (inst_type == `slp)
+	    {
+		// installation proposal header
+		desc = _("SLP Installation Source");
+	    }
+
+	    // %1 = installation source description or URL
+	    ret = [ sformat(_("OS Image Source: %1"), desc) ];
 	}
 
 	return ret;

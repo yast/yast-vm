@@ -17,13 +17,14 @@
     import "Popup";
     import "Wizard";
     import "Report";
+    import "Sequencer";
 
 
     // screen title - installation source configuration
     string title = _("Installation Source");
 
 
-    list <integer> sources = Pkg::SourceGetCurrent (false);
+    list<integer> sources = Pkg::SourceGetCurrent (false);
 
     map<string,any> sconfig = VM::GetSourceConfig();
 
@@ -60,11 +61,145 @@
 	VM::SetSourceConfig(conf["source_id"]:0, conf["inst_type"]:`configured, conf["custom"]:"");
     }
 
+    define void RefreshSourceTypeDialog()
+    {
+	boolean enabled = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton) == `custom;
+	UI::ChangeWidget(`id(`kernel), `Enabled, enabled);
+	UI::ChangeWidget(`id(`select_kernel), `Enabled, enabled);
+	UI::ChangeWidget(`id(`initrd), `Enabled, enabled);
+	UI::ChangeWidget(`id(`select_initrd), `Enabled, enabled);
+    }
 
+    /**
+     * Popup dialog - source configuration
+     * return symbol
+     */
+    define symbol SourceTypeDialog() {
+
+	string help_text = _("<P><B>Operating System</B></P>") +
+
+	_("<P>Kernel for the virtual machine can be extracted from selected
+installation source or it can be selected explicitely.</P><P>This is useful if
+the source doesn't contain required packages or if you want to use other
+operating system. RAM disk configuration is optional.</P>");
+
+	term contents =
+	    `Frame(_("Disk Image"),
+		`MarginBox(2, 0.3,
+		    // heading in a popup dialog
+		    `RadioButtonGroup(`id(`rbg),
+			`VBox(
+			    `VSpacing(0.3),
+			    `Left(`RadioButton(`id(`extract), `opt(`notify), _("&Extract Kernel and Initrd Image from an Installation Source"))),
+			    `VSpacing(1),
+			    `Left(`RadioButton(`id(`custom), `opt(`notify), _("Use &Custom Kernel and Initrd Image Files"))),
+//			    `VSpacing(0.2),
+			    `HBox(
+				`HSpacing(3),
+				`TextEntry(`id(`kernel), `opt(`hstretch), _("&Kernel Image"), VM::GetKernelImage()),
+				`HSpacing(1),
+				`VBox(
+				    `Label(""),
+				    `PushButton(`id(`select_kernel), _("Select Image..."))
+				)
+			    ),
+//			    `VSpacing(0.2),
+			    `HBox(
+				`HSpacing(3),
+				`TextEntry(`id(`initrd), `opt(`hstretch), _("&Ramdisk Image"), VM::GetInitrdImage()),
+				`HSpacing(1),
+				`VBox(
+				    `Label(""),
+				    `PushButton(`id(`select_initrd), _("Select Image..."))
+				)
+			    ),
+			    `VSpacing(0.2)
+			)
+		    )
+		)
+	    );
+
+	Wizard::SetContents(_("Virtual Machine Configuration"), contents, help_text, true, true);
+
+	symbol s = `dummy;
+
+	UI::ChangeWidget(`id(`rbg), `CurrentButton, (VM::GetCustomKernel()) ? `custom : `extract);
+
+	// initialize the widgets
+	RefreshSourceTypeDialog();
+
+	while(!contains([`next, `back, `abort, `cancel, `fetch], s))
+	{
+	    s = (symbol) UI::UserInput();
+
+	    if (s == `next)
+	    {
+		symbol type = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton);
+
+		if (type == `custom)
+		{
+		    string kernel = (string) UI::QueryWidget (`id(`kernel), `Value);
+		    string initrd = (string) UI::QueryWidget (`id(`initrd), `Value);
+
+		    if (kernel == nil || kernel == "")
+		    {
+			Report::Error("The kernel image file name cannot be empty.");
+			s = `again;
+			continue;
+		    }
+
+		    // set images
+		}
+		else
+		{
+		    s = `fetch;
+		}
+	    }
+	    else if (s == `select_kernel)
+	    {
+		string new_kernel = (string)UI::QueryWidget(`id(`kernel), `Value);
+		new_kernel = UI::AskForExistingFile(new_kernel, "*", _("Select Kernel Image"));
+
+		if (new_kernel != nil)
+		{
+		    UI::ChangeWidget(`id(`kernel), `Value, new_kernel);
+		}
+	    }
+	    else if (s == `select_initrd)
+	    {
+		string new_initrd = (string)UI::QueryWidget(`id(`initrd), `Value);
+		new_initrd = UI::AskForExistingFile(new_initrd, "*", _("Select Initrd Image"));
+
+		if (new_initrd != nil)
+		{
+		    UI::ChangeWidget(`id(`initrd), `Value, new_initrd);
+		}
+	    }
+	    else if (s == `custom || s == `extract)
+	    {
+		// refresh the dialog
+		RefreshSourceTypeDialog();
+	    }
+	}
+
+	boolean custom = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton) == `custom;
+	string new_kernel = (string)UI::QueryWidget(`id(`kernel), `Value);
+	string new_initrd = (string)UI::QueryWidget(`id(`initrd), `Value);
+
+	VM::SetCustomKernel(custom);
+
+	if (custom)
+	{
+	    VM::SetKernelImage(new_kernel);
+	    VM::SetInitrdImage(new_initrd);
+	}
+
+	return s;
+    }
+
+
+define symbol SourceSelection() {
     // build and show dialog
-
-    Wizard::OpenAcceptDialog ();
-
     integer indent = 3;
 
     term contents = `VBox(
@@ -105,8 +240,7 @@
     + _("<P>Select the installation source from which to install the virtual machine.</P>")
     + _("<P>Only network installation sources are supported (e.g., FTP or NFS).</P>");
 
-    Wizard::SetContents (title, contents, help_text, (boolean) WFM::Args(0),
-			 (boolean) WFM::Args(1));
+    Wizard::SetContents(title, contents, help_text, true, true);
 
     fill_table();
 
@@ -188,7 +322,33 @@ are supported in the installation."));
 	}
     }
 
-    Wizard::CloseDialog ();
+    return ret;
+}
+
+    Wizard::OpenNextBackDialog();
+
+    map aliases = $[
+	    "SourceSelection"	: ``(SourceSelection()),
+	    "SourceTypeDialog"	: ``(SourceTypeDialog()),
+	];
+
+    map sequence = $[
+	    "ws_start"	: "SourceTypeDialog",
+	    "SourceTypeDialog"	:
+		$[
+		    `fetch	    :	"SourceSelection",
+		    `abort	    :   `abort
+		],
+	    "SourceSelection"	:
+		$[
+		    `abort	    :   `abort
+		]
+	    ];
+
+    symbol ret = Sequencer::Run(aliases, sequence);
+
+    Wizard::CloseDialog();
 
     return ret;
+
 }

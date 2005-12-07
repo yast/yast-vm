@@ -42,6 +42,20 @@
 	}
     }
 
+    boolean CallBooleanBooleanFunction(string name, boolean arg) {
+	boolean(boolean) toEval = (boolean(boolean))functions[name]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(arg);
+	}
+	else
+	{
+	    y2error("%1() function is missing!", name);
+	    return nil;
+	}
+    }
+
     string CallStringFunction(string name) {
 	string() toEval = (string())functions[name]:nil;
 
@@ -293,8 +307,18 @@
 	}
     }
 
-    global string GetSourceProposal() {
-	return CallStringFunction("getSourceProposal");
+    global list<string> GetSourceProposal() {
+	list<string>() toEval = (list<string>())functions["getSourceProposal"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("GetSourceProposal() function is missing!");
+	    return nil;
+	}
     }
 
     global map GetSourceProposalWarning()
@@ -426,4 +450,29 @@
     global boolean ResetRestart() {
 	return CallBooleanFunction("resetRestart");
     }
+
+    global string GetKernelImage() {
+	return CallStringFunction("getKernelImage");
+    }
+
+    global boolean SetKernelImage(string img) {
+	return CallBooleanStringFunction("setKernelImage", img);
+    }
+
+    global string GetInitrdImage() {
+	return CallStringFunction("getInitrdImage");
+    }
+
+    global boolean SetInitrdImage(string img) {
+	return CallBooleanStringFunction("setInitrdImage", img);
+    }
+
+    global boolean GetCustomKernel() {
+	return CallBooleanFunction("getCustomKernel");
+    }
+
+    global boolean SetCustomKernel(boolean use_custom) {
+	return CallBooleanBooleanFunction("setCustomKernel", use_custom);
+    }
+
 }

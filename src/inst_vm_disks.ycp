@@ -29,8 +29,16 @@
 
 	map<string,any> ret = nil;
 
-	term contents =
+	string help_text = _("<P><B>Create Virtual Disk Image</B></P><P>Yast will
+create a new disk image of required size.</P><P>It is possible to create <B>sparse image
+file</B> which dynamically alocates disk space when it is needed.</P>") +
 
+_("<P>The image can be configured <B>read only</B>. In this case the virtual
+machine cannot modify the image in any way.</P>") +
+
+_("<P><B>Virtual disk</B> is name of the virtual disk inside the virtual machine.</P>");
+
+	term contents =
 	`Frame(_("Disk configuration"),
 		`MarginBox(1.5, 0.2,
 			// heading in a popup dialog
@@ -55,7 +63,7 @@
 			      ))
 			));
 
-	Wizard::SetContents(_("Virtual Disk Configuration"), contents, "help_text", true, true);
+	Wizard::SetContents(_("Virtual Disk Configuration"), contents, help_text, true, true);
 
 	UI::ChangeWidget (`id(`size), `ValidChars, "0123456789");
 	UI::ChangeWidget (`id(`size), `Value, tostring (s));
@@ -106,6 +114,13 @@
 
 	map<string,any> ret = nil;
 
+	string help_text = _("<P><B>Use Virtual Disk Image</B></P><P>Existing disk image can used by the virtual machine.</P>") +
+
+_("<P>The image can be configured <B>read only</B>. In this case the virtual
+machine cannot modify the image in any way.</P>") +
+
+_("<P><B>Virtual disk</B> is name of the virtual disk inside the virtual machine.</P>");
+
 	term contents = `Frame(_("Disk configuration"),
 	    `MarginBox(1.5, 0.2,
 		// heading in a popup dialog
@@ -131,7 +146,7 @@
 	    )
 	);
 
-	Wizard::SetContents(_("Virtual Disk Configuration"), contents, "help_text", true, true);
+	Wizard::SetContents(_("Virtual Disk Configuration"), contents, help_text, true, true);
 
 	symbol ui = `dummy;
 	while(!contains([`next, `accept, `back, `abort, `cancel], ui))
@@ -213,6 +228,14 @@
 	    );
 	}
 
+	string help_text = _("<P><B>Use Physical Device</B></P><P>The virtual machine can use physical devices in the machine.</P>") +
+
+_("<P>The physical device can be configured <B>read only</B>. In this case the virtual
+machine cannot modify the device in any way.</P>") +
+
+_("<P><B>Virtual disk</B> is name of the virtual disk inside the virtual machine.</P>");
+
+
 	term contents =
 
 	`Frame(_("Disk configuration"),
@@ -230,7 +253,7 @@
 			  )
 		    ));
 
-	Wizard::SetContents(_("Virtual Disk Configuration"), contents, "help_text", true, true);
+	Wizard::SetContents(_("Virtual Disk Configuration"), contents, help_text, true, true);
 	UI::ChangeWidget(`id(`phys), `Value, phys);
 
 	symbol s = `dummy;
@@ -278,6 +301,9 @@
      */
     define symbol LoopbackTypeDialog() {
 
+	// help text
+	string help_text = _("<P><B>Loop back file configuration</B></P><P>Existing disk image can be assigned to the virtual machine or it is possible to create new empty disk image.</P>");
+
 	term contents =
 	    `Frame(_("Disk Image"),
 		`MarginBox(2, 0.3,
@@ -294,7 +320,7 @@
 		)
 	    );
 
-	Wizard::SetContents(_("Configuration of Disk Image"), contents, "help_text", true, true);
+	Wizard::SetContents(_("Configuration of Disk Image"), contents, help_text, true, true);
 
 	symbol s = `dummy;
 

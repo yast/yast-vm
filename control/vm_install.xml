@@ -11,7 +11,7 @@ textdomain="vm"
 
     <proposals config:type="list">
         <proposal>
-            <label>UML Installation Settings</label>
+            <label>UML Virtual Machine Settings</label>
             <mode>normal</mode>
             <name>uml</name>
             <stage>normal</stage>
@@ -25,7 +25,7 @@ textdomain="vm"
             </proposal_modules>
         </proposal>
         <proposal>
-            <label>Virtual Machine Installation Settings</label>
+            <label>Xen Virtual Machine Settings</label>
             <mode>normal</mode>
             <name>xen</name>
             <stage>normal</stage>
