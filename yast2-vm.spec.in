@@ -5,10 +5,6 @@
 @HEADER@
 Requires:	yast2 yast2-installation yast2-users
 
-# UML support has been move into this package
-Obsoletes:	yast2-uml
-Provides:	yast2-uml
-
 Summary:	Start installation in a Virtual Machine
 
 %description
@@ -19,8 +15,6 @@ Summary:	Start installation in a Virtual Machine
 @BUILD@
 
 @INSTALL@
-mkdir $RPM_BUILD_ROOT/sbin
-ln -sf ../etc/init.d/uml $RPM_BUILD_ROOT/sbin/rcuml
 
 @CLEAN@
 
@@ -38,9 +32,3 @@ ln -sf ../etc/init.d/uml $RPM_BUILD_ROOT/sbin/rcuml
 %dir /usr/share/YaST2/control
 /usr/share/YaST2/control/vm_install.xml
 %doc @docdir@
-@desktopdir@/uml.desktop
-@clientdir@/uml*.ycp
-@clientdir@/inst_uml*.ycp
-@ybindir@/start-uml
-/etc/init.d/uml
-/sbin/rcuml

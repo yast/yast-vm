@@ -80,7 +80,7 @@ Start installation in the host system."));
 
     if (!Arch::is_xen())
     {
-	// we are already in UML, nested virtual machine is not supported
+	// xen kernel must be running to start a new Xen domain
 	Report::Error(_("For installing a XEN virtual machine, the system
 must be running the XEN Linux Kernel.
 Xen installation cannot be started.

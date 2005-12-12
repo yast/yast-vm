@@ -78,12 +78,6 @@
 	    functions = VM_XEN::GetFunctions();
 	    vmmtype = vmm;
 	}
-	else if (vmm == "uml")
-	{
-	    import "VM_UML";
-	    functions = VM_UML::GetFunctions();
-	    vmmtype = vmm;
-	}
 	else
 	{
 	    y2error("unsupported VMM type: %1", vmm);
