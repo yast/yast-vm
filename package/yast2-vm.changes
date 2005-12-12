@@ -1,4 +1,15 @@
 -------------------------------------------------------------------
+Mon Dec 12 09:49:05 CET 2005 - lslezak@suse.cz
+
+- custom kernel and RAM disk configuration
+- workflow update for custom kernel
+- renamed search variable
+- new help texts + updates
+- xen - configure more virtual network interfaces, allow to use
+  physical partition as storage, use existing disk image
+- 2.13.4
+
+-------------------------------------------------------------------
 Tue Nov 22 11:08:39 CET 2005 - lslezak@suse.cz
 
 - installation boot parameter - boot option has been splitted into

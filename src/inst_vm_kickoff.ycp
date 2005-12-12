@@ -13,7 +13,7 @@
     import "Progress";
     import "Report";
     import "Service";
-
+    import "Popup";
 
     textdomain "vm";
 
@@ -26,9 +26,8 @@
 				     // progress stage
 				     _("Write virtual machine configuration"),
 				     // progress stage
-				     _("Start installation"),
+				     _("Start the virtual machine"),
 				     // progress stage
-				     _("Finish installation"),
     ];
 
     // progress stage
@@ -94,26 +93,39 @@
 	return `abort;
     }
 
-    Progress::NextStage ();
+    if (!VM::GetCustomKernel())
+    {
+	VM::Prepare2();
+	if (!success)
+	{
+	    Report::Error(_("Cannot prepare the virtual machine for reboot.") + "\n" + abortmsg);
+	    return `abort;
+	}
+	success = VM::Start();
+	if (!success)
+	{
+	    return `abort;
+	}
 
-    VM::Prepare2();
-    if (!success)
-    {
-	Report::Error(_("Cannot prepare the virtual machine for reboot.") + "\n" + abortmsg);
-	return `abort;
+	VM::Prepare3();
+	if (!success)
+	{
+	    Report::Error(_("Cannot update configuration of the virtual machine."));
+	    return `abort;
+	}
     }
-    success = VM::Start();
-    if (!success)
+    else
     {
-	return `abort;
+	VM::Prepare2();
+	VM::Prepare3();
+
+	// ask user to start the virtual machine again (to continue the installation or configuration)
+	while(Popup::YesNo(_("The virtual machine has been shut down.\nStart the virtual machine again?")))
+	{
+	    VM::Start();
+	}
     }
 
-    VM::Prepare3();
-    if (!success)
-    {
-	Report::Error(_("Cannot update configuration of the virtual machine."));
-	return `abort;
-    }
     Progress::Finish ();
 
     return `next;

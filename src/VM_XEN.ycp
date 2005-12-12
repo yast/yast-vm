@@ -505,16 +505,18 @@
 	    url = "slp://";
 	}
 
-	string extra_arg = "TERM=xterm textmode=1 install=" + url;
-
-	// add boot options
-	if (VM_Common::extra_args != "") {
-	    extra_arg = extra_arg + " " + VM_Common::extra_args;
-	}
+	string extra_arg = VM_Common::extra_inst_args;
 
 	// add installation boot options
-	if (VM_Common::extra_inst_args != "") {
-	    extra_arg = extra_arg + " " + VM_Common::extra_inst_args;
+	if (extra_arg != "")
+	{
+	    // replace $URL_INSTALL variable
+	    string new_arg = regexpsub(VM_Common::extra_inst_args, "^(.*)$URL_INSTALL(.*)", sformat("\\1%1\\2", url));
+
+	    if (new_arg != nil)
+	    {
+		extra_arg = new_arg;
+	    }
 	}
 
 	ret = ret && WriteStringOption(configpath, "extra", extra_arg);
@@ -693,13 +695,13 @@
 		if (mounted)
 		{
 		    // search for files
-		    map<string,list<string> > search = $[
+		    map<string,list<string> > srch = $[
 			"vmlinuz-*-xen" : [ "/boot/", "/" ],
 			"initrd-*-xen" : [ "/boot/", "/" ],
 			"fstab" : [ "/etc/", "/" ]
 		    ];
 
-		    map<string,list<string> > found = SearchFiles(search, mountpoint);
+		    map<string,list<string> > found = SearchFiles(srch, mountpoint);
 
 		    y2milestone("Search result: %1", found);
 
@@ -719,11 +721,44 @@
 
 	foreach(map<string,any> disk, disks, {
 		string target = disk["target"]:"hda";
+		// TODO use prefix only for created images
 		ret = ret && ReadDiskImage(prefix + "/" + target);
 	    }
 	);
 
 	return ret;
+    }
+
+    global define string getExtraArgs() {
+	return VM_Common::extra_args;
+    }
+
+    global define boolean setExtraArgs(string args) {
+	VM_Common::extra_args = args;
+	return true;
+    }
+
+    global define boolean resetExtraArgs() {
+	// set empty default value for custom kernel
+	string arg = VM_Common::GetCustomKernel() ? "" : "TERM=xterm";
+	VM_Common::extra_args = arg;
+	return true;
+    }
+
+    global define string getExtraInstArgs() {
+	return VM_Common::extra_inst_args;
+    }
+
+    global define boolean setExtraInstArgs(string args) {
+	VM_Common::extra_inst_args = args;
+	return true;
+    }
+
+    global define boolean resetExtraInstArgs() {
+	// set empty default value for custom kernel
+	string arg = VM_Common::GetCustomKernel() ? "" : "TERM=xterm textmode=1 install=$URL_INSTALL";
+	VM_Common::extra_inst_args = arg;
+	return true;
     }
 
 
@@ -739,16 +774,16 @@
 	// upadate config - root device, set default runlevel, remove install= option
 	ret = ret && SCR::Write(configpath + "restart", nil);
 
-	string extra = "TERM=xterm";
-	if (VM_Common::extra_args != "")
-	{
-	    extra = extra + " " + VM_Common::extra_args;
-	}
+	string extra = getExtraArgs();
 
 	ret = ret && WriteStringOption(configpath, "extra", extra);
 	ret = ret && WriteStringOption(configpath, "kernel", kernel_path);
 	ret = ret && WriteStringOption(configpath, "ramdisk", initrd_path);
-	ret = ret && WriteStringOption(configpath, "root", VM_Common::root_device);
+
+	if (VM_Common::root_device != "")
+	{
+	    ret = ret && WriteStringOption(configpath, "root", VM_Common::root_device);
+	}
 
 	// flush the changes
 	ret = ret && SCR::Write(.etc.xen, nil);
@@ -761,9 +796,6 @@
 	path configpath = .etc.xen.value + topath("/etc/xen/" + VM_Common::config_name);
 
 	SCR::UnmountAgent(.etc.xen);
-
-	// set extra options
-	ret = ret && WriteStringOption(configpath, "extra", VM_Common::extra_args);
 
 	// set restart option
 	ret = ret && WriteStringOption(configpath, "restart", restart);
@@ -882,34 +914,6 @@
 	return out == 0;
     }
 
-    global define string getExtraArgs() {
-	return VM_Common::extra_args;
-    }
-
-    global define boolean setExtraArgs(string args) {
-	VM_Common::extra_args = args;
-	return true;
-    }
-
-    global define boolean resetExtraArgs() {
-	VM_Common::extra_args = "";
-	return true;
-    }
-
-    global define string getExtraInstArgs() {
-	return VM_Common::extra_inst_args;
-    }
-
-    global define boolean setExtraInstArgs(string args) {
-	VM_Common::extra_inst_args = args;
-	return true;
-    }
-
-    global define boolean resetExtraInstArgs() {
-	VM_Common::extra_inst_args = "";
-	return true;
-    }
-
     global define boolean InstallPackages() {
 	return VM_Common::InstallPackages(["xterm", "xorg-x11"]);
     }
@@ -984,5 +988,8 @@
 
 	// propose configuration (domain) name
 	resetConfigName();
+
+	resetExtraArgs();
+	resetExtraInstArgs();
     }
 }

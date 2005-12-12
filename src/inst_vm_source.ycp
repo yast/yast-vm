@@ -148,11 +148,15 @@ operating system. RAM disk configuration is optional.</P>");
 			continue;
 		    }
 
-		    // set images
+		    VM::SetCustomKernel(true);
+
+		    VM::SetKernelImage(kernel);
+		    VM::SetInitrdImage(initrd);
 		}
 		else
 		{
 		    s = `fetch;
+		    VM::SetCustomKernel(false);
 		}
 	    }
 	    else if (s == `select_kernel)
@@ -183,15 +187,21 @@ operating system. RAM disk configuration is optional.</P>");
 	}
 
 	boolean custom = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton) == `custom;
-	string new_kernel = (string)UI::QueryWidget(`id(`kernel), `Value);
-	string new_initrd = (string)UI::QueryWidget(`id(`initrd), `Value);
+	boolean old_setting = VM::GetCustomKernel();
 
-	VM::SetCustomKernel(custom);
-
-	if (custom)
+	// if kernel type has been changed ask user to reset kernel options
+	if ((s == `fetch || s == `next) && old_setting != custom)
 	{
-	    VM::SetKernelImage(new_kernel);
-	    VM::SetInitrdImage(new_initrd);
+	    string current = sformat(_("Current arguments: %1\nCurrent installation arguments: %2"), VM::GetExtraArgs(), VM::GetExtraInstArgs());
+
+	    string question = (custom) ? sformat(_("Set empty arguments for the selected kernel?\n%1"), current) :
+		sformat(_("Set default SUSE Linux installation arguments for kernel?\n%1"), current);
+
+	    if (Popup::YesNo(question))
+	    {
+		VM::ResetExtraArgs();
+		VM::ResetExtraInstArgs();
+	    }
 	}
 
 	return s;
