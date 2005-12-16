@@ -204,7 +204,7 @@
 	    if (size(network_conf) <= 0)
 	    {
 		// error popup
-		string message = _("At least one nework interface is required.");
+		string message = _("At least one network interface is required.");
 		Popup::Message(message);
 		continue;
 	    }

@@ -1,0 +1,177 @@
+/**
+ * Module:	inst_vm_kickoff.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * Purpose:	Prepare and start installation in a virtual machine.
+ *
+ * $Id:$
+ */
+{
+
+    import "Package";
+    import "Progress";
+    import "Report";
+    import "Bootloader";
+    import "BootCommon";
+    import "Popup";
+    import "Wizard";
+    import "Label";
+
+    textdomain "vm";
+
+    list <string> progress_stages = [
+				     // progress stage
+				     _("Install Packages"),
+				     // progress stage
+				     _("Configure Bootloader")
+    ];
+
+    list progress_descriptions = [];
+
+    integer progress_length = size(progress_stages);
+
+    // Headline for management domain installation
+    string headline = _("Configuring the Management Domain (domain0)");
+
+    // xen domain0 installation help text - 1/4
+    string help_text = _("<P><B>Domain0 Configuration</B></P><P>Configuration
+of management domain (domain0) has two parts.</P>") +
+
+    // xen domain0 installation help text - 2/4
+    _("<P>Required packages are installed into the system at first.</P><P>Then the
+bootloader is switched to Grub if it is not already used and Xen section is
+added to the bootloader menu if it is missing.</P>") +
+
+    // xen domain0 installation help text - 3/4
+_("<P>Grub is needed because it supports multiboot standard which is required
+to boot Xen hypervisor and Linux kernel.</P>") +
+
+    // xen domain0 installation help text - 4/4
+_("<P>When the configuration is successfully finished it is possible to boot Xen from the bootloader menu.</P>");
+
+    // error popup
+    string error = _("An error occurred during installation.");
+    // error popup
+    string abortmsg = _("The installation will be aborted.");
+
+    Wizard::OpenNextBackDialog();
+
+    // enable progress
+    boolean progress = Progress::set(true);
+
+    // Headline for virtual machine installation
+    Progress::New(headline, "", progress_length,
+		   progress_stages, progress_descriptions, help_text);
+
+    // package stage
+    Progress::NextStage();
+
+    list<string> packages = ["xen", "kernel-xen"];
+    boolean success = true;
+    boolean bootloader_modified = false;
+
+
+    // progressbar title - check whether Xen packages are installed
+    Progress::Title(_("Checking packages..."));
+    if (!Package::InstalledAll(packages))
+    {
+	// progressbar title - install the required packages
+	Progress::Title(_("Installing packages..."));
+	success = Package::InstallAll(packages);
+    }
+
+    if (!success)
+    {
+	// error popup
+	Report::Error(_("Cannot install required packages.") + "\n" + abortmsg);
+	return `abort;
+    }
+
+    // bootloader stage
+    Progress::NextStage();
+
+    // progressbar title - read bootloader settings
+    Progress::Title(_("Reading bootloader configuration..."));
+
+    // disable bootloader progress
+    Progress::set(false);
+    Bootloader::Read();
+    Progress::set(true);
+
+    // progressbar title - check whether GRUB or LILO is used as bootloader
+    Progress::Title(_("Checking bootloader type..."));
+
+    string loader_type = BootCommon::getLoaderType(false);
+    string bootloader_changes = "";
+
+    // false = don't recheck
+    if (loader_type != "grub")
+    {
+	// progressbar title
+	Progress::Title(_("Switching to GRUB bootloader..."));
+
+	// set type to GRUB
+	BootCommon::setLoaderType("grub");
+	// summary text - item in the task list
+	bootloader_changes = sformat(_("<LI>Switch to GRUB bootloader (current bootloader is '%1')</LI>"), loader_type);
+    }
+
+    // progressbar title - check if there is a Xen section
+    Progress::Title(_("Searching Xen section..."));
+
+    // get all sections
+    list sects = Bootloader::getSectionsList(`all);
+    y2milestone("bootloader sections: %1", sects);
+
+    if (!contains(sects, "XEN"))
+    {
+	// progressbar title - add missing Xen section to bootloader configuration
+	Progress::Title(_("Adding Xen section..."));
+	BootCommon::sections = add(BootCommon::sections, BootCommon::CreateLinuxSection("xen"));
+	sects = Bootloader::getSectionsList(`all);
+	y2milestone("bootloader sections: %1", sects);
+	// summary text - item in the task list
+	bootloader_changes = bootloader_changes + _("<LI>Add Xen section into the bootloader menu</LI>");
+    }
+
+    // confirm bootloader installation - dialog header
+    if (bootloader_changes != "")
+    {
+	// progressbar title - write the modified bootloader configuration
+	Progress::Title(_("Confirmation of the bootloader configuration..."));
+
+	bootloader_changes = bootloader_changes + _("<LI>Activate the new configuration</LI>");
+
+	if (Popup::AnyQuestionRichText(_("Update of the Bootloader Configuration"),
+	    sformat(_("<P><B>These actions will be performed:</B><UL>%1</UL></P>"), bootloader_changes),
+	    60, 10, Label::ContinueButton(), Label::CancelButton(), `yes_focus))
+	{
+	    // progressbar title - write the modified bootloader configuration
+	    Progress::Title(_("Writing bootloader configuration..."));
+
+	    Progress::set(false);
+	    success = Bootloader::Write();
+	    Progress::set(true);
+
+	    if (!success)
+	    {
+		Report::Error(error);
+		return `abort;
+	    }
+	}
+	else
+	{
+	    return `abort;
+	}
+    }
+
+    Progress::Finish();
+
+    // popup message - ask user to reboot the machine into Xen kernel
+    Popup::LongMessage(_("The machine is ready to start Xen management domain.\n\nReboot the machine and select Xen section in the bootloader menu to start it."));
+
+    Wizard::CloseDialog();
+
+    return `next;
+}

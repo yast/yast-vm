@@ -31,7 +31,7 @@
 
 	string help_text = _("<P><B>Create Virtual Disk Image</B></P><P>Yast will
 create a new disk image of required size.</P><P>It is possible to create <B>sparse image
-file</B> which dynamically alocates disk space when it is needed.</P>") +
+file</B> which dynamically allocates disk space when it is needed.</P>") +
 
 _("<P>The image can be configured <B>read only</B>. In this case the virtual
 machine cannot modify the image in any way.</P>") +

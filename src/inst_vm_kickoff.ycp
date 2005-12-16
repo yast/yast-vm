@@ -43,7 +43,7 @@
     // help text
     string help_text = _("<P><B>Installation</B></P><P>Preparing the virtual machine for installation...</P>");
 
-    string error = _("An error occured during installation of the virtual machine.");
+    string error = _("An error occurred during installation of the virtual machine.");
 
     // enable progress
     Progress::on();

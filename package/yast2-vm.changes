@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Dec 16 15:11:11 CET 2005 - lslezak@suse.cz
+
+- new client for Xen domain0 configuration (#117215)
+- spelling fixes
+- 2.13.6
+
+-------------------------------------------------------------------
 Mon Dec 12 17:07:25 CET 2005 - lslezak@suse.cz
 
 - removed UML support

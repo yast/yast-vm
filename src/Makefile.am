@@ -17,6 +17,7 @@ client_DATA =				\
 	inst_vm_kickoff.ycp		\
 	inst_vm_options.ycp		\
 	inst_vm_network.ycp		\
+	dom0_setup.ycp			\
 	vm_network_proposal.ycp
 
 ynclude_DATA = cmdline.ycp

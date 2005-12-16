@@ -915,7 +915,7 @@
     }
 
     global define boolean InstallPackages() {
-	return VM_Common::InstallPackages(["xterm", "xorg-x11"]);
+	return VM_Common::InstallPackages(["xterm", "xorg-x11", "xen-tools"]);
     }
 
     global define map GetFunctions()

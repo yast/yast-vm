@@ -13,6 +13,8 @@
     import "Report";
     import "Arch";
     import "CommandLine";
+    import "Popup";
+    import "Label";
 
     include "vm/cmdline.ycp";
 
@@ -81,21 +83,35 @@ Start installation in the host system."));
     if (!Arch::is_xen())
     {
 	// xen kernel must be running to start a new Xen domain
-	Report::Error(_("For installing a XEN virtual machine, the system
-must be running the XEN Linux Kernel.
+	string err = _("For running a Xen virtual machine, the system
+must be running the Xen Linux Kernel in dom.
 Xen installation cannot be started.
-"));
+");
+
+//	if (Popup::AnyQuestionRichText(_("Configure the Management Domain?"),
+//	    _("<P>A Xen virtual machine can be started only from management domain (domain0) which is not running now.</P><P><B>Configure the management domain?</B></P>"),
+//	60, 10, Label::YesButton(), Label::NoButton(), `yes_focus))
+
+	if (Popup::YesNo(_("A Xen virtual machine can be started only\nfrom management domain (domain0)\nwhich is not running now.\n\nConfigure the management domain now?")))
+	{
+	    y2milestone("Starting domain0 configuration...");
+	    return (symbol) WFM::CallFunction("dom0_setup", []);
+	}
+	else
+	{
+	    y2milestone("Skipping domain0 configuration");
+	}
 
 	return `abort;
     }
 
     // check whether X window system is accessible
-    // the installation runs in xterm, we need access to a X server
     integer exit_status = (integer) SCR::Execute(.target.bash, "/usr/X11R6/bin/xdpyinfo");
     y2milestone("X check exit status: %1", exit_status);
 
     if (exit_status != 0)
     {
+	// error - the installation runs in xterm, we need access to a X server
 	Report::Error(_("Virtual machine installation requires access to a graphical environment."));
 
 	return `abort;
@@ -103,7 +119,7 @@ Xen installation cannot be started.
 
     // initialize to xen VM type
     import "VM";
-    // TODO set virtualization type here
+    // set virtualization type here
     VM::SetVMMtype("xen");
 
     // initialize ProductControl module (load custom control file)
