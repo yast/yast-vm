@@ -61,7 +61,7 @@
 	 // restart mode - when the virtual machine is restarted
 	 "never" : _("Never"),
 	 // restart mode - when the virtual machine is restarted
-	 "onreboot" : _("On reboot")
+	 "onreboot" : _("On Reboot")
     ];
 
     global define string GetKernelImage() {

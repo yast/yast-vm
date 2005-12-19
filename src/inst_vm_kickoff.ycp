@@ -71,7 +71,7 @@
 
     if (!success)
     {
-	Report::Error(_("Cannot prepare virtual machine environment.") + "\n" + abortmsg);
+	Report::Error(_("Cannot prepare the virtual machine environment.") + "\n" + abortmsg);
 	return `abort;
     }
 
@@ -80,7 +80,7 @@
     success = VM::Write();
     if (!success)
     {
-	Report::Error(_("Cannot write configuration of the virtual machine.") + "\n" + abortmsg);
+	Report::Error(_("Cannot write the configuration of the virtual machine.") + "\n" + abortmsg);
 	return `abort;
     }
 
@@ -110,7 +110,7 @@
 	VM::Prepare3();
 	if (!success)
 	{
-	    Report::Error(_("Cannot update configuration of the virtual machine."));
+	    Report::Error(_("Cannot update the configuration of the virtual machine."));
 	    return `abort;
 	}
     }

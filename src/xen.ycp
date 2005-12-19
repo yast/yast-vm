@@ -23,7 +23,7 @@
      */
     map cmdline = $[
 	// help text
-	"help"      : _("Start installation in a virtual machine"),
+	"help"      : _("Start installation in a virtual machine."),
 	"id"        : "vm",
 	"guihandler": GUIhandler,
 	"actions"   : $[
@@ -74,8 +74,9 @@
     if (Arch::is_uml () == true)
     {
 	// we are already in UML, nested virtual machine is not supported
-	Report::Error(_("Virtual machine installation cannot be started inside UML machine.
-Start installation in the host system."));
+	Report::Error(_("Virtual machine installation cannot be started inside the UML machine.
+Start installation in the host system.
+"));
 
 	return `abort;
     }

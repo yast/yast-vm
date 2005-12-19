@@ -33,13 +33,14 @@
 create a new disk image of required size.</P><P>It is possible to create <B>sparse image
 file</B> which dynamically allocates disk space when it is needed.</P>") +
 
-_("<P>The image can be configured <B>read only</B>. In this case the virtual
-machine cannot modify the image in any way.</P>") +
+_("<P>The image can be configured <B>read only</B>. In this case, the virtual
+machine cannot modify the image in any way.</P>
+") +
 
-_("<P><B>Virtual disk</B> is name of the virtual disk inside the virtual machine.</P>");
+_("<P><B>Virtual Disk</B> is the name of the virtual disk inside the virtual machine.</P>");
 
 	term contents =
-	`Frame(_("Disk configuration"),
+	`Frame(_("Disk Configuration"),
 		`MarginBox(1.5, 0.2,
 			// heading in a popup dialog
 			`VBox(
@@ -56,7 +57,7 @@ _("<P><B>Virtual disk</B> is name of the virtual disk inside the virtual machine
 			      `VBox(
 
 			      `VSpacing(0.5),
-			      `Left(`CheckBox(`id(`ro), _("&Read Only Access"), ro)),
+			      `Left(`CheckBox(`id(`ro), _("&Read-Only Access"), ro)),
 			      `VSpacing(0.5),
 			      `Left(`CheckBox(`id(`sparse), _("Create &Sparse Image File"), sparse)),
 			      `VSpacing(0.2)
@@ -114,14 +115,15 @@ _("<P><B>Virtual disk</B> is name of the virtual disk inside the virtual machine
 
 	map<string,any> ret = nil;
 
-	string help_text = _("<P><B>Use Virtual Disk Image</B></P><P>Existing disk image can used by the virtual machine.</P>") +
+	string help_text = _("<P><B>Use Virtual Disk Image</B>: An existing disk image can used by the virtual machine.</P>") +
 
-_("<P>The image can be configured <B>read only</B>. In this case the virtual
-machine cannot modify the image in any way.</P>") +
+_("<P>The image can be configured <B>read only</B>. In this case, the virtual
+machine cannot modify the image in any way.</P>
+") +
 
-_("<P><B>Virtual disk</B> is name of the virtual disk inside the virtual machine.</P>");
+_("<P><B>Virtual Disk</B> is the name of the virtual disk inside the virtual machine.</P>");
 
-	term contents = `Frame(_("Disk configuration"),
+	term contents = `Frame(_("Disk Configuration"),
 	    `MarginBox(1.5, 0.2,
 		// heading in a popup dialog
 		`VBox(
@@ -140,7 +142,7 @@ _("<P><B>Virtual disk</B> is name of the virtual disk inside the virtual machine
 		    : `Empty(),
 
 		    `VSpacing(0.5),
-		    `Left(`CheckBox(`id(`ro), _("&Read Only Access"), ro)),
+		    `Left(`CheckBox(`id(`ro), _("&Read-Only Access"), ro)),
 		    `VSpacing(0.2)
 		)
 	    )
@@ -177,7 +179,7 @@ _("<P><B>Virtual disk</B> is name of the virtual disk inside the virtual machine
 		    if ((integer)SCR::Read(.target.size, new_src) < 0)
 		    {
 			// %1 is file name
-			Report::Error(sformat(_("File %1 doesn't exist."), new_src));
+			Report::Error(sformat(_("File %1 does not exist."), new_src));
 			continue;
 		    }
 		    ret = $[ "source" : new_src, "type" : "loop-use", "ro" : new_ro ];
@@ -228,17 +230,18 @@ _("<P><B>Virtual disk</B> is name of the virtual disk inside the virtual machine
 	    );
 	}
 
-	string help_text = _("<P><B>Use Physical Device</B></P><P>The virtual machine can use physical devices in the machine.</P>") +
+	string help_text = _("<P><B>Use Physical Device</B>: The virtual machine can use physical devices in the machine.</P>") +
 
-_("<P>The physical device can be configured <B>read only</B>. In this case the virtual
-machine cannot modify the device in any way.</P>") +
+_("<P>The physical device can be configured <B>read-only</B>. In this case, the virtual
+machine cannot modify the device in any way.</P>
+") +
 
-_("<P><B>Virtual disk</B> is name of the virtual disk inside the virtual machine.</P>");
+_("<P><B>Virtual Disk</B> is the name of the virtual disk inside the virtual machine.</P>");
 
 
 	term contents =
 
-	`Frame(_("Disk configuration"),
+	`Frame(_("Disk Configuration"),
 		`MarginBox(2, 0.3,
 			// heading in a popup dialog
 			`VBox(
@@ -248,7 +251,7 @@ _("<P><B>Virtual disk</B> is name of the virtual disk inside the virtual machine
 			    `TextEntry(`id(`device), `opt(`hstretch), _("&Virtual Machine Device (Target)"), device),
 
 			    `VSpacing(1),
-			    `Left(`CheckBox(`id(`ro), _("&Read Only Access"), ro)),
+			    `Left(`CheckBox(`id(`ro), _("&Read-Only Access"), ro)),
 			    `VSpacing(0.8)
 			  )
 		    ));
@@ -302,7 +305,7 @@ _("<P><B>Virtual disk</B> is name of the virtual disk inside the virtual machine
     define symbol LoopbackTypeDialog() {
 
 	// help text
-	string help_text = _("<P><B>Loop back file configuration</B></P><P>Existing disk image can be assigned to the virtual machine or it is possible to create new empty disk image.</P>");
+	string help_text = _("<P><B>Loopback File Configuration</B></P><P>An existing disk image can be assigned to the virtual machine or it is possible to create a new empty disk image.</P>");
 
 	term contents =
 	    `Frame(_("Disk Image"),

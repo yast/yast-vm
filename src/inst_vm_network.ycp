@@ -38,12 +38,12 @@
 
 		    if (mac == "")
 		    {
-			mac = _("Random address");
+			mac = _("Random Address");
 		    }
 
 		    if (bridge == "")
 		    {
-			bridge = _("Default bridge");
+			bridge = _("Default Bridge");
 		    }
 
 		    ret = add(ret, `item(`id(num), num, mac, bridge));

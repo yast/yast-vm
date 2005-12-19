@@ -60,7 +60,7 @@
 					    `VSpacing(0.5),
 					    `Left(`ComboBox(`id(`restart),
 							    // combobox label
-							    _("Re&start the virtual machine"),
+							    _("Re&start the Virtual Machine"),
 							    [
 							     // combobox item
 							     `item(`id("always"), VM_Common::restart_mapping["always"]:"", VM::GetRestart() == "always"),
@@ -125,7 +125,7 @@ Enter another name.");
 //	    TODO: else if (mem < available memory)
 
 	    // error message: requested memory size is greater that available free memory
-	    string memory_size_error = _("Requested memory size is greater than currently free space.
+	    string memory_size_error = _("The requested memory size is larger than the amount of space currently available.
 There is %1MB free memory available.");
 
 	    VM::SetMemorySize(mem);

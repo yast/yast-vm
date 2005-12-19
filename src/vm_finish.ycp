@@ -39,7 +39,7 @@ if (func == "Info")
     return (any)$[
 	"steps" : 1,
 	// progress step title
-	"title" : _("Configuring the Virtual Machine..."),
+	"title" : _("Configuring the virtual machine..."),
 	// TODO FIXME: use in XEN environment
 	"when" : false ? [ `installation, `update, `autoinst ] : [],
     ];
