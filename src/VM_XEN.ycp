@@ -511,7 +511,7 @@
 	if (extra_arg != "")
 	{
 	    // replace $URL_INSTALL variable
-	    string new_arg = regexpsub(VM_Common::extra_inst_args, "^(.*)$URL_INSTALL(.*)", sformat("\\1%1\\2", url));
+	    string new_arg = regexpsub(VM_Common::extra_inst_args, "^(.*)\\$URL_INSTALL(.*)", sformat("\\1%1\\2", url));
 
 	    if (new_arg != nil)
 	    {
@@ -868,6 +868,19 @@
 	    // restart sources - use the only one enabled source
 	    list sources = Pkg::SourceStartCache(true);
 	    y2milestone("Source init: %1", sources);
+
+	    // check whether required packages are provided by the installation source
+	    if (!Pkg::IsAvailable("kernel-xen"))
+	    {
+		y2error("kernel-xen package is not available");
+		return false;
+	    }
+
+	    if (!Pkg::IsAvailable("install-initrd"))
+	    {
+		y2error("install-initrd package is not available");
+		return false;
+	    }
 
 	    string arch = VM_Common::PackageArch();
 	    y2milestone("Extracting Xen kernel from the installation source (arch=%1) ...", arch);

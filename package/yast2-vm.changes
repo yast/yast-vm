@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Wed Jan  4 13:03:28 CET 2006 - lslezak@suse.cz
+
+- install xen-tools package
+- check whether kernel-xen and install-initrd packages
+  are available (#116395)
+- fixed $URL_INSTALL macro expansion
+- 2.13.8
+
+-------------------------------------------------------------------
 Mon Dec 19 14:18:36 CET 2005 - jsuchome@suse.cz
 
 - merged proofed texts

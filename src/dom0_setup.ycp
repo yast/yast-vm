@@ -67,7 +67,7 @@ _("<P>When the configuration is successfully finished it is possible to boot Xen
     // package stage
     Progress::NextStage();
 
-    list<string> packages = ["xen", "kernel-xen"];
+    list<string> packages = ["xen", "kernel-xen", "xen-tools", "xen-tools-ioemu"];
     boolean success = true;
     boolean bootloader_modified = false;
 

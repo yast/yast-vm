@@ -15,6 +15,7 @@
     import "CommandLine";
     import "Popup";
     import "Label";
+    import "Package";
 
     include "vm/cmdline.ycp";
 
@@ -83,16 +84,8 @@ Start installation in the host system.
 
     if (!Arch::is_xen())
     {
-	// xen kernel must be running to start a new Xen domain
-	string err = _("For running a Xen virtual machine, the system
-must be running the Xen Linux Kernel in dom.
-Xen installation cannot be started.
-");
-
-//	if (Popup::AnyQuestionRichText(_("Configure the Management Domain?"),
-//	    _("<P>A Xen virtual machine can be started only from management domain (domain0) which is not running now.</P><P><B>Configure the management domain?</B></P>"),
-//	60, 10, Label::YesButton(), Label::NoButton(), `yes_focus))
-
+	// error - xen kernel must be running to start a new Xen domain,
+	// ask user to configure the first (management) Xen domain
 	if (Popup::YesNo(_("A Xen virtual machine can be started only\nfrom management domain (domain0)\nwhich is not running now.\n\nConfigure the management domain now?")))
 	{
 	    y2milestone("Starting domain0 configuration...");
@@ -117,6 +110,14 @@ Xen installation cannot be started.
 
 	return `abort;
     }
+
+    // install required packages if they are missing
+    if (!Package::InstallAll(["xen-tools"]))
+    {
+	// installation failed
+	return `abort;
+    }
+
 
     // initialize to xen VM type
     import "VM";
