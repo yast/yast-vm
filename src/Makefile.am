@@ -18,7 +18,8 @@ client_DATA =				\
 	inst_vm_options.ycp		\
 	inst_vm_network.ycp		\
 	dom0_setup.ycp			\
-	vm_network_proposal.ycp
+	vm_network_proposal.ycp		\
+	xen_auto.ycp
 
 ynclude_DATA = cmdline.ycp
 

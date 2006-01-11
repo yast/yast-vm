@@ -1,9 +1,9 @@
 /**
- * Module:	inst_vm_kickoff.ycp
+ * Module:	dom0_setup.ycp
  *
  * Authors:	Ladislav Slezak <lslezak@suse.cz>
  *
- * Purpose:	Prepare and start installation in a virtual machine.
+ * Purpose:	Configure domain0 (Xen management domain)
  *
  * $Id:$
  */
@@ -115,6 +115,9 @@ _("<P>When the configuration is successfully finished it is possible to boot Xen
 	BootCommon::setLoaderType("grub");
 	// summary text - item in the task list
 	bootloader_changes = sformat(_("<LI>Switch to GRUB bootloader (current bootloader is '%1')</LI>"), loader_type);
+
+	BootCommon::location_changed = true;
+	BootCommon::changed = true;
     }
 
     // progressbar title - check if there is a Xen section

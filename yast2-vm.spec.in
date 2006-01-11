@@ -21,7 +21,7 @@ Summary:	Start installation in a Virtual Machine
 %files
 %defattr(-,root,root)
 @clientdir@/vm*.ycp
-@clientdir@/xen.ycp
+@clientdir@/xen*.ycp
 @clientdir@/dom0_setup.ycp
 @clientdir@/inst_vm*.ycp
 @moduledir@/VM*.ycp

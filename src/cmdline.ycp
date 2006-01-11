@@ -19,6 +19,7 @@
     import "Wizard";
     import "GetInstArgs";
     import "VM";
+    import "Mode";
 
     textdomain "vm";
 
@@ -31,7 +32,7 @@
 	symbol ret = (symbol) WFM::CallFunction ("inst_proposal",
                 [GetInstArgs::ButtonsProposal(true, true, VM::GetVMMtype())]);
 
-	if (ret == `next)
+	if (ret == `next && !Mode::config())
 	{
 	    WFM::CallFunction ("inst_vm_kickoff", [false, false]);
 	}

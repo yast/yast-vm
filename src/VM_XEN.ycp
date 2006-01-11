@@ -10,6 +10,7 @@
     import "VM_Common";
     import "Report";
     import "HTML";
+    import "Mode";
 
     textdomain "vm";
 
@@ -37,11 +38,31 @@
 
     string img_prefix = "/var/lib/xen/images/";
 
-    string restart_default = "onreboot";
-    string restart = restart_default;
+    string default_restart = "onreboot";
+    string restart = default_restart;
+
+    global map Export() {
+	map ret = $[
+	    "Common" :	VM_Common::Export(),
+	    "disks"  :	disks,
+	    "network" :	network,
+	    "restart" :	restart
+	];
+
+	return ret;
+    }
+
+    global void Import(map input) {
+	    VM_Common::Import(input["Common"]:$[]);
+
+	    disks =	input["disks"]:default_disks;
+	    network =	input["network"]:default_network;
+	    restart =	input["restart"]:default_restart;
+    }
 
     global boolean setMemorySize(integer msize)
     {
+	VM_Common::SetModified(msize != VM_Common::memory_size);
 	VM_Common::memory_size = msize;
 	return true;
     }
@@ -60,6 +81,7 @@
     global boolean setRestart(string mode) {
 	if (contains([ "always", "never", "onreboot" ], mode))
 	{
+	    VM_Common::SetModified(restart != mode);
 	    restart = mode;
 	    return true;
 	}
@@ -72,13 +94,14 @@
     }
 
     global boolean resetRestart() {
-	restart = restart_default;
+	restart = default_restart;
 	return true;
     }
 
     global boolean setStartMode(string mode)
     {
 	y2milestone("start_mode: %1", mode);
+	VM_Common::SetModified(mode != VM_Common::start_mode);
 	VM_Common::start_mode = mode;
 	return true;
     }
@@ -159,15 +182,18 @@
 		 HTML::List (tmp)
 	];
 
-
-	// check available free memory
-	integer fm = FreeMemory();
-
-	if (getMemorySize() > fm)
+	// skip memory check in autoyast configuration mode
+	if (!Mode::config())
 	{
-	    // error in the installation proposal - don't allow to continue
-	    ret = add(ret, "warning", sformat(_("Not enough free memory (%1MB available)."), fm));
-	    ret = add(ret, "warning_level", `blocker);
+	    // check available free memory
+	    integer fm = FreeMemory();
+
+	    if (getMemorySize() > fm)
+	    {
+		// error in the installation proposal - don't allow to continue
+		ret = add(ret, "warning", sformat(_("Not enough free memory (%1MB available)."), fm));
+		ret = add(ret, "warning_level", `blocker);
+	    }
 	}
 
 	return ret;
@@ -175,6 +201,7 @@
 
     global define boolean setDiskConfig(list<map<string,any> > dconf)
     {
+	VM_Common::SetModified(disks != dconf);
 	disks = dconf;
 	return true;
     }
@@ -190,6 +217,7 @@
 
     global define boolean setNetworkConfig(list<map<string,string> > net)
     {
+	VM_Common::SetModified(net != network);
 	network = net;
 	return true;
     }
@@ -331,6 +359,8 @@
 
     global define boolean setSourceConfig(integer sid, symbol type, string custom) {
 
+	VM_Common::SetModified(sid != VM_Common::source_id || type != VM_Common::inst_type || custom != VM_Common::custom_source);
+
 	VM_Common::source_id = sid;
 	VM_Common::inst_type = type;
 	VM_Common::custom_source = custom;
@@ -343,6 +373,7 @@
     }
 
     global boolean setConfigName(string cname) {
+	VM_Common::SetModified(cname != VM_Common::config_name);
 	VM_Common::config_name = cname;
 	return true;
     }
@@ -734,6 +765,7 @@
     }
 
     global define boolean setExtraArgs(string args) {
+	VM_Common::SetModified(args != VM_Common::extra_args);
 	VM_Common::extra_args = args;
 	return true;
     }
@@ -750,6 +782,7 @@
     }
 
     global define boolean setExtraInstArgs(string args) {
+	VM_Common::SetModified(args != VM_Common::extra_inst_args);
 	VM_Common::extra_inst_args = args;
 	return true;
     }
@@ -931,6 +964,14 @@
 	return VM_Common::InstallPackages(["xterm", "xorg-x11", "xen-tools"]);
     }
 
+    global boolean GetModified() {
+	return VM_Common::GetModified();
+    }
+
+    global void SetModified(boolean modif) {
+	VM_Common::SetModified(modif);
+    }
+
     global define map GetFunctions()
     {
 	return $[
@@ -1004,5 +1045,7 @@
 
 	resetExtraArgs();
 	resetExtraInstArgs();
+
+	SetModified(false);
     }
 }

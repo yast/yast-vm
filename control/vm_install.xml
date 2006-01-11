@@ -12,7 +12,6 @@ textdomain="vm"
     <proposals config:type="list">
         <proposal>
             <label>Xen Virtual Machine Settings</label>
-            <mode>normal</mode>
             <name>xen</name>
             <stage>normal</stage>
             <enable_skip>no</enable_skip>

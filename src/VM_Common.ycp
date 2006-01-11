@@ -49,11 +49,70 @@
 
     global string root_device = "";
 
+    global string autoyast_profile = "";
+
     string custom_kernel = "";
 
     string custom_initrd = "";
 
     boolean use_custom_kernel = false;
+
+    boolean modified = false;
+
+    global boolean GetModified() {
+	return modified;
+    }
+
+    global void SetModified(boolean modif) {
+	modified = modif;
+    }
+
+    global map Export() {
+	map ret = $[
+	    "source_id" :	  source_id,
+	    "inst_type" :	  inst_type,
+	    "custom_source" :	  custom_source,
+	    "memory_size" :	  memory_size,
+	    "number_of_cpus" :	  number_of_cpus,
+	    "start_mode" :	  start_mode,
+	    "MAC_address" :	  MAC_address,
+	    "random_MAC" :	  random_MAC,
+	    "config_name" :	  config_name,
+	    "extra_args" :	  extra_args,
+	    "extra_inst_args" :	  extra_inst_args,
+	    "root_device" :	  root_device,
+	    "custom_kernel" :	  custom_kernel,
+	    "custom_initrd" :	  custom_initrd,
+	    "use_custom_kernel" : use_custom_kernel,
+	];
+
+	return ret;
+    }
+
+    global void Import(map input) {
+	source_id =		input["source_id"]:0;
+	inst_type =		input["inst_type"]:`configured;
+	custom_source =		input["custom_source"]:"";
+	memory_size =		input["memory_size"]:default_memory_size;
+	number_of_cpus =	input["number_of_cpus"]:1;
+	start_mode =		input["start_mode"]:default_start_mode;
+	MAC_address =		input["MAC_address"]:default_MAC;
+	random_MAC =		input["random_MAC"]:true;
+	config_name =		input["config_name"]:"";
+	extra_args =		input["extra_args"]:"";
+	extra_inst_args =	input["extra_inst_args"]:"";
+	root_device =		input["root_device"]:"";
+	custom_kernel =		input["custom_kernel"]:"";
+	custom_initrd =		input["custom_initrd"]:"";
+	use_custom_kernel =	input["use_custom_kernel"]:false;
+    }
+
+    global string GetAutoYastProposal() {
+	// proposal item
+	return sformat(_("AutoYast profile: %1"), (autoyast_profile != "") ?
+	    // none AutoYast profile has been selected
+	    autoyast_profile : _("<I>none</I>"));
+    }
 
     global map<string, string> restart_mapping = $[
 	 // restart mode - when the virtual machine is restarted
