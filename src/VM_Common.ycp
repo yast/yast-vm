@@ -13,6 +13,7 @@
     import "Package";
     import "Arch";
     import "ProductControl";
+    import "HTML";
 
     textdomain "vm";
 
@@ -86,6 +87,18 @@
 	    "use_custom_kernel" : use_custom_kernel,
 	];
 
+	// export configured source as custom (source index may point later to another source)
+	if (inst_type == `configured && source_id != nil && source_id > 0)
+	{
+	    map general_data = Pkg::SourceGeneralData (source_id);
+	    string url = general_data["url"]:"";
+
+	    y2milestone("Exporting source config: %1", url);
+
+	    ret["custom_source"] = url;
+	    ret["inst_type"] = `custom;
+	}
+
 	return ret;
     }
 
@@ -108,10 +121,38 @@
     }
 
     global string GetAutoYastProposal() {
-	// proposal item
-	return sformat(_("AutoYast profile: %1"), (autoyast_profile != "") ?
+	// proposal items
+	return HTML::List([ sformat(_("AutoYast profile: %1"), (autoyast_profile != "") ?
 	    // none AutoYast profile has been selected
-	    autoyast_profile : _("<I>none</I>"));
+	    autoyast_profile : _("<I>none</I>"))]);
+    }
+
+    global boolean SetAutoYastProfile(string profile) {
+	modified = (profile != autoyast_profile);
+	autoyast_profile = profile;
+	return true;
+    }
+
+    global string GetAutoYastProfile() {
+	return autoyast_profile;
+    }
+
+    global define list<string> CPUflags()
+    {
+	// check only the first processor (assume the same processors)
+	string cpuinfo_flags = (string) SCR::Read(.proc.cpuinfo.value."0"."flags");
+	list<string> cpuflags = (size(cpuinfo_flags) > 0) ? splitstring(cpuinfo_flags, " ") : [];
+
+	y2milestone("Detected CPU flags: %1", cpuflags);
+	return cpuflags;
+    }
+
+    global define boolean VirtualizationCPU()
+    {
+	list<string> cpuflags = CPUflags();
+
+	// TODO: check: vmx = Intel VT-x, svm = AMD Pacifica
+	return contains(cpuflags, "vmx") || contains(cpuflags, "svm");
     }
 
     global map<string, string> restart_mapping = $[
@@ -276,6 +317,40 @@ are supported in the installation."),
 
 	return ret;
     }
+
+    define boolean CreateExt2Image(string image) {
+	// create 16MB sparse image file
+	if (!VM_Common::CreateDiskImage(image, 16*1024*1024, true))
+	{
+	    return false;
+	}
+
+	// create Ext2 filesystem (built in FS, no kernel module required)
+	// reserve 0% percent for root
+	string command = "/sbin/mkfs.ext2 -m 0 " + image;
+	y2milestone("executing: %1", command);
+
+	integer out = (integer)SCR::Execute(.target.bash, command);
+	y2milestone("mkfs.ext2 result: %1", out);
+	return (out == 0);
+    }
+
+    // TODO!!
+    define boolean CreateImageWithProfile(string image, string profile)
+    {
+	// create the image
+	if (!CreateExt2Image(image))
+	{
+	    return false;
+	}
+
+	// mount the image
+
+	// copy the profile
+
+	// unmount the image
+    }
+
 
     global define string GetTmpDir() {
 	// get temporary directory

@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Fri Jan 13 15:55:27 CET 2006 - lslezak@suse.cz
+
+- no network interfaces possible in virtual machine
+- AutoYast profile selection is part of the proposal
+- export selected installation source as URL in AutoYast
+- configure Xen virtualization mode (paravirtualization or
+  full virtualization) (GUI only)
+- 2.13.10
+
+-------------------------------------------------------------------
 Wed Jan 11 12:53:53 CET 2006 - lslezak@suse.cz
 
 - AutoYast client

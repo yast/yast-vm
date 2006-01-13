@@ -1,0 +1,92 @@
+/**
+ * Module:	inst_vm_network.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * Purpose:	Ask user for network settings.
+ *
+ * $Id:$
+ *
+ */
+
+{
+    textdomain "vm";
+
+    import "VM_XEN";
+    import "VM_Common";
+    import "Wizard";
+    import "Popup";
+    import "Report";
+    import "Label";
+    import "Mode";
+
+
+    // screen title for the Xen mode selection
+    string title = _("Xen Virtualization");
+
+    // build and show dialog
+    Wizard::OpenAcceptDialog ();
+
+    term contents = `HBox(
+	`HSpacing(2),
+	`RadioButtonGroup(`id(`rb_group),
+	    `Frame(_("Virtualization Mode"),
+		`VBox(
+		    `VSpacing(0.5),
+		    `Left(`RadioButton(`id("para"), _("Paravirtualization (Requires Modified Guest OS)"), true)),
+		    `VSpacing(0.5),
+		    `Left(`RadioButton(`id("full"), _("Full Virtualization (Unmodified Guest OS)"))),
+		    `VSpacing(0.5)
+		)
+	    )
+	),
+	`HSpacing(2)
+    );
+
+    // help text for virtualization mode setting (1/2)
+    string help_text = _("<p><b>Virtualization Mode</b><br></p>")
+	// help text for virtualization mode setting (2/2)
+
+	+ _("<p>Xen supports two possible virtualization modes:
+paravirtualization and full virtualization.</p>")
+
+	+ _("<p><b>Paravirtualization</b> requires modified guest OS which
+supports Xen virtualization.</p>")
+
+	+ _("<p><b>Full virtualization</b> requires CPU with virtualization
+support. In this case Xen completely emulates PC hardware in a virtual machine.
+It's possible to install unmodified guest OS.</p>");
+
+    Wizard::SetContents (title, contents, help_text, true, true);
+
+    // set full virtualization widget state
+    if (!Mode::config() && !VM_Common::VirtualizationCPU())
+    {
+	// not autoyast config mode and no virtualization CPU => disable full virtualization
+	UI::ChangeWidget(`id("full"), `Enabled, false);
+    }
+
+    symbol ret = nil;
+
+    while (true)
+    {
+	ret = (symbol) Wizard::UserInput();
+
+	if (ret == `abort && Popup::ConfirmAbort(`painless))
+	    break;
+
+	if (ret == `cancel || ret == `back)
+	    break;
+
+	if (ret == `next)
+	{
+	    string selected = (string)(UI::QueryWidget(`id(`rb_group), `CurrentButton));
+	    VM_XEN::SetVirtualizationType(selected);
+	    break;
+	}
+    }
+
+    Wizard::CloseDialog();
+
+    return ret;
+}

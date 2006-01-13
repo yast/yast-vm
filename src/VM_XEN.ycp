@@ -41,9 +41,43 @@
     string default_restart = "onreboot";
     string restart = default_restart;
 
+    string default_mode = "para";
+    string virtualization_type = default_mode; // "para" or "full"
+
+    global define string GetVirtualizationType()
+    {
+	return virtualization_type;
+    }
+
+    global define boolean SetVirtualizationType(string type)
+    {
+	if (!contains(["para", "full"], type))
+	{
+	    y2warning("uknown virtualilzation type: %1", type);
+	    return false;
+	}
+
+	VM_Common::SetModified(virtualization_type != type);
+	virtualization_type = type;
+
+	return true;
+    }
+
+    global boolean ResetVirtualizationType()
+    {
+	return SetVirtualizationType(default_mode);
+    }
+
+    global string GetVirtualizationProposal()
+    {
+	string val = (virtualization_type == "para") ? _("Paravirtualization") : _("Full Virtualization");
+	return HTML::List([val]);
+    }
+
     global map Export() {
 	map ret = $[
 	    "Common" :	VM_Common::Export(),
+	    "virtualization_type" : virtualization_type,
 	    "disks"  :	disks,
 	    "network" :	network,
 	    "restart" :	restart
@@ -52,12 +86,15 @@
 	return ret;
     }
 
-    global void Import(map input) {
+    global boolean Import(map input) {
 	    VM_Common::Import(input["Common"]:$[]);
 
 	    disks =	input["disks"]:default_disks;
 	    network =	input["network"]:default_network;
 	    restart =	input["restart"]:default_restart;
+	    virtualization_type = input["virtualization_type"]:default_mode;
+
+	    return true;
     }
 
     global boolean setMemorySize(integer msize)
@@ -1026,6 +1063,9 @@
 	    "resetNetworkConfig" : VM_XEN::resetNetworkConfig,
 	    "getNetworkProposal" : VM_XEN::getNetworkProposal,
 	    "getNetworkProposalWarning" : VM_XEN::getNetworkProposalWarning,
+
+	    "import"	: VM_XEN::Import,
+	    "export"	: VM_XEN::Export,
 
 	    "Write" : VM_XEN::Write,
 	    "Prepare" : VM_XEN::Prepare,

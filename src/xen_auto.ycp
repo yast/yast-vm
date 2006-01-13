@@ -52,7 +52,11 @@
     }
     /* Create a  summary*/
     else if (func == "Summary") {
-	map proposal = (map)WFM::CallFunction("vm_options_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+	// don't show AutoYast in the summary, in AutoYast config mode it doesn't make sense
+	map proposal = (map)WFM::CallFunction("xen_mode_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+	string mode = proposal["preformatted_proposal"]:"";
+
+	proposal = (map)WFM::CallFunction("vm_options_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
 	string options = proposal["preformatted_proposal"]:"";
 
 	proposal = (map)WFM::CallFunction("vm_disks_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
@@ -64,7 +68,8 @@
 	proposal = (map)WFM::CallFunction("vm_network_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
 	string network = proposal["preformatted_proposal"]:"";
 
-	ret = "<P><BIG><B>" + _("Options") + "</B></BIG></P>" + options
+	ret = "<P><BIG><B>" + _("Virtualization Mode") + "</B></BIG></P>" + mode
+	    + "<P><BIG><B>" + _("Options") + "</B></BIG></P>" + options
 	    + "<P><BIG><B>" + _("Disks") + "</B></BIG></P>" + disks
 	    + "<P><BIG><B>" + _("Source") + "</B></BIG></P>" + source
 	    + "<P><BIG><B>" + _("Network") + "</B></BIG></P>" + network;
@@ -90,6 +95,8 @@
 	VM_XEN::resetDiskConfig();
 	VM_XEN::resetSourceConfig();
 	VM_XEN::resetNetworkConfig();
+	VM_XEN::ResetVirtualizationType();
+	VM::ResetAutoYastProfile();
 
 	ret = $[];
     }

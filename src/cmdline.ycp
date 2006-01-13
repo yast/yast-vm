@@ -19,25 +19,58 @@
     import "Wizard";
     import "GetInstArgs";
     import "VM";
+    import "VM_Common";
     import "Mode";
+    import "Sequencer";
 
     textdomain "vm";
 
-    define symbol GUIhandler() {
-	// create initial dialog
-	Wizard::CreateDialog ();
-	Wizard::SetDesktopIcon ("vm");
+    define symbol proposal()
+    {
+	return (symbol)WFM::CallFunction ("inst_proposal",
+		    [GetInstArgs::ButtonsProposal(true, true, VM::GetVMMtype())]);
+    }
 
-	// calling inst_proposal
-	symbol ret = (symbol) WFM::CallFunction ("inst_proposal",
-                [GetInstArgs::ButtonsProposal(true, true, VM::GetVMMtype())]);
-
-	if (ret == `next && !Mode::config())
+    define symbol start()
+    {
+	if (!Mode::config())
 	{
-	    WFM::CallFunction ("inst_vm_kickoff", [false, false]);
+	    return (symbol)WFM::CallFunction("inst_vm_kickoff", [false, false]);
 	}
 
-	Wizard::CloseDialog ();
+	return `next;
+    }
+
+    define symbol GUIhandler() {
+	// create initial dialog
+	Wizard::CreateDialog();
+	Wizard::SetDesktopIcon ("vm");
+
+
+	map aliases = $[
+		"proposal"	: ``(proposal()),
+		"start"		: ``(start())
+	    ];
+
+	map sequence = $[
+		"ws_start"	: "proposal",
+		"proposal"	:
+		    $[
+			`next	    :	"start",
+			`abort	    :	`abort
+		    ],
+		"start"	:
+		    $[
+			`next	    :	`finish,
+			`abort	    :	`abort
+		    ]
+	];
+
+	y2milestone("sequence: %1", sequence);
+
+	symbol ret = Sequencer::Run(aliases, sequence);
+
+	Wizard::CloseDialog();
 
 	return ret;
     }

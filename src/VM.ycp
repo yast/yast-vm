@@ -10,9 +10,26 @@
 
     textdomain "vm";
 
+    import "VM_Common";
 
     map functions = $[];
     string vmmtype = "";
+
+    global string GetAutoYastProfile() {
+	return VM_Common::GetAutoYastProfile();
+    }
+
+    global boolean SetAutoYastProfile(string profile) {
+	return VM_Common::SetAutoYastProfile(profile);
+    }
+
+    global string GetAutoYastProposal() {
+	return VM_Common::GetAutoYastProposal();
+    }
+
+    global boolean ResetAutoYastProfile() {
+	return VM_Common::SetAutoYastProfile("");
+    }
 
     boolean CallBooleanFunction(string name) {
 	boolean() toEval = (boolean())functions[name]:nil;
@@ -469,4 +486,31 @@
 	return CallBooleanBooleanFunction("setCustomKernel", use_custom);
     }
 
+    global boolean Import(map input) {
+	boolean(map) toEval = (boolean(map))functions["import"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(input);
+	}
+	else
+	{
+	    y2error("import() function is missing!");
+	    return nil;
+	}
+    }
+
+    global map Export() {
+	map() toEval = (map())functions["export"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("export() function is missing!");
+	    return nil;
+	}
+    }
 }

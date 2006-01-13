@@ -201,14 +201,6 @@
 
 	if (ret == `next)
 	{
-	    if (size(network_conf) <= 0)
-	    {
-		// error popup
-		string message = _("At least one network interface is required.");
-		Popup::Message(message);
-		continue;
-	    }
-
 	    VM::SetNetworkConfig(network_conf);
 	    break;
 	}
