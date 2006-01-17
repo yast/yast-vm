@@ -24,6 +24,7 @@ Summary:	Start installation in a Virtual Machine
 @clientdir@/xen*.ycp
 @clientdir@/dom0_setup.ycp
 @clientdir@/inst_vm*.ycp
+@clientdir@/inst_xen*.ycp
 @moduledir@/VM*.ycp
 @moduledir@/VM*.ybc
 @desktopdir@/xen.desktop

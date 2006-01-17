@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Jan 17 11:07:32 CET 2006 - lslezak@suse.cz
+
+- fixed .spec file (missing inst_xen_mode.ycp in the file list)
+- 2.13.11
+
+-------------------------------------------------------------------
 Fri Jan 13 15:55:27 CET 2006 - lslezak@suse.cz
 
 - no network interfaces possible in virtual machine
