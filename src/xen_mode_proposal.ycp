@@ -11,10 +11,7 @@
 {
     textdomain "vm";
 
-    import "VM_XEN";
-    import "VM_Common";
-    import "HTML";
-    import "Mode";
+    import "VM";
 
     import "Report";
     Report::DisplayErrors(true, 0);
@@ -30,10 +27,10 @@
 
 	if (force_reset)
 	{
-	    VM_XEN::ResetVirtualizationType();
+	    VM::ResetVirtualizationType();
 	}
 
-	ret = $[ "preformatted_proposal" : VM_XEN::GetVirtualizationProposal() ];
+	ret = $[ "preformatted_proposal" : VM::GetVirtualizationProposal() ];
     }
     else if ( func == "AskUser" )
     {

@@ -93,9 +93,19 @@
 	return `abort;
     }
 
-    if (!VM::GetCustomKernel())
+    if (!VM::GetCustomKernel() && VM::GetVirtualizationType() != "full")
     {
-	VM::Prepare2();
+	success = VM::Prepare2();
+
+	// TODO: check VM_Common::root_device
+
+	// help text
+	string msg = _("Root device was not detected.
+Enter the root device (e.g. /dev/hda1),
+if it is not needed leave it empty.");
+	// Label
+	string label = _("Root Device");
+
 	if (!success)
 	{
 	    Report::Error(_("Cannot prepare the virtual machine for reboot.") + "\n" + abortmsg);
@@ -107,7 +117,7 @@
 	    return `abort;
 	}
 
-	VM::Prepare3();
+	success = VM::Prepare3();
 	if (!success)
 	{
 	    Report::Error(_("Cannot update the configuration of the virtual machine."));

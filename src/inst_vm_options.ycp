@@ -80,7 +80,8 @@
     string help_text = _("<P><B>Options</B></P>")
     + _("<P>Set how much host system memory will be used by the virtual machine.</P>")
     + _("<P>The virtual machine can be started automatically on boot or manually when needed.</P>")
-    + _("<P><I>Boot Options</I> are used as extra arguments for the kernel.</P>");
+    + _("<P><I>Boot Options</I> are used as extra arguments for the kernel.</P>")
+    + _("<P>Use option 'root' (e.g. 'root=/dev/hda1') for root device configuration.</P>");
 
     Wizard::SetContents (title, contents, help_text, (boolean) WFM::Args(0),
 			 (boolean) WFM::Args(1));
@@ -92,6 +93,14 @@
 //    UI::ChangeWidget (`id(`ncpus), `Value, tostring (number_of_cpus));
 
     UI::ChangeWidget (`id(`startmode), `Value, VM::GetStartMode());
+
+    // set widget state
+    boolean enabled = (VM::GetVirtualizationType() == "para");
+    if (!enabled)
+    {
+	UI::ChangeWidget(`id(`bootopts), `Enabled, enabled);
+	UI::ChangeWidget(`id(`bootinstopts), `Enabled, enabled);
+    }
 
     any ret = nil;
 

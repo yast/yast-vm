@@ -30,14 +30,17 @@
 	map<string,any> ret = nil;
 
 	string help_text = _("<P><B>Create Virtual Disk Image</B></P><P>Yast will
-create a new disk image of required size.</P><P>It is possible to create <B>sparse image
-file</B> which dynamically allocates disk space when it is needed.</P>") +
+create a new disk image of specified size.</P>") +
+
+_("<P><B>Virtual Machine Device</B> is the name of the virtual disk inside the virtual machine.</P>") +
 
 _("<P>The image can be configured <B>read only</B>. In this case, the virtual
-machine cannot modify the image in any way.</P>
-") +
+machine cannot modify the image in any way.</P>") +
 
-_("<P><B>Virtual Disk</B> is the name of the virtual disk inside the virtual machine.</P>");
+	_("<P>It is possible to create <B>sparse image
+file</B> which dynamically allocates disk space when it is needed.</P>");
+
+
 
 	term contents =
 	`Frame(_("Disk Configuration"),
@@ -51,7 +54,7 @@ _("<P><B>Virtual Disk</B> is the name of the virtual disk inside the virtual mac
 			      `VSpacing(0.5),
 			      (VM::GetVMMtype() == "xen") ?
 				  // label - disk device widget (enter /dev/hda1, /dev/sdb3...)
-				  `TextEntry(`id(`device), `opt(`hstretch), _("&Virtual Disk Device"), device)
+				  `TextEntry(`id(`device), `opt(`hstretch), _("&Virtual Machine Device"), device)
 			      : `Empty(),
 
 			      `VBox(
@@ -121,7 +124,7 @@ _("<P>The image can be configured <B>read only</B>. In this case, the virtual
 machine cannot modify the image in any way.</P>
 ") +
 
-_("<P><B>Virtual Disk</B> is the name of the virtual disk inside the virtual machine.</P>");
+_("<P><B>Virtual Machine Device</B> is the name of the virtual disk inside the virtual machine.</P>");
 
 	term contents = `Frame(_("Disk Configuration"),
 	    `MarginBox(1.5, 0.2,
@@ -138,7 +141,7 @@ _("<P><B>Virtual Disk</B> is the name of the virtual disk inside the virtual mac
 		    `VSpacing(0.5),
 		    (VM::GetVMMtype() == "xen") ?
 			// label - disk device widget (enter /dev/hda1, /dev/sdb3...)
-			`TextEntry(`id(`device), `opt(`hstretch), _("&Virtual Disk Device"), device)
+			`TextEntry(`id(`device), `opt(`hstretch), _("&Virtual Machine Device"), device)
 		    : `Empty(),
 
 		    `VSpacing(0.5),
@@ -230,13 +233,15 @@ _("<P><B>Virtual Disk</B> is the name of the virtual disk inside the virtual mac
 	    );
 	}
 
-	string help_text = _("<P><B>Use Physical Device</B>: The virtual machine can use physical devices in the machine.</P>") +
+	string help_text = _("<P><B>Block Device</B>: The virtual machine can use only block devices accessible from domain 0.</P>") +
 
-_("<P>The physical device can be configured <B>read-only</B>. In this case, the virtual
+_("<P><B>Virtual Machine Device</B> is the name of the virtual device presented to the virtual machine.") +
+
+_("<P>The block device can be configured <B>read-only</B>. In this case, the virtual
 machine cannot modify the device in any way.</P>
-") +
+");
 
-_("<P><B>Virtual Disk</B> is the name of the virtual disk inside the virtual machine.</P>");
+
 
 
 	term contents =
@@ -245,7 +250,7 @@ _("<P><B>Virtual Disk</B> is the name of the virtual disk inside the virtual mac
 		`MarginBox(2, 0.3,
 			// heading in a popup dialog
 			`VBox(
-			    `ComboBox(`id(`phys), `opt(`editable, `hstretch), _("Physical Device (Source)"), devs),
+			    `ComboBox(`id(`phys), `opt(`editable, `hstretch), _("Block Device (Source)"), devs),
 			    `VSpacing(0.8),
 			    // label - disk device widget (enter /dev/hda1, /dev/sdb3...)
 			    `TextEntry(`id(`device), `opt(`hstretch), _("&Virtual Machine Device (Target)"), device),
@@ -409,7 +414,8 @@ define symbol DiskOverview() {
 			`HBox(
 			    // add dots - %1 is translated 'Add' button label
 			    `MenuButton (sformat(_("%1..."), Label::AddButton()),
-				[ `item(`id(`add_loop), _("Add Loopback Device...")), `item(`id(`add_phys), _("Add Physical Device...")) ]),
+			    // Menu item
+				[ `item(`id(`add_loop), _("Add Loopback Device...")), `item(`id(`add_phys), _("Add Block Device...")) ]),
 			    `PushButton (`id (`edit), Label::EditButton()),
 			    `PushButton (`id (`delete), Label::DeleteButton())
 			)
@@ -490,7 +496,7 @@ The content of each virtual disk is stored in a file in the host system.</P>
 
 
 symbol AddLoopBack() {
-    map<string,any> m = ask_size("", 1024, false, false);
+    map<string,any> m = ask_size("", 1024, true, false);
     symbol ret = `back;
 
     if (m != nil)

@@ -11,6 +11,7 @@
     import "Report";
     import "HTML";
     import "Mode";
+    import "Arch";
 
     textdomain "vm";
 
@@ -22,7 +23,7 @@
     // target - virtual device in the VM
     // ro - read-only flag
     // size - size of the image (when type is "loop-create")
-    list <map <string,any> > default_disks = [ $["size" : 1024, "sparse" : false, "target" : "hda", "type" : "loop-create", "source" : "hda", "ro" : false ] ];
+    list <map <string,any> > default_disks = [ $["size" : 1024, "sparse" : true, "target" : "hda", "type" : "loop-create", "source" : "hda", "ro" : false ] ];
     global list <map <string,any> > disks = default_disks;
 
     list <map <string,string> > default_network = [ $[ "mac" : "", "bridge": ""] ];
@@ -41,43 +42,10 @@
     string default_restart = "onreboot";
     string restart = default_restart;
 
-    string default_mode = "para";
-    string virtualization_type = default_mode; // "para" or "full"
-
-    global define string GetVirtualizationType()
-    {
-	return virtualization_type;
-    }
-
-    global define boolean SetVirtualizationType(string type)
-    {
-	if (!contains(["para", "full"], type))
-	{
-	    y2warning("uknown virtualilzation type: %1", type);
-	    return false;
-	}
-
-	VM_Common::SetModified(virtualization_type != type);
-	virtualization_type = type;
-
-	return true;
-    }
-
-    global boolean ResetVirtualizationType()
-    {
-	return SetVirtualizationType(default_mode);
-    }
-
-    global string GetVirtualizationProposal()
-    {
-	string val = (virtualization_type == "para") ? _("Paravirtualization") : _("Full Virtualization");
-	return HTML::List([val]);
-    }
 
     global map Export() {
 	map ret = $[
 	    "Common" :	VM_Common::Export(),
-	    "virtualization_type" : virtualization_type,
 	    "disks"  :	disks,
 	    "network" :	network,
 	    "restart" :	restart
@@ -92,7 +60,6 @@
 	    disks =	input["disks"]:default_disks;
 	    network =	input["network"]:default_network;
 	    restart =	input["restart"]:default_restart;
-	    virtualization_type = input["virtualization_type"]:default_mode;
 
 	    return true;
     }
@@ -198,13 +165,13 @@
 	tmp = add (tmp, sformat (_("Activation: %1"),
 				 VM_Common::start_mode_names[getStartMode()]:_("Unknown")));
 
-	if (VM_Common::extra_args != "")
+	if (VM_Common::extra_args != "" && VM_Common::GetVirtualizationType() != "full")
 	{
 	    // part of proposal text, %1 are extra kernel options
 	    tmp = add (tmp, sformat (_("Boot Options: %1"), VM_Common::extra_args));
 	}
 
-	if (VM_Common::extra_inst_args != "")
+	if (VM_Common::extra_inst_args != "" && VM_Common::GetVirtualizationType() != "full")
 	{
 	    // part of proposal text, %1 are extra kernel options used for the first stage only
 	    tmp = add (tmp, sformat (_("Additional Installation Options: %1"), VM_Common::extra_inst_args));
@@ -423,8 +390,10 @@
 	return WriteOption(configpath, optname, "\"" + optvalue + "\"");
     }
 
-    string formatDiskConfig(list<map<string,any> > conf, string pref) {
+    string formatDiskConfig(list<map<string,any> > conf, string pref, boolean ioemu) {
 	string ret = "";
+
+	string ioemu_option = (ioemu) ? "ioemu:" : "";
 
 	foreach(map<string,any> d, conf, {
 		if (size(ret) > 0)
@@ -436,16 +405,16 @@
 
 		if (d["type"]:"" == "phys")
 		{
-		    ret = ret + sformat("'phy:%1,%2,%3'", d["source"]:"", d["target"]:"", rw_mode);
+		    ret = ret + sformat("'phy:%1,%2%3,%4'", d["source"]:"", ioemu_option, d["target"]:"", rw_mode);
 		}
 		else if (d["type"]:"" == "loop-create")
 		{
 		    string f = pref + "/" + d["target"]:"";
-		    ret = ret + sformat("'file:%1,%2,%3'", f, d["target"]:"", rw_mode);
+		    ret = ret + sformat("'file:%1,%2%3,%4'", f, ioemu_option, d["target"]:"", rw_mode);
 		}
 		else if (d["type"]:"" == "loop-use")
 		{
-		    ret = ret + sformat("'file:%1,%2,%3'", d["source"]:"", d["target"]:"", rw_mode);
+		    ret = ret + sformat("'file:%1,%2%3,%4'", d["source"]:"", ioemu_option, d["target"]:"", rw_mode);
 		}
 	    }
 	);
@@ -468,8 +437,10 @@
 
 	boolean first = true;
 	boolean all_default = true;
+
+	string type = (VM_Common::GetVirtualizationType() == "full") ? "type=ioemu," : "";
 	foreach(map<string,string> c, conf, {
-		string iface = "";
+		string iface = type;
 
 		string mac = c["mac"]:"";
 		string bridge = c["bridge"]:"";
@@ -516,7 +487,8 @@
 	    }
 	);
 
-	if (all_default)
+	// write config for fully virtualizaed hosts - required due to "type" option
+	if (all_default && VM_Common::GetVirtualizationType() != "full")
 	{
 	    // all options have default value - return nil, no configuration is needed
 	    ret = nil;
@@ -535,11 +507,22 @@
 
 	path configpath = .etc.xen.value + topath("/etc/xen/" + VM_Common::config_name);
 
-	boolean ret = WriteOption(configpath, "disk", formatDiskConfig(disks, img_prefix + VM_Common::config_name));
+	boolean ret = WriteOption(configpath, "disk", formatDiskConfig(disks, img_prefix + VM_Common::config_name, VM_Common::GetVirtualizationType() == "full"));
 	ret = ret && WriteOption(configpath, "memory", tostring(VM_Common::memory_size));
 	ret = ret && WriteStringOption(configpath, "kernel", kernel_path);
 
 	ret = ret && WriteStringOption(configpath, "ramdisk", initrd_path);
+
+	if (VM_Common::GetVirtualizationType() == "full")
+	{
+	    // use vmx builder for full virtualized hosts
+	    ret = ret && WriteStringOption(configpath, "builder", "vmx");
+
+	    // library dir (32/64bit)
+	    string arch_libdir = Arch::i386() ? "lib" : "lib64";
+	    // set device model
+	    ret = ret && WriteStringOption(configpath, "device_model", "/usr/" + arch_libdir + "/xen/bin/qemu-dm");
+	}
 
 	ret = ret && WriteStringOption(configpath, "name", VM_Common::config_name);
 
@@ -551,7 +534,7 @@
 
 	if (vif != nil)
 	{
-	    ret = ret && WriteOption(configpath, "vif", GetVIF(network));
+	    ret = ret && WriteOption(configpath, "vif", vif);
 	}
 
 	ret = ret && WriteStringOption(configpath, "restart", "never");
@@ -587,7 +570,18 @@
 	    }
 	}
 
-	ret = ret && WriteStringOption(configpath, "extra", extra_arg);
+	// set autoyast option
+	string extra_autoyast = "";
+	if (VM_Common::autoyast_profile != nil && VM_Common::autoyast_profile != "")
+	{
+	    // get the filename
+	    list<string> names = splitstring(VM_Common::autoyast_profile, "/");
+	    string name = names[size(names) - 1]:"";
+	    // add autoyast extra option
+	    extra_autoyast = " autoyast=device://hdt63/" + name;
+	}
+
+	ret = ret && WriteStringOption(configpath, "extra", extra_arg + extra_autoyast);
 
 	// flush the changes
 	ret = ret && SCR::Write(.etc.xen, nil);
@@ -833,13 +827,33 @@
 
 
     global define boolean Prepare2() {
-
-	ReadDiskImages(img_prefix + VM_Common::config_name);
+	boolean ret = true;
 
 	SCR::UnmountAgent(.etc.xen);
-
 	path configpath = .etc.xen.value + topath("/etc/xen/" + VM_Common::config_name);
-	boolean ret = true;
+
+	// remove the disk with autoyast profile
+	if (VM_Common::autoyast_profile != nil && VM_Common::autoyast_profile != "")
+	{
+	    // remove the last disk (image with autoyast profile)
+	    disks = remove(disks, size(disks) - 1);
+	    ret = WriteOption(configpath, "disk", formatDiskConfig(disks, img_prefix + VM_Common::config_name, VM_Common::GetVirtualizationType() == "full"));
+
+	    string command = "/bin/rm " + img_prefix + VM_Common::config_name + "/autoyast.img";
+	    integer out = (integer)SCR::Execute(.target.bash, command);
+	    if (out != 0)
+	    {
+		y2warning("Cannot remove autoyast image, command: %1 failed", command);
+	    }
+	}
+
+	// all following action are needed only in paravirtualization mode
+	if (VM_Common::GetVirtualizationType() == "full")
+	{
+	    return true;
+	}
+
+	ReadDiskImages(img_prefix + VM_Common::config_name);
 
 	// upadate config - root device, set default runlevel, remove install= option
 	ret = ret && SCR::Write(configpath + "restart", nil);
@@ -859,6 +873,19 @@
 	ret = ret && SCR::Write(.etc.xen, nil);
 
 	return true;
+    }
+
+    global define boolean UpdateRoot(string root)
+    {
+	SCR::UnmountAgent(.etc.xen);
+
+	path configpath = .etc.xen.value + topath("/etc/xen/" + VM_Common::config_name);
+	boolean ret = WriteStringOption(configpath, "root", root);
+
+	// flush the changes
+	SCR::Write(.etc.xen, nil);
+
+	return ret;
     }
 
     global define boolean Prepare3() {
@@ -985,6 +1012,15 @@
 	// set source statuses back
 	VM_Common::SetSourceState(src_status);
 
+	// create disk image file with autoyast profile
+	if (VM_Common::autoyast_profile != nil && VM_Common::autoyast_profile != "")
+	{
+	    VM_Common::CreateImageWithProfile(target_dir + "/autoyast.img", VM_Common::autoyast_profile);
+
+	    // add the disk image to the list
+	    disks = add(disks, $[ "target" : "hdt63", "type" : "loop-use", "source" : "autoyast.img", "ro" : false ] );
+	}
+
 	return true;
     }
 
@@ -1044,6 +1080,7 @@
 	    "getExtraArgs"	: VM_XEN::getExtraArgs,
 	    "setExtraArgs"	: VM_XEN::setExtraArgs,
 	    "resetExtraArgs"	: VM_XEN::resetExtraArgs,
+	    "updateRoot"	: VM_XEN::UpdateRoot,
 
 	    "getExtraInstArgs"	: VM_XEN::getExtraInstArgs,
 	    "setExtraInstArgs"	: VM_XEN::setExtraInstArgs,
@@ -1057,6 +1094,11 @@
 
 	    "getCustomKernel"	: VM_Common::GetCustomKernel,
 	    "setCustomKernel"	: VM_Common::SetCustomKernel,
+
+	    "getVirtualizationType" : VM_Common::GetVirtualizationType,
+	    "setVirtualizationType" : VM_Common::SetVirtualizationType,
+	    "resetVirtualizationType" : VM_Common::ResetVirtualizationType,
+	    "virtualizationTypeProposal" : VM_Common::GetVirtualizationProposal,
 
 	    "setNetworkConfig" : VM_XEN::setNetworkConfig,
 	    "getNetworkConfig" : VM_XEN::getNetworkConfig,

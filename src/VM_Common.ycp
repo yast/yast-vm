@@ -60,6 +60,40 @@
 
     boolean modified = false;
 
+    string default_type = "para";
+    string virtualization_type = default_type; // cuurently "para" or "full"
+
+    global define string GetVirtualizationType()
+    {
+	return virtualization_type;
+    }
+
+    global define boolean SetVirtualizationType(string type)
+    {
+	if (!contains(["para", "full"], type))
+	{
+	    y2warning("uknown virtualilzation type: %1", type);
+	    return false;
+	}
+
+	modified = virtualization_type != type;
+	virtualization_type = type;
+
+	return true;
+    }
+
+    global boolean ResetVirtualizationType()
+    {
+	return SetVirtualizationType(default_type);
+    }
+
+    global string GetVirtualizationProposal()
+    {
+	string val = (virtualization_type == "para") ? _("Paravirtualization") : _("Full Virtualization");
+	return HTML::List([val]);
+    }
+
+
     global boolean GetModified() {
 	return modified;
     }
@@ -85,6 +119,7 @@
 	    "custom_kernel" :	  custom_kernel,
 	    "custom_initrd" :	  custom_initrd,
 	    "use_custom_kernel" : use_custom_kernel,
+	    "virtualization_type" : virtualization_type,
 	];
 
 	// export configured source as custom (source index may point later to another source)
@@ -118,6 +153,7 @@
 	custom_kernel =		input["custom_kernel"]:"";
 	custom_initrd =		input["custom_initrd"]:"";
 	use_custom_kernel =	input["use_custom_kernel"]:false;
+	virtualization_type =	input["virtualization_type"]:default_type;
     }
 
     global string GetAutoYastProposal() {
@@ -318,9 +354,22 @@ are supported in the installation."),
 	return ret;
     }
 
-    define boolean CreateExt2Image(string image) {
-	// create 16MB sparse image file
-	if (!VM_Common::CreateDiskImage(image, 16*1024*1024, true))
+    global define string GetTmpDir() {
+	// get temporary directory
+	string tmpdir = (string)SCR::Read(.target.tmpdir);
+	if (tmpdir == "" || tmpdir == nil)
+	{
+	    y2warning("Using /tmp directory for temporary files!");
+	    tmpdir = "/tmp";
+	}
+
+	return tmpdir;
+    }
+
+
+    global define boolean CreateExt2Image(string image, integer image_size) {
+	// create sparse image file
+	if (!VM_Common::CreateDiskImage(image, image_size, true))
 	{
 	    return false;
 	}
@@ -335,34 +384,47 @@ are supported in the installation."),
 	return (out == 0);
     }
 
-    // TODO!!
-    define boolean CreateImageWithProfile(string image, string profile)
+    global define boolean CreateImageWithProfile(string image, string profile)
     {
-	// create the image
-	if (!CreateExt2Image(image))
+	// create 16MB image
+	if (!CreateExt2Image(image, 16*1024*1024))
 	{
 	    return false;
 	}
 
+	// make directory for temporary device mounting
+	string dir = GetTmpDir() + "/mnt";
+
 	// mount the image
-
-	// copy the profile
-
-	// unmount the image
-    }
-
-
-    global define string GetTmpDir() {
-	// get temporary directory
-	string tmpdir = (string)SCR::Read(.target.tmpdir);
-	if (tmpdir == "" || tmpdir == nil)
+	string command = sformat("/bin/mount -o loop %1 %2", image, dir);
+	integer result = (integer)SCR::Execute (.target.bash, command);
+	if (result != 0)
 	{
-	    y2warning("Using /tmp directory for temporary files!");
-	    tmpdir = "/tmp";
+	    y2error("Cannot mount image %1 to %2", image, dir);
+	    return false;
 	}
 
-	return tmpdir;
+	// copy the profile
+	command = sformat("/bin/cp %1 %2", profile, dir);
+	result = (integer) SCR::Execute (.target.bash, command);
+	if (result != 0)
+	{
+	    y2error("Cannot copy profile %1 to %2", profile, dir);
+	    return false;
+	}
+
+	// unmount the image
+	command = sformat("/bin/umount %1", dir);
+	result = (integer) SCR::Execute (.target.bash, command);
+	if (result != 0)
+	{
+	    y2error("Cannot unmount directory %1", dir);
+	    return false;
+	}
+
+	return true;
     }
+
 
     // uses source_id variable
     global define string GetPackage(string package, string dir) {

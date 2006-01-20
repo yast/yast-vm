@@ -513,4 +513,25 @@
 	    return nil;
 	}
     }
+
+    global string GetVirtualizationType() {
+	return CallStringFunction("getVirtualizationType");
+    }
+
+    global boolean SetVirtualizationType(string type) {
+	return CallBooleanStringFunction("setVirtualizationType", type);
+    }
+
+    global boolean ResetVirtualizationType() {
+	return CallBooleanFunction("resetVirtualizationType");
+    }
+
+    global string GetVirtualizationProposal() {
+	return CallStringFunction("virtualizationTypeProposal");
+    }
+
+    global boolean UpdateRoot(string root) {
+	return CallBooleanStringFunction("updateRoot", root);
+    }
+
 }

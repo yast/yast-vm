@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Fri Jan 20 12:53:58 CET 2006 - lslezak@suse.cz
+
+- Improved help texts (#143669, #143672, #143674)
+- Use "RAM Disk" instead of "initrd" (#143673)
+- Fixes in the Full Virtualization mode
+- Propose sparse images
+- Create extra disk image for AutoYast profile
+- 2.13.12
+
+-------------------------------------------------------------------
 Tue Jan 17 11:07:32 CET 2006 - lslezak@suse.cz
 
 - fixed .spec file (missing inst_xen_mode.ycp in the file list)

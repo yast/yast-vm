@@ -95,7 +95,7 @@
 	VM_XEN::resetDiskConfig();
 	VM_XEN::resetSourceConfig();
 	VM_XEN::resetNetworkConfig();
-	VM_XEN::ResetVirtualizationType();
+	VM::ResetVirtualizationType();
 	VM::ResetAutoYastProfile();
 
 	ret = $[];

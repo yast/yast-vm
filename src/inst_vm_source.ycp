@@ -91,7 +91,7 @@ operating system. RAM disk configuration is optional.</P>
 		    `RadioButtonGroup(`id(`rbg),
 			`VBox(
 			    `VSpacing(0.3),
-			    `Left(`RadioButton(`id(`extract), `opt(`notify), _("&Extract Kernel and initrd Image from an Installation Source"))),
+			    `Left(`RadioButton(`id(`extract), `opt(`notify), _("&Extract Kernel and RAM Disk Image from an Installation Source"))),
 			    `VSpacing(1),
 			    `Left(`RadioButton(`id(`custom), `opt(`notify), _("Use &Custom Kernel and Initrd Image Files"))),
 //			    `VSpacing(0.2),
@@ -120,7 +120,7 @@ operating system. RAM disk configuration is optional.</P>
 		)
 	    );
 
-	Wizard::SetContents(_("Virtual Machine Configuration"), contents, help_text, true, true);
+	Wizard::SetContents(_("Operating System"), contents, help_text, true, true);
 
 	symbol s = `dummy;
 
@@ -173,7 +173,7 @@ operating system. RAM disk configuration is optional.</P>
 	    else if (s == `select_initrd)
 	    {
 		string new_initrd = (string)UI::QueryWidget(`id(`initrd), `Value);
-		new_initrd = UI::AskForExistingFile(new_initrd, "*", _("Select initrd Image"));
+		new_initrd = UI::AskForExistingFile(new_initrd, "*", _("Select RAM Disk Image"));
 
 		if (new_initrd != nil)
 		{
