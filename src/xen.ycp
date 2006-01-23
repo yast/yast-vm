@@ -83,11 +83,15 @@ Start installation in the host system.
 	return `abort;
     }
 
-    if (false && !Arch::is_xen() && !Mode::config())
+    if (!Arch::is_xen() && !Mode::config())
     {
 	// error - xen kernel must be running to start a new Xen domain,
 	// ask user to configure the first (management) Xen domain
-	if (Popup::YesNo(_("A Xen virtual machine can be started only\nfrom management domain (domain0)\nwhich is not running now.\n\nConfigure the management domain now?")))
+	if (Popup::YesNo(_("A Xen virtual machine can be started only
+from the management domain (domain0),
+which is not running now.
+
+Configure the management domain now?")))
 	{
 	    y2milestone("Starting domain0 configuration...");
 	    return (symbol) WFM::CallFunction("dom0_setup", []);

@@ -79,8 +79,8 @@
 	string help_text = _("<P><B>Operating System</B></P>") +
 
 	_("<P>The kernel for the virtual machine can be extracted from the selected
-installation source or it can be selected explicitly.</P><P>This is useful if
-the source does not contain required packages or if you want to use other
+installation source or it can be selected explicitly. This is useful if
+the source does not contain required packages or if you want to use another
 operating system. RAM disk configuration is optional.</P>
 ");
 

@@ -158,7 +158,7 @@
 
     global string GetAutoYastProposal() {
 	// proposal items
-	return HTML::List([ sformat(_("AutoYast profile: %1"), (autoyast_profile != "") ?
+	return HTML::List([ sformat(_("AutoYast Profile: %1"), (autoyast_profile != "") ?
 	    // none AutoYast profile has been selected
 	    autoyast_profile : _("<I>none</I>"))]);
     }

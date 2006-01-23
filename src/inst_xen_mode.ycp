@@ -50,13 +50,15 @@
 paravirtualization and full virtualization.</p>")
 
 	// help text for virtualization mode setting (3/3)
-	+ _("<p><b>Paravirtualization</b> requires modified guest OS which
-supports Xen virtualization.</p>")
+	+ _("<p><b>Paravirtualization</b> requires a modified guest OS that
+supports Xen virtualization.</p>
+")
 
 	// help text for virtualization mode setting (4/4)
 	+ _("<p><b>Full virtualization</b> requires CPU with virtualization
-support. In this case Xen completely emulates PC hardware in a virtual machine.
-It's possible to install unmodified guest OS.</p>")
+support. In this case, Xen completely emulates PC hardware in a virtual machine.
+It is possible to install an unmodified guest OS.</p>
+")
 
 	// help text for virtualization mode setting (5/5)
 	+ _("<p>If the mode is changed some settings (e.g. OS kernel) will be reset to default values.</p>");
