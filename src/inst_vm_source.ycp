@@ -93,7 +93,7 @@ operating system. RAM disk configuration is optional.</P>
 			    `VSpacing(0.3),
 			    `Left(`RadioButton(`id(`extract), `opt(`notify), _("&Extract Kernel and RAM Disk Image from an Installation Source"))),
 			    `VSpacing(1),
-			    `Left(`RadioButton(`id(`custom), `opt(`notify), _("Use &Custom Kernel and Initrd Image Files"))),
+			    `Left(`RadioButton(`id(`custom), `opt(`notify), _("Use &Custom Kernel and RAM Disk Image Files"))),
 //			    `VSpacing(0.2),
 			    `HBox(
 				`HSpacing(3),
