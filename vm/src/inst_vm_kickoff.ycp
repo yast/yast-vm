@@ -1,0 +1,142 @@
+/**
+ * Module:	inst_vm_kickoff.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * Purpose:	Prepare and start installation in a virtual machine.
+ *
+ * $Id:$
+ */
+{
+    import "VM";
+    import "Directory";
+    import "Progress";
+    import "Report";
+    import "Service";
+    import "Popup";
+
+    textdomain "vm";
+
+
+    list <string> progress_stages = [
+				     // progress stage
+				     _("Install packages"),
+				     // progress stage
+				     _("Prepare virtual machine environment"),
+				     // progress stage
+				     _("Write virtual machine configuration"),
+				     // progress stage
+				     _("Start the virtual machine"),
+				     // progress stage
+    ];
+
+    // progress stage
+    string update_stage = _("Update the configuration");
+
+    list progress_descriptions = [];
+
+    integer progress_length = size(progress_stages);
+
+    // Headline for virtual machine installation
+    string headline = _("Preparing Installation of the Virtual Machine");
+
+    // help text
+    string help_text = _("<P><B>Installation</B></P><P>Preparing the virtual machine for installation...</P>");
+
+    string error = _("An error occurred during installation of the virtual machine.");
+
+    // enable progress
+    Progress::on();
+
+    // Headline for virtual machine installation
+    Progress::New (headline, "", progress_length,
+		   progress_stages, progress_descriptions, help_text);
+
+    Progress::NextStage ();
+
+    boolean success = VM::InstallPackages();
+
+    // part of an error message
+    string abortmsg = _("The installation will be aborted.");
+
+    if (!success)
+    {
+	Report::Error(_("Cannot install required packages.") + "\n" + abortmsg);
+	return `abort;
+    }
+
+    Progress::NextStage ();
+
+    success = VM::Prepare();
+
+    if (!success)
+    {
+	Report::Error(_("Cannot prepare the virtual machine environment.") + "\n" + abortmsg);
+	return `abort;
+    }
+
+    Progress::NextStage ();
+
+    success = VM::Write();
+    if (!success)
+    {
+	Report::Error(_("Cannot write the configuration of the virtual machine.") + "\n" + abortmsg);
+	return `abort;
+    }
+
+    Progress::NextStage ();
+
+    success = VM::Start();
+    if (!success)
+    {
+	Report::Error(_("Cannot start the virtual machine.") + "\n" + abortmsg);
+	return `abort;
+    }
+
+    if (!VM::GetCustomKernel() && VM::GetVirtualizationType() != "full")
+    {
+	success = VM::Prepare2();
+
+	// TODO: check VM_Common::root_device
+
+	// help text
+	string msg = _("Root device was not detected.
+Enter the root device (e.g. /dev/hda1),
+if it is not needed leave it empty.");
+	// Label
+	string label = _("Root Device");
+
+	if (!success)
+	{
+	    Report::Error(_("Cannot prepare the virtual machine for reboot.") + "\n" + abortmsg);
+	    return `abort;
+	}
+	success = VM::Start();
+	if (!success)
+	{
+	    return `abort;
+	}
+
+	success = VM::Prepare3();
+	if (!success)
+	{
+	    Report::Error(_("Cannot update the configuration of the virtual machine."));
+	    return `abort;
+	}
+    }
+    else
+    {
+	VM::Prepare2();
+	VM::Prepare3();
+
+	// ask user to start the virtual machine again (to continue the installation or configuration)
+	while(Popup::YesNo(_("The virtual machine has been shut down.\nStart the virtual machine again?")))
+	{
+	    VM::Start();
+	}
+    }
+
+    Progress::Finish ();
+
+    return `next;
+}

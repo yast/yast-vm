@@ -1,0 +1,212 @@
+/**
+ * Module:	inst_vm_network.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * Purpose:	Ask user for network settings.
+ *
+ * $Id:$
+ *
+ */
+
+{
+    textdomain "vm";
+
+    import "VM";
+    import "Wizard";
+    import "Popup";
+    import "Report";
+    import "Label";
+
+    define boolean Check_MAC(string mac) ``{
+	return regexpmatch(mac, "^[0-9a-fA-F][0-9a-fA-F](:[0-9a-fA-F][0-9a-fA-F]){5}$");
+    }
+
+    list<map<string, string> > network_conf = VM::GetNetworkConfig();
+
+    define list<term> CreateInterfaceList(list<map<string, string> > network)
+    {
+	list<term> ret = [];
+
+	if (network != nil)
+	{
+	    integer num = 0;
+
+	    foreach(map interface, network, {
+		    string mac = interface["mac"]:"";
+		    string bridge = interface["bridge"]:"";
+
+		    if (mac == "")
+		    {
+			mac = _("Random Address");
+		    }
+
+		    if (bridge == "")
+		    {
+			bridge = _("Default Bridge");
+		    }
+
+		    ret = add(ret, `item(`id(num), num, mac, bridge));
+
+		    num = num + 1;
+		}
+	    );
+	}
+
+	return ret;
+    }
+
+    define void refresh_table(list<map<string, string> > cont)
+    {
+	list<term> content = CreateInterfaceList(cont);
+	UI::ChangeWidget (`id(`network), `Items, content);
+    }
+
+    define map<string,string> interface_popup(string mac, string bridge) ``{
+
+	UI::OpenDialog (`opt(`decorated),
+			// heading in a popup dialog
+			`VBox(`Heading(_("Virtual Network Card Configuration") ),
+			    `VSpacing(0.5),
+			    // text entry label
+			    `TextEntry(`id(`MAC_address), _("&MAC Address"), mac),
+			    `VSpacing(1),
+			    `TextEntry(`id(`bridge), _("&Bridge Name"), bridge),
+			    `VSpacing(1),
+			    `HBox(
+				`PushButton(`id(`ok), `opt(`default), Label::OKButton()),
+				`PushButton(`id(`cancel), Label::CancelButton())
+			    )
+			)
+		    );
+
+	// allow only valid characters
+	UI::ChangeWidget (`id (`MAC_address), `ValidChars, "0123456789:abcdefABCDEF");
+
+	string new_mac = "";
+	string new_bridge = "";
+
+	symbol ret = nil;
+	while (ret != `cancel && ret != `ok)
+	{
+	    ret = (symbol)UI::UserInput();
+
+	    if (ret == `cancel)
+		break;
+
+	    if (ret == `ok)
+	    {
+		new_mac = (string) UI::QueryWidget(`id(`MAC_address), `Value);
+		new_bridge = (string) UI::QueryWidget (`id(`bridge), `Value);
+
+		if (!Check_MAC(new_mac))
+		{
+		    // error message
+		    Report::Error(_("The MAC address entered is not valid."));
+		    UI::SetFocus(`id(`MAC_address));
+		    ret = `again;
+		}
+	    }
+	}
+
+	UI::CloseDialog ();
+
+	map<string,string> result = $[ "mac" : new_mac, "bridge" : new_bridge, "ui" : tostring(ret) ];
+
+	y2debug("result: %1", result);
+	return result;
+    }
+
+    // screen title for network options
+    string title = _("Network Settings");
+
+    // build and show dialog
+    Wizard::OpenAcceptDialog ();
+
+
+    term contents = `VBox(
+	`Table(`id(`network), `header(`Right(_("No.")), _("MAC Address"), _("Bridge")), []),
+	`HBox(
+	    `PushButton (`id (`add), Label::AddButton()),
+	    `PushButton (`id (`edit), Label::EditButton()),
+	    `PushButton (`id (`delete), Label::DeleteButton())
+	)
+    );
+
+    // help text for network settings (1/2)
+    string help_text = _("<p><b>Network Settings</b><br></p>")
+	// help text for network settings (2/2)
+	+ _("<p>Each virtual machine has a virtual ethernet network card. The MAC address is a unique identification of the ethernet network card.</p>")
+    ;
+
+    Wizard::SetContents (title, contents, help_text, true, true);
+    refresh_table(network_conf);
+
+    symbol ret = nil;
+
+    while (true)
+    {
+	ret = (symbol) Wizard::UserInput ();
+
+	if (ret == `abort && Popup::ConfirmAbort(`painless))
+	    break;
+
+	if (ret == `cancel || ret == `back)
+	    break;
+
+	if (ret == `add)
+	{
+	    map<string,string> ifc = $[ "mac":"", "bridge":"" ];
+
+	    network_conf = add(network_conf, ifc);
+	    refresh_table(network_conf);
+	    UI::ChangeWidget(`id(`network), `CurrentItem, size(network_conf) - 1);
+	}
+
+	integer id = (integer) UI::QueryWidget (`id(`network), `CurrentItem);
+
+	if (ret == `edit)
+	{
+	    if (id != nil)
+	    {
+		map<string,string> n = network_conf[id]:$[];
+		n = interface_popup(n["mac"]:"", n["bridge"]:"");
+
+		if (n["ui"]:"" == "`ok")
+		{
+		    n = remove(n, "ui");
+		    network_conf[id] = n;
+		    y2milestone("changed virtual network card %1: %2", id, n);
+
+		    refresh_table(network_conf);
+		    UI::ChangeWidget(`id(`network), `CurrentItem, id);
+		}
+	    }
+	}
+
+	if (ret == `delete)
+	{
+	    if (id != nil)
+	    {
+		network_conf = remove(network_conf, id);
+		refresh_table(network_conf);
+		y2milestone("removed virtual network card %1", id);
+
+		if (size(network_conf) > id)
+		{
+		    UI::ChangeWidget(`id(`network), `CurrentItem, id);
+		}
+	    }
+	}
+
+	if (ret == `next)
+	{
+	    VM::SetNetworkConfig(network_conf);
+	    break;
+	}
+    }
+
+    Wizard::CloseDialog();
+
+    return ret;
+}

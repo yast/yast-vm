@@ -1,0 +1,176 @@
+-------------------------------------------------------------------
+Mon Jan 30 14:44:55 CET 2006 - lslezak@suse.cz
+
+- don't write obsoleted 'nics' options to domain configuration
+  file (#145390)
+- 2.13.15
+
+-------------------------------------------------------------------
+Wed Jan 25 11:02:12 CET 2006 - lslezak@suse.cz
+
+- Use "RAM Disk" instead of "initrd" (#143673)
+- 2.13.14
+
+-------------------------------------------------------------------
+Mon Jan 23 16:53:39 CET 2006 - lslezak@suse.cz
+
+- merged proofed texts
+- 2.13.13
+
+-------------------------------------------------------------------
+Fri Jan 20 12:53:58 CET 2006 - lslezak@suse.cz
+
+- Improved help texts (#143669, #143672, #143674)
+- Use "RAM Disk" instead of "initrd" (#143673)
+- Fixes in the Full Virtualization mode
+- Propose sparse images
+- Create extra disk image for AutoYast profile
+- 2.13.12
+
+-------------------------------------------------------------------
+Tue Jan 17 11:07:32 CET 2006 - lslezak@suse.cz
+
+- fixed .spec file (missing inst_xen_mode.ycp in the file list)
+- 2.13.11
+
+-------------------------------------------------------------------
+Fri Jan 13 15:55:27 CET 2006 - lslezak@suse.cz
+
+- no network interfaces possible in virtual machine
+- AutoYast profile selection is part of the proposal
+- export selected installation source as URL in AutoYast
+- configure Xen virtualization mode (paravirtualization or
+  full virtualization) (GUI only)
+- 2.13.10
+
+-------------------------------------------------------------------
+Wed Jan 11 12:53:53 CET 2006 - lslezak@suse.cz
+
+- AutoYast client
+- 2.13.9
+
+-------------------------------------------------------------------
+Wed Jan  4 13:03:28 CET 2006 - lslezak@suse.cz
+
+- install xen-tools package
+- check whether kernel-xen and install-initrd packages
+  are available (#116395)
+- fixed $URL_INSTALL macro expansion
+- 2.13.8
+
+-------------------------------------------------------------------
+Mon Dec 19 14:18:36 CET 2005 - jsuchome@suse.cz
+
+- merged proofed texts
+- 2.13.7 
+
+-------------------------------------------------------------------
+Fri Dec 16 15:11:11 CET 2005 - lslezak@suse.cz
+
+- new client for Xen domain0 configuration (#117215)
+- spelling fixes
+- 2.13.6
+
+-------------------------------------------------------------------
+Mon Dec 12 17:07:25 CET 2005 - lslezak@suse.cz
+
+- removed UML support
+- 2.13.5
+
+-------------------------------------------------------------------
+Mon Dec 12 09:49:05 CET 2005 - lslezak@suse.cz
+
+- custom kernel and RAM disk configuration
+- workflow update for custom kernel
+- renamed search variable
+- new help texts + updates
+- xen - configure more virtual network interfaces, allow to use
+  physical partition as storage, use existing disk image
+- 2.13.4
+
+-------------------------------------------------------------------
+Tue Nov 22 11:08:39 CET 2005 - lslezak@suse.cz
+
+- installation boot parameter - boot option has been splitted into
+  two parts: boot option and additional installation boot option
+  (used only at the first stage, e.g. autoyast option)
+- xen - configure restart option
+- fixed error message (part of #117215)
+- version 2.13.3
+
+-------------------------------------------------------------------
+Fri Nov 11 10:30:05 CET 2005 - lslezak@suse.cz
+
+- added command line mode support
+- merged UML functionality (yast2-uml package can be dropped)
+- uml - configure UMID option, um-host-install-initrd package
+  is not used any more (#96323)
+- version 2.13.2
+
+-------------------------------------------------------------------
+Fri Oct 14 09:30:02 CEST 2005 - lslezak@suse.cz
+
+- moved generic code to VM_Common::
+- proposal definition is part of the package
+- version 2.13.1
+
+-------------------------------------------------------------------
+Tue Sep 27 11:21:31 CEST 2005 - lslezak@suse.cz
+
+- install required X packages (xorg-x11, xterm) (#117660)
+- write option ioemu for emulated disk (#117711)
+- version 2.13.0
+
+-------------------------------------------------------------------
+Mon Sep 19 09:34:47 CEST 2005 - lslezak@suse.cz
+
+- fixed 'Xen' spelling (#117226)
+
+-------------------------------------------------------------------
+Fri Sep  9 11:32:13 CEST 2005 - lslezak@suse.cz
+
+- write vif option properly into VM configuration file (#115791)
+- don't start an installatinon without network source (#114740) 
+- 2.12.4
+
+-------------------------------------------------------------------
+Fri Aug 26 13:30:30 CEST 2005 - lslezak@suse.cz
+
+- fixed layout of the tables (#112971)
+- use arch dependend kernel-xen and install-initrd package
+- reinitialize installtion sources
+- fixed logging
+- 2.12.3
+
+-------------------------------------------------------------------
+Fri Aug 19 12:46:23 CEST 2005 - lslezak@suse.cz
+
+- use properly custom installation source
+- mount partitions in virtual disk image
+- search for kernel files, copy them to domain0
+- search for root device name
+- update VM configuration file before starting the 2nd stage
+- create link in /etc/xen/auto when 'on boot' start
+  mode is selected
+- add TERM=xterm kernel option (to have colours in 2nd stage)
+- 2.12.2
+
+-------------------------------------------------------------------
+Fri Aug 12 12:24:14 CEST 2005 - lslezak@suse.cz
+
+- fixed creating of an installation initrd (#104339)
+- fixed configuration update after reboot (after first
+  installation stage)
+- 2.12.1
+
+-------------------------------------------------------------------
+Fri Aug 12 09:08:10 CEST 2005 - visnov@suse.cz
+
+- fix textdomain 
+
+-------------------------------------------------------------------
+Fri Aug  5 12:34:43 CEST 2005 - lslezak@suse.cz
+
+- initial release
+- 2.12.0
+

@@ -1,0 +1,366 @@
+/**
+ * Module:	inst_vm_source.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * Purpose:	Ask the user for installation source for the virtual machine.
+ *
+ * $Id:$
+ *
+ */
+{
+    textdomain "vm";
+
+    import "VM";
+    import "URL";
+    import "Label";
+    import "Popup";
+    import "Wizard";
+    import "Report";
+    import "Sequencer";
+
+
+    // screen title - installation source configuration
+    string title = _("Installation Source");
+
+
+    list<integer> sources = Pkg::SourceGetCurrent (false);
+
+    map<string,any> sconfig = VM::GetSourceConfig();
+
+    define term create_item (integer index, integer id) ``{
+        map product_data = Pkg::SourceProductData (id);
+        map general_data = Pkg::SourceGeneralData (id);
+        return `item (`id (index),
+		      product_data["label"]:"unknown",
+		      general_data["url"]:"");
+    }
+
+
+    define void fill_table () ``{
+
+	integer i = 0;
+        list items = [];
+	integer j = -1;
+
+        while (i < size (sources))
+	{
+	    items = add (items, create_item (i, sources[i]:0));
+	    if (sources[i]:0 == sconfig["source_id"]:0)
+		j = i;
+	    i = i + 1;
+        }
+
+        UI::ChangeWidget (`id (`sources), `Items, items);
+	if (j > -1)
+	    UI::ChangeWidget (`id(`sources), `CurrentItem, j);
+    }
+
+    define void updateConfig(map<string,any> conf) {
+	y2debug("updateConfig(%1)", conf);
+	VM::SetSourceConfig(conf["source_id"]:0, conf["inst_type"]:`configured, conf["custom"]:"");
+    }
+
+    define void RefreshSourceTypeDialog()
+    {
+	boolean enabled = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton) == `custom;
+	UI::ChangeWidget(`id(`kernel), `Enabled, enabled);
+	UI::ChangeWidget(`id(`select_kernel), `Enabled, enabled);
+	UI::ChangeWidget(`id(`initrd), `Enabled, enabled);
+	UI::ChangeWidget(`id(`select_initrd), `Enabled, enabled);
+    }
+
+    /**
+     * Popup dialog - source configuration
+     * return symbol
+     */
+    define symbol SourceTypeDialog() {
+
+	string help_text = _("<P><B>Operating System</B></P>") +
+
+	_("<P>The kernel for the virtual machine can be extracted from the selected
+installation source or it can be selected explicitly. This is useful if
+the source does not contain required packages or if you want to use another
+operating system. RAM disk configuration is optional.</P>
+");
+
+	term contents =
+	    `Frame(_("Disk Image"),
+		`MarginBox(2, 0.3,
+		    // heading in a popup dialog
+		    `RadioButtonGroup(`id(`rbg),
+			`VBox(
+			    `VSpacing(0.3),
+			    `Left(`RadioButton(`id(`extract), `opt(`notify), _("&Extract Kernel and RAM Disk Image from an Installation Source"))),
+			    `VSpacing(1),
+			    `Left(`RadioButton(`id(`custom), `opt(`notify), _("Use &Custom Kernel and RAM Disk Image Files"))),
+//			    `VSpacing(0.2),
+			    `HBox(
+				`HSpacing(3),
+				`TextEntry(`id(`kernel), `opt(`hstretch), _("&Kernel Image"), VM::GetKernelImage()),
+				`HSpacing(1),
+				`VBox(
+				    `Label(""),
+				    `PushButton(`id(`select_kernel), _("Select Image..."))
+				)
+			    ),
+//			    `VSpacing(0.2),
+			    `HBox(
+				`HSpacing(3),
+				`TextEntry(`id(`initrd), `opt(`hstretch), _("&RAM Disk Image"), VM::GetInitrdImage()),
+				`HSpacing(1),
+				`VBox(
+				    `Label(""),
+				    `PushButton(`id(`select_initrd), _("Select Image..."))
+				)
+			    ),
+			    `VSpacing(0.2)
+			)
+		    )
+		)
+	    );
+
+	Wizard::SetContents(_("Operating System"), contents, help_text, true, true);
+
+	symbol s = `dummy;
+
+	UI::ChangeWidget(`id(`rbg), `CurrentButton, (VM::GetCustomKernel()) ? `custom : `extract);
+
+	// initialize the widgets
+	RefreshSourceTypeDialog();
+
+	while(!contains([`next, `back, `abort, `cancel, `fetch], s))
+	{
+	    s = (symbol) UI::UserInput();
+
+	    if (s == `next)
+	    {
+		symbol type = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton);
+
+		if (type == `custom)
+		{
+		    string kernel = (string) UI::QueryWidget (`id(`kernel), `Value);
+		    string initrd = (string) UI::QueryWidget (`id(`initrd), `Value);
+
+		    if (kernel == nil || kernel == "")
+		    {
+			Report::Error("The kernel image file name cannot be empty.");
+			s = `again;
+			continue;
+		    }
+
+		    VM::SetCustomKernel(true);
+
+		    VM::SetKernelImage(kernel);
+		    VM::SetInitrdImage(initrd);
+		}
+		else
+		{
+		    s = `fetch;
+		    VM::SetCustomKernel(false);
+		}
+	    }
+	    else if (s == `select_kernel)
+	    {
+		string new_kernel = (string)UI::QueryWidget(`id(`kernel), `Value);
+		new_kernel = UI::AskForExistingFile(new_kernel, "*", _("Select Kernel Image"));
+
+		if (new_kernel != nil)
+		{
+		    UI::ChangeWidget(`id(`kernel), `Value, new_kernel);
+		}
+	    }
+	    else if (s == `select_initrd)
+	    {
+		string new_initrd = (string)UI::QueryWidget(`id(`initrd), `Value);
+		new_initrd = UI::AskForExistingFile(new_initrd, "*", _("Select RAM Disk Image"));
+
+		if (new_initrd != nil)
+		{
+		    UI::ChangeWidget(`id(`initrd), `Value, new_initrd);
+		}
+	    }
+	    else if (s == `custom || s == `extract)
+	    {
+		// refresh the dialog
+		RefreshSourceTypeDialog();
+	    }
+	}
+
+	boolean custom = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton) == `custom;
+	boolean old_setting = VM::GetCustomKernel();
+
+	// if kernel type has been changed ask user to reset kernel options
+	if ((s == `fetch || s == `next) && old_setting != custom)
+	{
+	    string current = sformat(_("Current Arguments: %1
+Current Installation Arguments: %2"), VM::GetExtraArgs(), VM::GetExtraInstArgs());
+
+	    string question = (custom) ? sformat(_("Set empty arguments for the selected kernel?\n%1"), current) :
+		sformat(_("Set default SUSE Linux installation arguments for kernel?\n%1"), current);
+
+	    if (Popup::YesNo(question))
+	    {
+		VM::ResetExtraArgs();
+		VM::ResetExtraInstArgs();
+	    }
+	}
+
+	return s;
+    }
+
+
+define symbol SourceSelection() {
+    // build and show dialog
+    integer indent = 3;
+
+    term contents = `VBox(
+			`RadioButtonGroup(`id(`source), `opt(`notify),
+			    `VBox(
+				`VSpacing(0.3),
+				// radio button label
+				`Left(`RadioButton(`id(`configured),  `opt(`notify), _("&Configured Installation Source"), sconfig["inst_type"]:`unknown == `configured)),
+				`VSpacing(0.3),
+				`HBox(
+				    `HSpacing(indent),
+				    `Table(`id(`sources),
+					// table column heading
+					`header(_("Name"), _("URL")), [ ])
+				),
+				// push button label
+				// installation source configuration module
+				// is started when it's pressed
+				`PushButton(`id(`inst_src), _("C&onfigure...")),
+				`VSpacing(1),
+
+				`Left(`RadioButton(`id(`custom),  `opt(`notify), _("Custom &Installation Source"), sconfig["inst_type"]:`unknown == `custom)),
+				`HBox(
+				    `HSpacing(indent),
+				    `TextEntry(`id(`custom_source), _("&URL of Installation Source"), sconfig["custom_source"]:"")
+				),
+				`VSpacing(1)
+
+// TODO: disabled, we need kernel package before starting VM, we MUST know the URL
+//				`Left(`RadioButton(`id(`slp),  `opt(`notify), _("&SLP Installation Source"), sconfig["inst_type"]:`unknown == `slp)),
+//				`VSpacing(1)
+			    )
+			)
+		    );
+
+    // help text for backup dialog during update 1/7
+    string help_text = _("<P><B>Installation Source</B></P>")
+    + _("<P>Select the installation source from which to install the virtual machine.</P>")
+    + _("<P>Only network installation sources, such as FTP or NFS, are supported.</P>");
+
+    Wizard::SetContents(title, contents, help_text, true, true);
+
+    fill_table();
+
+    symbol ret = nil;
+
+    while (true)
+    {
+	// refresh status of the widgets
+	symbol selected = (symbol)(UI::QueryWidget(`id(`source), `CurrentButton));
+	UI::ChangeWidget(`id(`sources), `Enabled, selected == `configured);
+	UI::ChangeWidget(`id(`inst_src), `Enabled, selected == `configured);
+	UI::ChangeWidget(`id(`custom_source), `Enabled, selected == `custom);
+
+	ret = (symbol) Wizard::UserInput ();
+
+	if (ret == `abort && Popup::ConfirmAbort (`painless))
+	    break;
+
+	if (ret == `cancel || ret == `back)
+	    break;
+
+	if (ret == `next)
+	{
+	    // check if selected installation source is valid
+	    integer current = (integer) UI::QueryWidget (`id(`sources),
+							 `CurrentItem);
+
+	    integer current_srcid = sources[current]:0;
+
+	    map general_data = Pkg::SourceGeneralData(current_srcid);
+
+	    symbol selected_type = (symbol)UI::QueryWidget(`id(`source), `CurrentButton);
+	    string selected_custom_source = (string)UI::QueryWidget(`id(`custom_source), `Value);
+
+	    string srcurl = (selected_type == `configured) ? general_data["url"]:"" : selected_custom_source;
+
+	    map parsed_url = URL::Parse(srcurl);
+
+	    if (!URL::Check(srcurl) || parsed_url["host"]:"" == "")
+	    {
+		Report::Error(_("Entered URL value is not valid."));
+	    }
+	    else if (contains(["ftp", "nfs", "smb", "http"], parsed_url["scheme"]:""))
+	    {
+		y2debug("Selected network source: %1", srcurl);
+		sconfig["inst_type"] = selected_type;
+
+		if (selected_type == `configured)
+		{
+		    sconfig["source_id"] = current_srcid;
+		}
+		else if (selected_type == `custom)
+		{
+		    sconfig["custom"] = selected_custom_source;
+		}
+		else
+		{
+		    y2error("Unknown installation type");
+		}
+
+		updateConfig(sconfig);
+
+		break;
+	    }
+	    else
+	    {
+		Report::Error(_("Only network installation sources
+are supported in the installation."));
+	    }
+	}
+
+	if (ret == `inst_src)
+	{
+	    // start installation source configuration module
+	    WFM::CallFunction("inst_source", []);
+	    // refresh table content
+	    sources = Pkg::SourceGetCurrent(false);
+	    fill_table();
+	}
+    }
+
+    return ret;
+}
+
+    Wizard::OpenNextBackDialog();
+
+    map aliases = $[
+	    "SourceSelection"	: ``(SourceSelection()),
+	    "SourceTypeDialog"	: ``(SourceTypeDialog()),
+	];
+
+    map sequence = $[
+	    "ws_start"	: "SourceTypeDialog",
+	    "SourceTypeDialog"	:
+		$[
+		    `fetch	    :	"SourceSelection",
+		    `abort	    :   `abort
+		],
+	    "SourceSelection"	:
+		$[
+		    `abort	    :   `abort
+		]
+	    ];
+
+    symbol ret = Sequencer::Run(aliases, sequence);
+
+    Wizard::CloseDialog();
+
+    return ret;
+
+}
