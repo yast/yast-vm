@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon Jan 30 14:44:55 CET 2006 - lslezak@suse.cz
+
+- don't write obsoleted 'nics' options to domain configuration
+  file (#145390)
+- 2.13.15
+
+-------------------------------------------------------------------
 Wed Jan 25 11:02:12 CET 2006 - lslezak@suse.cz
 
 - Use "RAM Disk" instead of "initrd" (#143673)

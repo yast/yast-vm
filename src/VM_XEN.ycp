@@ -528,8 +528,6 @@
 
 	ret = ret && WriteStringOption(configpath, "dhcp", "dhcp");
 
-	ret = ret && WriteOption(configpath, "nics", tostring(size(network)));
-
 	string vif = GetVIF(network);
 
 	if (vif != nil)
