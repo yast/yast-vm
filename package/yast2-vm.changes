@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Feb  1 13:12:57 CET 2006 - lslezak@suse.cz
+
+- extract translatable strings from vm_install.xml control file
+  (#146651)
+- 2.13.16
+
+-------------------------------------------------------------------
 Mon Jan 30 14:44:55 CET 2006 - lslezak@suse.cz
 
 - don't write obsoleted 'nics' options to domain configuration

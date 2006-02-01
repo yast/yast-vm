@@ -8,5 +8,14 @@
 @YAST2-CHECKS-COMMON@
 @YAST2-CHECKS-YCP@
 
+## Nasty hack: xgettext doesn't work for XML files, so let's symlink it
+( cd control; 
+ for xml in `ls *.xml`; do
+    ln -sf $xml  `basename $xml .xml`.glade
+ done
+ )
+find control -name *.glade > POTFILES
+
 ## and generate the output...
 @YAST2-OUTPUT@
+
