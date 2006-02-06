@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Mon Feb  6 14:32:16 CET 2006 - lslezak@suse.cz
+
+- full virtualization fix (use hvm loader and builder)
+- write vif option correctly (#145390)
+- allow non-network source
+- suppose VM crash if runtime is lower than 3 sec
+- 2.13.17
+
+-------------------------------------------------------------------
 Wed Feb  1 13:12:57 CET 2006 - lslezak@suse.cz
 
 - extract translatable strings from vm_install.xml control file

@@ -94,7 +94,7 @@ It is possible to install an unmodified guest OS.</p>
 		if (selected == "full")
 		{
 		    VM_Common::SetCustomKernel(true);
-		    VM_Common::SetKernelImage("/usr/lib/xen/boot/vmxloader");
+		    VM_Common::SetKernelImage("/usr/lib/xen/boot/hvmloader");
 		    VM_Common::SetInitrdImage("");
 		}
 		else

@@ -86,7 +86,20 @@
 
     Progress::NextStage ();
 
+    //
+    integer start_time = time();
     success = VM::Start();
+    integer duration = time() - start_time;
+
+    y2milestone("Uptime of the virtual machine: %1 seconds", duration);
+
+    // the virtual machine exited too early, suppose that it has crashed
+    // minimal success runtime is 3 seconds
+    if (duration < 3)
+    {
+	success = false;
+    }
+
     if (!success)
     {
 	Report::Error(_("Cannot start the virtual machine.") + "\n" + abortmsg);

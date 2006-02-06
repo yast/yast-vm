@@ -153,6 +153,10 @@ operating system. RAM disk configuration is optional.</P>
 
 		    VM::SetKernelImage(kernel);
 		    VM::SetInitrdImage(initrd);
+
+		    // set no installation source
+		    sconfig["inst_type"] = `none;
+		    updateConfig(sconfig);
 		}
 		else
 		{
@@ -249,8 +253,8 @@ define symbol SourceSelection() {
 
     // help text for backup dialog during update 1/7
     string help_text = _("<P><B>Installation Source</B></P>")
-    + _("<P>Select the installation source from which to install the virtual machine.</P>")
-    + _("<P>Only network installation sources, such as FTP or NFS, are supported.</P>");
+    + _("<P>Select the installation source from which to install the virtual machine.</P>");
+//    + _("<P>Only network installation sources, such as FTP or NFS, are supported.</P>");
 
     Wizard::SetContents(title, contents, help_text, true, true);
 
@@ -295,9 +299,9 @@ define symbol SourceSelection() {
 	    {
 		Report::Error(_("Entered URL value is not valid."));
 	    }
-	    else if (contains(["ftp", "nfs", "smb", "http"], parsed_url["scheme"]:""))
+	    else
 	    {
-		y2debug("Selected network source: %1", srcurl);
+		y2debug("Selected source: %1", srcurl);
 		sconfig["inst_type"] = selected_type;
 
 		if (selected_type == `configured)
@@ -317,11 +321,11 @@ define symbol SourceSelection() {
 
 		break;
 	    }
-	    else
+/*	    else
 	    {
 		Report::Error(_("Only network installation sources
 are supported in the installation."));
-	    }
+	    }*/
 	}
 
 	if (ret == `inst_src)

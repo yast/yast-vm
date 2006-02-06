@@ -313,7 +313,7 @@
 
 	map ret = $[];
 
-	if (inst_type == `configured && (source_id == nil || source_id < 0))
+/*	if (inst_type == `configured && (source_id == nil || source_id < 0))
 	{
 	    ret = $[ "warning" :
 		    // error message
@@ -321,7 +321,7 @@
 are supported in the installation."),
 		     "warning_level" : `blocker
 	    ];
-	}
+	}*/
 // TODO: check custom installation source - parse URL, try to open it...
 /*	else if (inst_type == `custom)
 	{

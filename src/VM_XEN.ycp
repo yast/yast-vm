@@ -438,35 +438,28 @@
 	boolean first = true;
 	boolean all_default = true;
 
-	string type = (VM_Common::GetVirtualizationType() == "full") ? "type=ioemu," : "";
+	string type = (VM_Common::GetVirtualizationType() == "full") ? "type=ioemu" : "";
 	foreach(map<string,string> c, conf, {
 		string iface = type;
 
 		string mac = c["mac"]:"";
 		string bridge = c["bridge"]:"";
 
-		if (mac != "" || bridge != "")
-		{
-		    all_default = false;
-		}
-
 		if (mac != "")
-		{
-		    iface = "mac=" + mac;
-		}
-
-		if (bridge == "" && mac == "")
-		{
-		    // both options use default - set at least default bridge name
-		    // because Xen doesn't accept empty option
-		    bridge = "xenbr0";
-		}
-
-		if (bridge == "")
 		{
 		    if (iface != "")
 		    {
-			iface = iface + ", ";
+			iface = iface + ",";
+		    }
+
+		    iface = "mac=" + mac;
+		}
+
+		if (bridge != "")
+		{
+		    if (iface != "")
+		    {
+			iface = iface + ",";
 		    }
 
 		    iface = iface + "bridge=" + bridge;
@@ -487,16 +480,7 @@
 	    }
 	);
 
-	// write config for fully virtualizaed hosts - required due to "type" option
-	if (all_default && VM_Common::GetVirtualizationType() != "full")
-	{
-	    // all options have default value - return nil, no configuration is needed
-	    ret = nil;
-	}
-	else
-	{
-	    ret = "[ " + ret + " ]";
-	}
+	ret = "[ " + ret + " ]";
 
 	return ret;
     }
@@ -515,8 +499,8 @@
 
 	if (VM_Common::GetVirtualizationType() == "full")
 	{
-	    // use vmx builder for full virtualized hosts
-	    ret = ret && WriteStringOption(configpath, "builder", "vmx");
+	    // use hvm builder for full virtualized hosts
+	    ret = ret && WriteStringOption(configpath, "builder", "hvm");
 
 	    // library dir (32/64bit)
 	    string arch_libdir = Arch::i386() ? "lib" : "lib64";
@@ -557,7 +541,7 @@
 	string extra_arg = VM_Common::extra_inst_args;
 
 	// add installation boot options
-	if (extra_arg != "")
+	if (extra_arg != "" && url != "")
 	{
 	    // replace $URL_INSTALL variable
 	    string new_arg = regexpsub(VM_Common::extra_inst_args, "^(.*)\\$URL_INSTALL(.*)", sformat("\\1%1\\2", url));
