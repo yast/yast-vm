@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Mon Feb 13 17:29:54 CET 2006 - lslezak@suse.cz
+
+- 2.13.18
+
+-------------------------------------------------------------------
 Mon Feb 13 17:13:42 CET 2006 - lslezak@suse.cz
 
 - validate domain name (only alphanumeric and _-.:+ characterrs
