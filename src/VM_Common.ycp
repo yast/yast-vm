@@ -3,7 +3,7 @@
  * Package:	VM configuration - common function for all virtualization architectures
  * Authors:	Ladislav Slezak <lslezak@suse.cz>
  *
- * $Id:$
+ * $Id$
  */
 {
     module "VM_Common";

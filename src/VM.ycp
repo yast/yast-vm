@@ -3,7 +3,7 @@
  * Package:	VM configuration - generic module
  * Authors:	Ladislav Slezak <lslezak@suse.cz>
  *
- * $Id:$
+ * $Id$
  */
 {
     module "VM";

@@ -2,7 +2,7 @@
  * File:	modules/VM_XEN.ycp
  * Package:	XEN specific functions and values
  * Authors:	Ladislav Slezak <lslezak@suse.cz>
- * $Id:$
+ * $Id$
  */
 {
     module "VM_XEN";

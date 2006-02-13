@@ -5,7 +5,7 @@
  *
  * Purpose:	Prepare and start installation in a virtual machine.
  *
- * $Id:$
+ * $Id$
  */
 {
     import "VM";

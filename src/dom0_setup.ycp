@@ -5,7 +5,7 @@
  *
  * Purpose:	Configure domain0 (Xen management domain)
  *
- * $Id:$
+ * $Id$
  */
 {
 
