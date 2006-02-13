@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Feb 13 17:13:42 CET 2006 - lslezak@suse.cz
+
+- validate domain name (only alphanumeric and _-.:+ characterrs
+  are allowed) (#150054)
+
+-------------------------------------------------------------------
 Mon Feb 13 16:55:24 CET 2006 - lslezak@suse.cz
 
 - resize dom0 memory size if needed (#147612)

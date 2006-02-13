@@ -12,6 +12,7 @@
     import "HTML";
     import "Mode";
     import "Arch";
+    import "String";
 
     textdomain "vm";
 
@@ -405,6 +406,9 @@
     }
 
     global boolean setConfigName(string cname) {
+	// remove invalid characters
+	cname = filterchars(cname, String::CAlnum() + "_-.:+");
+
 	VM_Common::SetModified(cname != VM_Common::config_name);
 	VM_Common::config_name = cname;
 	return true;

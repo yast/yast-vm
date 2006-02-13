@@ -16,6 +16,7 @@
     import "VM_Common";
     import "Wizard";
     import "Popup";
+    import "String";
 
     // screen title for virtual machine options
     string title = _("The Virtual Machine Options");
@@ -86,13 +87,16 @@
     Wizard::SetContents (title, contents, help_text, (boolean) WFM::Args(0),
 			 (boolean) WFM::Args(1));
 
-    UI::ChangeWidget (`id(`memory), `ValidChars, "0123456789");
+    UI::ChangeWidget (`id(`memory), `ValidChars, String::CDigit());
     UI::ChangeWidget (`id(`memory), `Value, tostring (VM::GetMemorySize()));
 
 //    UI::ChangeWidget (`id(`ncpus), `ValidChars, "0123456789");
 //    UI::ChangeWidget (`id(`ncpus), `Value, tostring (number_of_cpus));
 
     UI::ChangeWidget (`id(`startmode), `Value, VM::GetStartMode());
+
+    // allow only 0-9, a-z, A-Z, and the characters _-.:+ in domain name
+    UI::ChangeWidget (`id(`vmname), `ValidChars, String::CAlnum() + "_-.:+");
 
     // set widget state
     boolean enabled = (VM::GetVirtualizationType() == "para");
