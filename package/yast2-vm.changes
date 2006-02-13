@@ -2,7 +2,7 @@
 Mon Feb 13 12:55:11 CET 2006 - lslezak@suse.cz
 
 - don't start VM when file downloading from source fails (#147428)
-- initialize target 
+- initialize target (#150241)
 
 -------------------------------------------------------------------
 Mon Feb 13 11:24:32 CET 2006 - lslezak@suse.cz
