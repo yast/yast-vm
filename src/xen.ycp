@@ -116,6 +116,9 @@ Configure the management domain now?")))
 	return `abort;
     }
 
+    // initialize the target system
+    Pkg::TargetInit("/", true);
+
     // install required packages if they are missing
     if (!Mode::config() && !Package::InstallAll(["xen-tools"]))
     {

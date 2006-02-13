@@ -921,6 +921,12 @@
 	    // disable all sources
 	    VM_Common::DisableAllSources();
 	    integer enabled_src = VM_Common::source_id;
+
+	    if (enabled_src == nil)
+	    {
+		y2error("Configured source ID (VM_Common::source_id) is nil!");
+		return false;
+	    }
 	    y2milestone("src_status: %1", VM_Common::InstSourceStatus());
 
 	    // check whether the custom installation source is already defined
@@ -970,9 +976,16 @@
 	    {
 		kernel_path = target_dir + "/" + kernel_path;
 	    }
+	    else
+	    {
+		return false;
+	    }
 
 	    y2milestone("Creating installation ramdisk (initrd)...");
-	    VM_Common::CreateInstallationImage(kpkg, target_dir + "/inst-initrd");
+	    if (VM_Common::CreateInstallationImage(kpkg, target_dir + "/inst-initrd") == false)
+	    {
+		return false;
+	    }
 	    initrd_path = target_dir + "/inst-initrd";
 	    y2milestone("kernel: %1, initrd: %2", kernel_path, initrd_path);
 	}
