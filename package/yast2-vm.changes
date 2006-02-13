@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Mon Feb 13 16:55:24 CET 2006 - lslezak@suse.cz
+
+- resize dom0 memory size if needed (#147612)
+
+-------------------------------------------------------------------
 Mon Feb 13 15:04:06 CET 2006 - lslezak@suse.cz
 
 - start 2nd stage at background, finish yast module (#149665)

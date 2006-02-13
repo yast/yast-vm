@@ -132,11 +132,39 @@
 	string free_line = output[0]:"";
 
 	string msize = regexpsub(free_line, "free_memory[ \t]*:[ \t]*(.*)", "\\1");
-	y2debug("memory size: %1", msize);
+	y2milestone("free_memory size: %1", msize);
 
 	if (msize == nil)
 	{
-	    msize = "0";
+	    return 0;
+	}
+
+	integer ret = tointeger(msize);
+
+	if (ret == nil)
+	{
+	    ret = 0;
+	}
+
+	return ret;
+    }
+
+    global integer MaxFreeMemory() {
+	// run 'xm info command'
+	string cmd = "/usr/sbin/xm info | grep max_free_memory";
+
+	map out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2debug("max_free_memory out: %1", out);
+
+	list<string> output = splitstring(out["stdout"]:"", "\n");
+	string free_line = output[0]:"";
+
+	string msize = regexpsub(free_line, "max_free_memory[ \t]*:[ \t]*(.*)", "\\1");
+	y2milestone("max_free_memory size: %1", msize);
+
+	if (msize == nil)
+	{
+	    return 0;
 	}
 
 	integer ret = tointeger(msize);
@@ -189,8 +217,8 @@
 	// skip memory check in autoyast configuration mode
 	if (!Mode::config())
 	{
-	    // check available free memory
-	    integer fm = FreeMemory();
+	    // check maximum available free memory
+	    integer fm = MaxFreeMemory();
 
 	    if (getMemorySize() > fm)
 	    {
@@ -902,7 +930,34 @@
 	return ret;
     }
 
-    global define boolean Prepare(/*string target_dir, string kernel_name*/) {
+    define integer dom0Mem()
+    {
+	// get dom0 memory size
+	string cmd = "/usr/sbin/xm list --long 0 | /usr/bin/grep memory";
+	map out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2debug("xm list output: %1", out);
+
+	list<string> output = splitstring(out["stdout"]:"", "\n");
+	string mem_line = output[0]:"";
+	string msize = regexpsub(mem_line, "\\(memory (.*)\\)", "\\1");
+
+	if (msize == nil)
+	{
+	    return 0;
+	}
+
+	integer ret = tointeger(msize);
+
+	if (ret == nil)
+	{
+	    ret = 0;
+	}
+
+	y2milestone("dom0_memory size: %1", ret);
+	return ret;
+    }
+
+    global define boolean Prepare() {
 	// build/extract xen kernel and installation initrd, copy them to the target directory
 	string target_dir = img_prefix + VM_Common::config_name;
 	string cmd = "/bin/mkdir -p " + target_dir;
@@ -1014,6 +1069,35 @@
 
 	    // add the disk image to the list
 	    disks = add(disks, $[ "target" : "hdt63", "type" : "loop-use", "source" : "autoyast.img", "ro" : false ] );
+	}
+
+	integer freemem = FreeMemory();
+
+	// check available free memory size
+	if (VM_Common::memory_size > freemem)
+	{
+	    integer maxmem = MaxFreeMemory();
+
+	    if (VM_Common::memory_size > maxmem)
+	    {
+		y2error("Required memory size %1, max. available %2", VM_Common::memory_size, maxmem);
+		return false;
+	    }
+
+	    // get current memory size
+	    integer dom0 = dom0Mem();
+	    // compute the new size
+	    integer new_mem = dom0 - (VM_Common::memory_size - freemem);
+	    y2milestone("Resizing dom0 memory size from %1 to %2...", dom0, new_mem);
+
+	    // resize dom0 memory
+	    string command = "/usr/sbin/xm mem-set 0 " + new_mem;
+	    integer out = (integer)SCR::Execute(.target.bash, command);
+	    if (out != 0)
+	    {
+		y2error("Cannot resize dom0 memory, command '%1' failed", command);
+		return false;
+	    }
 	}
 
 	return true;
