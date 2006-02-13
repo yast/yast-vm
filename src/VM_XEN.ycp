@@ -23,11 +23,11 @@
     // target - virtual device in the VM
     // ro - read-only flag
     // size - size of the image (when type is "loop-create")
-    list <map <string,any> > default_disks = [ $["size" : 1024, "sparse" : true, "target" : "hda", "type" : "loop-create", "source" : "hda", "ro" : false ] ];
+    list <map <string,any> > default_disks = [ $["size" : 4096, "sparse" : true, "target" : "hda", "type" : "loop-create", "source" : "hda", "ro" : false ] ];
     global list <map <string,any> > disks = default_disks;
 
-    list <map <string,string> > default_network = [ $[ "mac" : "", "bridge": ""] ];
-    global list <map <string,string> > network = default_network;
+    list <map <string,string> > default_network = [];
+    global list <map <string,string> > network = [];
 
     string domain_prefix = "domain";
 
@@ -1027,6 +1027,11 @@
 	VM_Common::SetModified(modif);
     }
 
+    define list <map <string,string> > create_default_network_config()
+    {
+	return [ $[ "mac" : VM_Common::Propose_MAC_address(""), "bridge": ""] ];
+    }
+
     global define map GetFunctions()
     {
 	return $[
@@ -1106,6 +1111,11 @@
 
 	// propose configuration (domain) name
 	resetConfigName();
+
+	// create default network config (requires proposed config name)
+	default_network = create_default_network_config();
+	// set the default network config
+	network = default_network;
 
 	resetExtraArgs();
 	resetExtraInstArgs();

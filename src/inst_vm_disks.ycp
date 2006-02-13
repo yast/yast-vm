@@ -51,7 +51,7 @@ file</B> which dynamically allocates disk space when it is needed.</P>");
 			      `ComboBox(`id(`size), `opt(`editable,`hstretch),
 					// combobox label
 					_("&Disk Size in MB:"),
-					["512", "1024", "2048", "4096"]),
+					["1024", "2048", "4096", "8192"]),
 			      `VSpacing(0.5),
 			      (VM::GetVMMtype() == "xen") ?
 				  // label - disk device widget (enter /dev/hda1, /dev/sdb3...)

@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Feb 13 11:24:32 CET 2006 - lslezak@suse.cz
+
+- increased default disk image size to 4GB (#149604)
+- generate default MAC address for network interface (#149177) 
+
+-------------------------------------------------------------------
 Mon Feb  6 14:32:16 CET 2006 - lslezak@suse.cz
 
 - full virtualization fix (use hvm loader and builder)

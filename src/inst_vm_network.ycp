@@ -13,6 +13,7 @@
     textdomain "vm";
 
     import "VM";
+    import "VM_Common";
     import "Wizard";
     import "Popup";
     import "Report";
@@ -156,7 +157,8 @@
 
 	if (ret == `add)
 	{
-	    map<string,string> ifc = $[ "mac":"", "bridge":"" ];
+	    // generate random MAC for the new interface
+	    map<string,string> ifc = $[ "mac": VM_Common::Propose_MAC_address(sformat("%1", size(network_conf))), "bridge":"" ];
 
 	    network_conf = add(network_conf, ifc);
 	    refresh_table(network_conf);

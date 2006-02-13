@@ -681,4 +681,32 @@ are supported in the installation."),
 	return out["exit"]:1 == 0;
     }
 
+    global string Propose_MAC_address(string option)
+    {
+	// use hostname and network domain name of the host machine and configuration name of VM
+	map<string,any> h_out = (map<string,any>)SCR::Execute(.target.bash_output, "/bin/hostname");
+	string host_n = h_out["stdout"]:"";
+
+	map<string,any> d_out = (map<string,any>)SCR::Execute(.target.bash_output, "/bin/domainname");
+	string dom_n = d_out["stdout"]:"";
+
+	string command = sformat("echo '%1' | md5sum", host_n + dom_n + VM_Common::config_name + option);
+	y2debug("Command: %1", command);
+
+	map<string,any> out = (map<string,any>)SCR::Execute(.target.bash_output, command);
+	list<string> result= splitstring(out["stdout"]:"", "\n");
+
+	y2debug("hash: %1", result[0]:"");
+	string ret = regexpsub(result[0]:"", "^(..)(..)(..)(..).*", "fe:fd:\\1:\\2:\\3:\\4");
+
+	// TODO detect if the address is already in use on the network
+
+	if (ret == nil)
+	{
+	    ret = "";
+	}
+
+	y2milestone("Proposed MAC: %1", ret);
+	return ret;
+    }
 }
