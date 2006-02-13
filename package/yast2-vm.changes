@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Feb 13 15:04:06 CET 2006 - lslezak@suse.cz
+
+- start 2nd stage at background, finish yast module (#149665)
+- show the network device config popup when adding new interface
+
+-------------------------------------------------------------------
 Mon Feb 13 12:55:11 CET 2006 - lslezak@suse.cz
 
 - don't start VM when file downloading from source fails (#147428)

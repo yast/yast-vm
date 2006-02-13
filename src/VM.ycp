@@ -426,8 +426,8 @@
 	return CallBooleanFunction("Prepare3");
     }
 
-    global boolean Start() {
-	return CallBooleanFunction("Start");
+    global boolean Start(boolean background) {
+	return CallBooleanBooleanFunction("Start", background);
     }
 
     global boolean InstallPackages() {

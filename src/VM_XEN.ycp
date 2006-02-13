@@ -1019,11 +1019,13 @@
 	return true;
     }
 
-    global define boolean Start() {
+    global define boolean Start(boolean background) {
 	// start the VM in xterm session
 	string cmd = sformat("/usr/bin/xterm -T \"Xen - %2\" -e %1 create -c /etc/xen/%2", xm, VM_Common::config_name);
 	y2milestone("xterm command: %1", cmd);
-	integer out = (integer)SCR::Execute(.target.bash, cmd);
+
+	path bash_path = (background) ? .target.bash_background : .target.bash;
+	integer out = (integer)SCR::Execute(bash_path, cmd);
 
 	return out == 0;
     }

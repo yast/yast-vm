@@ -46,7 +46,7 @@
     string error = _("An error occurred during installation of the virtual machine.");
 
     // enable progress
-    Progress::on();
+    boolean progress_state = Progress::set(true);
 
     // Headline for virtual machine installation
     Progress::New (headline, "", progress_length,
@@ -86,9 +86,9 @@
 
     Progress::NextStage ();
 
-    //
+    // measure uptime of the VM
     integer start_time = time();
-    success = VM::Start();
+    success = VM::Start(false);
     integer duration = time() - start_time;
 
     y2milestone("Uptime of the virtual machine: %1 seconds", duration);
@@ -124,11 +124,16 @@ if it is not needed leave it empty.");
 	    Report::Error(_("Cannot prepare the virtual machine for reboot.") + "\n" + abortmsg);
 	    return `abort;
 	}
-	success = VM::Start();
+
+	// start the VM in background
+	success = VM::Start(true);
 	if (!success)
 	{
 	    return `abort;
 	}
+
+	// wait a while before updating the configuration
+	sleep(3000);
 
 	success = VM::Prepare3();
 	if (!success)
@@ -143,13 +148,14 @@ if it is not needed leave it empty.");
 	VM::Prepare3();
 
 	// ask user to start the virtual machine again (to continue the installation or configuration)
-	while(Popup::YesNo(_("The virtual machine has been shut down.\nStart the virtual machine again?")))
+	if (Popup::YesNo(_("The virtual machine has been shut down.\nStart the virtual machine again?")))
 	{
-	    VM::Start();
+	    VM::Start(true);
 	}
     }
 
     Progress::Finish ();
+    Progress::set(progress_state);
 
     return `next;
 }
