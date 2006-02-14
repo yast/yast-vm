@@ -245,10 +245,8 @@
 
 	foreach(integer src, sources, ``{
 		map general_data = Pkg::SourceGeneralData(src);
-		map product_data = Pkg::SourceProductData(src);
 
 		y2milestone("general_data: %1", general_data);
-		y2milestone("product_data: %1", product_data);
 
 		string srcurl = general_data["url"]:"";
 
@@ -258,8 +256,6 @@
 		    y2milestone("Found network source: %1", src);
 		    sid = src;
 		}
-
-		y2milestone("Pkg::SourceProductData: %1", Pkg::SourceProductData(src));
 	    }
 	);
 
@@ -525,7 +521,6 @@ are supported in the installation."),
 	foreach(integer src, sources, {
 		map general_data = Pkg::SourceGeneralData(src);
 		y2milestone("general_data: %1", general_data);
-		y2milestone("product_data: %1", Pkg::SourceProductData(src));
 		ret[src] = general_data["enabled"]:false;
 	    }
 	);
