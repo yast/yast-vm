@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Fri Feb 17 15:42:04 CET 2006 - lslezak@suse.cz
+
+- boot device configuration in full virtualization mode,
+  start VM in background (#145064)
+- xen config file fixes
+- 2.13.19
+
+-------------------------------------------------------------------
 Mon Feb 13 17:29:54 CET 2006 - lslezak@suse.cz
 
 - 2.13.18

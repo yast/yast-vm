@@ -86,18 +86,31 @@
 
     Progress::NextStage ();
 
+    boolean background_start = false;
+    if (VM::GetVirtualizationType() == "full" && VM::GetBootDevice() == "d")
+    {
+	background_start = true;
+    }
+
     // measure uptime of the VM
     integer start_time = time();
-    success = VM::Start(false);
+    success = VM::Start(background_start);
     integer duration = time() - start_time;
 
     y2milestone("Uptime of the virtual machine: %1 seconds", duration);
 
     // the virtual machine exited too early, suppose that it has crashed
     // minimal success runtime is 3 seconds
-    if (duration < 3)
+    if (!background_start && duration < 3)
     {
 	success = false;
+    }
+
+    // small delay - wait until the VM is up
+    // TODO rather check whether the VM is up via 'xm list' instead of the sleep
+    if (background_start)
+    {
+	sleep(5000);
     }
 
     if (!success)
@@ -148,7 +161,7 @@ if it is not needed leave it empty.");
 	VM::Prepare3();
 
 	// ask user to start the virtual machine again (to continue the installation or configuration)
-	if (Popup::YesNo(_("The virtual machine has been shut down.\nStart the virtual machine again?")))
+	if (!background_start && Popup::YesNo(_("The virtual machine has been shut down.\nStart the virtual machine again?")))
 	{
 	    VM::Start(true);
 	}

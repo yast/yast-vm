@@ -546,8 +546,6 @@
 	ret = ret && WriteOption(configpath, "memory", tostring(VM_Common::memory_size));
 	ret = ret && WriteStringOption(configpath, "kernel", kernel_path);
 
-	ret = ret && WriteStringOption(configpath, "ramdisk", initrd_path);
-
 	if (VM_Common::GetVirtualizationType() == "full")
 	{
 	    // use hvm builder for full virtualized hosts
@@ -557,6 +555,10 @@
 	    string arch_libdir = Arch::i386() ? "lib" : "lib64";
 	    // set device model
 	    ret = ret && WriteStringOption(configpath, "device_model", "/usr/" + arch_libdir + "/xen/bin/qemu-dm");
+	}
+	else
+	{
+	    ret = ret && WriteStringOption(configpath, "ramdisk", initrd_path);
 	}
 
 	ret = ret && WriteStringOption(configpath, "name", VM_Common::config_name);
@@ -584,49 +586,53 @@
 	    }
 	}
 
-	// set installation source
-	string url = "";
-
-	if (VM_Common::inst_type == `configured)
+	if (VM_Common::GetVirtualizationType() != "full")
 	{
-	    map general_data = Pkg::SourceGeneralData (VM_Common::source_id);
-	    url = general_data["url"]:"";
-	}
-	else if (VM_Common::inst_type == `custom)
-	{
-	    url = VM_Common::custom_source;
-	}
-	else if (VM_Common::inst_type == `slp)
-	{
-	    url = "slp://";
-	}
+	    string url = "";
 
-	string extra_arg = VM_Common::extra_inst_args;
+	    // set installation source
 
-	// add installation boot options
-	if (extra_arg != "" && url != "")
-	{
-	    // replace $URL_INSTALL variable
-	    string new_arg = regexpsub(VM_Common::extra_inst_args, "^(.*)\\$URL_INSTALL(.*)", sformat("\\1%1\\2", url));
-
-	    if (new_arg != nil)
+	    if (VM_Common::inst_type == `configured)
 	    {
-		extra_arg = new_arg;
+		map general_data = Pkg::SourceGeneralData (VM_Common::source_id);
+		url = general_data["url"]:"";
 	    }
-	}
+	    else if (VM_Common::inst_type == `custom)
+	    {
+		url = VM_Common::custom_source;
+	    }
+	    else if (VM_Common::inst_type == `slp)
+	    {
+		url = "slp://";
+	    }
 
-	// set autoyast option
-	string extra_autoyast = "";
-	if (VM_Common::autoyast_profile != nil && VM_Common::autoyast_profile != "")
-	{
-	    // get the filename
-	    list<string> names = splitstring(VM_Common::autoyast_profile, "/");
-	    string name = names[size(names) - 1]:"";
-	    // add autoyast extra option
-	    extra_autoyast = " autoyast=device://hdt63/" + name;
-	}
+	    string extra_arg = VM_Common::extra_inst_args;
 
-	ret = ret && WriteStringOption(configpath, "extra", extra_arg + extra_autoyast);
+	    // add installation boot options
+	    if (extra_arg != "" && url != "")
+	    {
+		// replace $URL_INSTALL variable
+		string new_arg = regexpsub(VM_Common::extra_inst_args, "^(.*)\\$URL_INSTALL(.*)", sformat("\\1%1\\2", url));
+
+		if (new_arg != nil)
+		{
+		    extra_arg = new_arg;
+		}
+	    }
+
+	    // set autoyast option
+	    string extra_autoyast = "";
+	    if (VM_Common::autoyast_profile != nil && VM_Common::autoyast_profile != "")
+	    {
+		// get the filename
+		list<string> names = splitstring(VM_Common::autoyast_profile, "/");
+		string name = names[size(names) - 1]:"";
+		// add autoyast extra option
+		extra_autoyast = " autoyast=device://hdt63/" + name;
+	    }
+
+	    ret = ret && WriteStringOption(configpath, "extra", extra_arg + extra_autoyast);
+	}
 
 	// flush the changes
 	ret = ret && SCR::Write(.etc.xen, nil);
@@ -901,7 +907,7 @@
 		// set boot from hard disk
 		ret = ret && WriteStringOption(configpath, "boot", "c");
 		// remove CD-ROM configuration
-		ret = ret && WriteStringOption(configpath, "cdrom", nil);
+		ret = ret && SCR::Write(configpath + "cdrom", nil);
 
 		// flush the changes
 		ret = ret && SCR::Write(.etc.xen, nil);
@@ -1211,6 +1217,11 @@
 	return $["cdrom_image":cdrom_image, "boot_device":boot_device];
     }
 
+    global define string GetBootDevice()
+    {
+	return boot_device;
+    }
+
     global define map GetFunctions()
     {
 	return $[
@@ -1271,6 +1282,8 @@
 	    "resetNetworkConfig" : VM_XEN::resetNetworkConfig,
 	    "getNetworkProposal" : VM_XEN::getNetworkProposal,
 	    "getNetworkProposalWarning" : VM_XEN::getNetworkProposalWarning,
+
+	    "getBootDevice"	: VM_XEN::GetBootDevice,
 
 	    "import"	: VM_XEN::Import,
 	    "export"	: VM_XEN::Export,

@@ -534,4 +534,9 @@
 	return CallBooleanStringFunction("updateRoot", root);
     }
 
+    global string GetBootDevice()
+    {
+	return CallStringFunction("getBootDevice");
+    }
+
 }
