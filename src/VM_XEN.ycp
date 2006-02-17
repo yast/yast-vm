@@ -43,6 +43,11 @@
     string default_restart = "onreboot";
     string restart = default_restart;
 
+    string default_boot_device = "c";
+    string boot_device = default_boot_device;
+
+    string default_cdrom_image = "";
+    string cdrom_image = default_cdrom_image;
 
     global map Export() {
 	map ret = $[
@@ -323,8 +328,22 @@
     }
 
     global define list<string> getSourceProposal() {
-	y2debug("source configuration: %1, %2, %3", VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
-	return VM_Common::CreateSourceProposal(VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
+	y2milestone("source configuration: %1, %2, %3", VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
+	list<string> ret = VM_Common::CreateSourceProposal(VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
+
+	if (VM_Common::GetVirtualizationType() == "full")
+	{
+	    ret = add(ret, _("Boot Device: ") + (boot_device == "c" ? _("Hard Disk") : _("CD-ROM")) );
+
+	    if (boot_device == "d")
+	    {
+		ret = add(ret, _("CD-ROM Image: ") + cdrom_image);
+	    }
+	}
+
+	y2milestone("proposal: %1", ret);
+
+	return ret;
     }
 
     global define map getSourceProposalWarning() {
@@ -552,6 +571,18 @@
 	}
 
 	ret = ret && WriteStringOption(configpath, "restart", "never");
+
+	if (VM_Common::GetVirtualizationType() == "full")
+	{
+	    // write boot device option
+	    ret = ret && WriteStringOption(configpath, "boot", boot_device);
+
+	    // write CD-ROM configuration if booting from a CD
+	    if (boot_device == "d")
+	    {
+		ret = ret && WriteStringOption(configpath, "cdrom", cdrom_image);
+	    }
+	}
 
 	// set installation source
 	string url = "";
@@ -864,7 +895,19 @@
 	// all following action are needed only in paravirtualization mode
 	if (VM_Common::GetVirtualizationType() == "full")
 	{
-	    return true;
+	    // update boot configuration if the VM booted from a CD
+	    if (boot_device == "d")
+	    {
+		// set boot from hard disk
+		ret = ret && WriteStringOption(configpath, "boot", "c");
+		// remove CD-ROM configuration
+		ret = ret && WriteStringOption(configpath, "cdrom", nil);
+
+		// flush the changes
+		ret = ret && SCR::Write(.etc.xen, nil);
+	    }
+
+	    return ret;
 	}
 
 	ReadDiskImages(img_prefix + VM_Common::config_name);
@@ -886,7 +929,7 @@
 	// flush the changes
 	ret = ret && SCR::Write(.etc.xen, nil);
 
-	return true;
+	return ret;
     }
 
     global define boolean UpdateRoot(string root)
@@ -1133,6 +1176,39 @@
     define list <map <string,string> > create_default_network_config()
     {
 	return [ $[ "mac" : VM_Common::Propose_MAC_address(""), "bridge": ""] ];
+    }
+
+    // reset full virtualization options
+    global define boolean ResetFullOptions()
+    {
+	cdrom_image = default_cdrom_image;
+	boot_device = default_boot_device;
+
+	return true;
+    }
+
+    global define boolean SetFullOptions(map<string,string> opts)
+    {
+	cdrom_image = opts["cdrom_image"]:"";
+
+	string bd = opts["boot_device"]:"c";
+
+	if (bd == "c" || bd == "d")
+	{
+	    boot_device = bd;
+	}
+	else
+	{
+	    y2error("Wrong boot device '%1', only \"c\" or \"d\" are valid boot devices", bd);
+	    return false;
+	}
+
+	return true;
+    }
+
+    global define map<string,string> GetFullOptions()
+    {
+	return $["cdrom_image":cdrom_image, "boot_device":boot_device];
     }
 
     global define map GetFunctions()

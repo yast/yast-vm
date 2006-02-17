@@ -12,6 +12,8 @@
     textdomain "vm";
 
     import "VM";
+    import "VM_Common";
+    import "VM_XEN";
     import "URL";
     import "Label";
     import "Popup";
@@ -341,21 +343,128 @@ are supported in the installation."));
     return ret;
 }
 
+define void RefreshFullOptionsDialog()
+{
+    boolean enabled = (symbol) UI::QueryWidget (`id(`rb_group), `CurrentButton) == `cdrom;
+
+    UI::ChangeWidget(`id(`cdromimage), `Enabled, enabled);
+    UI::ChangeWidget(`id(`select_file), `Enabled, enabled);
+}
+
+define symbol FullOptionsDialog()
+{
+    // screen title for the Xen mode selection
+    string title = _("Operating System");
+
+    map<string,string> fulloption = VM_XEN::GetFullOptions();
+    string cd = fulloption["cdrom_image"]:"";
+    string boot = fulloption["boot_device"]:"c";
+
+    y2milestone("VTx config: cdrom_image: %1, boot_device: %2", cd, boot);
+
+    term contents = `HBox(
+	`HSpacing(2),
+	`RadioButtonGroup(`id(`rb_group),
+	    `Frame(_("Boot System From"),
+		`VBox(
+		    `VSpacing(0.5),
+		    `Left(`RadioButton(`id(`cdrom), `opt(`notify), _("CD-ROM Device"), boot == "d")),
+		    `HBox(
+                        `HSpacing(2),
+                        `TextEntry(`id(`cdromimage), `opt(`hstretch), _("&ISO Image File"), cd),
+                        `HSpacing(1),
+                        `VBox(
+                            `Label(""),
+                            `PushButton(`id(`select_file), _("Select Image..."))
+                        ),
+                        `HSpacing(1)
+		    ),
+		    `VSpacing(0.5),
+		    `Left(`RadioButton(`id(`disk), `opt(`notify), _("Hard Disk"), boot == "c")),
+		    `VSpacing(0.5)
+		)
+	    )
+	),
+	`HSpacing(2)
+    );
+
+    // help text for OS selection in full virtualization mode (1/3)
+    string help_text = _("<B><BIG>Fully Virtualized Operating System</BIG></B>")
+	// help text for OS selection in full virtualization mode (2/3)
+	+ _("<P>The new virtual machine can be booted from a CDROM or hard disk.</P>")
+	// help text for OS selection in full virtualization mode (3/3)
+	+ _("<P>It is assumed a new OS installation will occur if the VM is booted
+from a CDROM. In this case, after the installation the CDROM will be
+removed and the virtual machine will be booted from hard disk.</P>");
+
+    Wizard::SetContents (title, contents, help_text, true, true);
+
+    symbol ret = nil;
+
+    while (true)
+    {
+	RefreshFullOptionsDialog();
+
+	ret = (symbol) Wizard::UserInput();
+
+	if (ret == `abort && Popup::ConfirmAbort(`painless))
+	    break;
+
+	if (ret == `cancel || ret == `back)
+	    break;
+
+	if (ret == `next)
+	{
+	    string bootdev = (symbol)(UI::QueryWidget(`id(`rb_group), `CurrentButton)) == `cdrom ? "d" : "c";
+	    string cdimg = (string)(UI::QueryWidget(`id(`cdromimage), `Value));
+
+	    if (bootdev == "d" && cdimg == "")
+	    {
+		// error - entered empty ISO image file name
+		Report::Error(_("Select an ISO image file for CD-ROM emulation."));
+	    }
+	    else
+	    {
+		VM_XEN::SetFullOptions( $["boot_device":bootdev, "cdrom_image":cdimg] );
+		break;
+	    }
+	}
+	else if (ret == `select_file)
+	{
+	    string cdimg = (string)(UI::QueryWidget(`id(`cdromimage), `Value));
+	    string new_img = UI::AskForExistingFile(cdimg, "*.iso", _("Select ISO Image"));
+
+	    if (new_img != nil)
+	    {
+		UI::ChangeWidget(`id(`cdromimage), `Value, new_img);
+	    }
+	}
+    }
+
+    return ret;
+}
+
     Wizard::OpenNextBackDialog();
 
     map aliases = $[
 	    "SourceSelection"	: ``(SourceSelection()),
 	    "SourceTypeDialog"	: ``(SourceTypeDialog()),
+	    "FullOptionsDialog"	: ``(FullOptionsDialog())
 	];
 
     map sequence = $[
-	    "ws_start"	: "SourceTypeDialog",
+	    // start differnt workflow for full virtualization mode
+	    "ws_start"	: (VM::GetVirtualizationType() == "full") ? "FullOptionsDialog" : "SourceTypeDialog",
 	    "SourceTypeDialog"	:
 		$[
 		    `fetch	    :	"SourceSelection",
 		    `abort	    :   `abort
 		],
 	    "SourceSelection"	:
+		$[
+		    `abort	    :   `abort
+		],
+	    "FullOptionsDialog"	:
 		$[
 		    `abort	    :   `abort
 		]
