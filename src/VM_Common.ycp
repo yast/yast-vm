@@ -163,6 +163,22 @@
 	    autoyast_profile : _("<I>none</I>"))]);
     }
 
+    global map<string,any> GetAutoYastProposalWarning() {
+	map<string,any> ret = $[];
+
+	if (GetVirtualizationType() == "full" && autoyast_profile != "")
+	{
+	    // error in the installation proposal - don't allow to continue
+	    ret = $[
+		// warning text in proposal dialog
+		"warning" : _("AutoYast profile for the VM cannot be configured here in full virtualization mode.<BR>Configure it inside the VM after boot."),
+		"warning_level" : `warning
+	    ];
+	}
+
+	return ret;
+    }
+
     global boolean SetAutoYastProfile(string profile) {
 	modified = (profile != autoyast_profile);
 	autoyast_profile = profile;
@@ -187,7 +203,7 @@
     {
 	list<string> cpuflags = CPUflags();
 
-	// TODO: check: vmx = Intel VT-x, svm = AMD Pacifica
+	// vmx = Intel VT-x, svm = AMD Pacifica
 	return contains(cpuflags, "vmx") || contains(cpuflags, "svm");
     }
 
@@ -309,15 +325,14 @@
 
 	map ret = $[];
 
-/*	if (inst_type == `configured && (source_id == nil || source_id < 0))
+	if (inst_type == `configured && (source_id == nil || source_id < 0))
 	{
 	    ret = $[ "warning" :
-		    // error message
-		    _("Only network installation sources
-are supported in the installation."),
+		    // error message in proposal
+		    _("OS installation source is not configured."),
 		     "warning_level" : `blocker
 	    ];
-	}*/
+	}
 // TODO: check custom installation source - parse URL, try to open it...
 /*	else if (inst_type == `custom)
 	{
@@ -423,19 +438,19 @@ are supported in the installation."),
 
 
     // uses source_id variable
-    global define string GetPackage(string package, string dir) {
-	// get info about the package (media number)
+    global define string GetPackage(string package) {
+	// get info about the package (media number and path to the package)
 	map<string,any> pkginfo = Pkg::PkgProperties(package);
 	y2milestone("pkginfo: %1", pkginfo);
 
-	string location = pkginfo["location"]:"";
+	string pkg_path = pkginfo["path"]:"";
 	string ret = "";
 
 	// check whether the package was found
-	if (location != "" && location != nil)
+	if (pkg_path != "" && pkg_path != nil)
 	{
 	    // get local location
-	    ret = Pkg::SourceProvideFile(source_id, pkginfo["medianr"]:0, dir + "/" + pkginfo["location"]:"");
+	    ret = Pkg::SourceProvideFile(source_id, pkginfo["medianr"]:0, pkg_path);
 	}
 
 	return ret;
@@ -643,7 +658,7 @@ are supported in the installation."),
     global define boolean CreateInstallationImage(string kernelpkg, string target) {
 	string arch = VM_Common::PackageArch();
 	// get installation package
-	string inst = VM_Common::GetPackage("install-initrd", "suse/" + arch);
+	string inst = VM_Common::GetPackage("install-initrd");
 	y2milestone("image rpm: %1", inst);
 
 	if (inst == nil || inst == "")

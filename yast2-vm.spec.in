@@ -2,7 +2,7 @@
 
 
 @HEADER@
-BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools
+BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite
 Requires:	yast2 yast2-installation
 
 Summary:	Start installation in a Virtual Machine

@@ -283,17 +283,31 @@ define symbol SourceSelection() {
 	if (ret == `next)
 	{
 	    // check if selected installation source is valid
-	    integer current = (integer) UI::QueryWidget (`id(`sources),
-							 `CurrentItem);
+	    integer current = (integer) UI::QueryWidget (`id(`sources), `CurrentItem);
 
-	    integer current_srcid = sources[current]:0;
-
-	    map general_data = Pkg::SourceGeneralData(current_srcid);
+	    y2milestone("sources: %1, current: %2", sources, current);
+	    integer current_srcid = -1;
+	    if (size(sources) > 0)
+	    {
+		current_srcid = sources[current]:0;
+	    }
 
 	    symbol selected_type = (symbol)UI::QueryWidget(`id(`source), `CurrentButton);
 	    string selected_custom_source = (string)UI::QueryWidget(`id(`custom_source), `Value);
+	    string srcurl = "";
 
-	    string srcurl = (selected_type == `configured) ? general_data["url"]:"" : selected_custom_source;
+	    if (selected_type == `configured)
+	    {
+		if (current_srcid >= 0)
+		{
+		    map general_data = Pkg::SourceGeneralData(current_srcid);
+		    srcurl = general_data["url"]:"";
+		}
+	    }
+	    else
+	    {
+		srcurl = selected_custom_source;
+	    }
 
 	    map parsed_url = URL::Parse(srcurl);
 

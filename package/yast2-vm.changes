@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Tue Feb 21 11:29:27 CET 2006 - lslezak@suse.cz
+
+- display warning in full virtualization mode if AutoYast
+  profile is configured
+- check URL of an installation source
+- fixed package download from an inst. source
+- fixed crash due to uninitialized source (#150241)
+- 2.13.20
+
+-------------------------------------------------------------------
 Tue Feb 21 08:52:58 CET 2006 - lslezak@suse.cz
 
 - check valid disk devices in full virtualization mode (#145064)

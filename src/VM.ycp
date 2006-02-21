@@ -27,6 +27,11 @@
 	return VM_Common::GetAutoYastProposal();
     }
 
+    global map<string,any> GetAutoYastProposalWarning()
+    {
+	return VM_Common::GetAutoYastProposalWarning();
+    }
+
     global boolean ResetAutoYastProfile() {
 	return VM_Common::SetAutoYastProfile("");
     }

@@ -927,7 +927,7 @@
 	path configpath = .etc.xen.value + topath("/etc/xen/" + VM_Common::config_name);
 
 	// remove the disk with autoyast profile
-	if (VM_Common::autoyast_profile != nil && VM_Common::autoyast_profile != "")
+	if (VM_Common::GetVirtualizationType() != "full" && VM_Common::autoyast_profile != nil && VM_Common::autoyast_profile != "")
 	{
 	    // remove the last disk (image with autoyast profile)
 	    disks = remove(disks, size(disks) - 1);
@@ -1118,10 +1118,9 @@
 		return false;
 	    }
 
-	    string arch = VM_Common::PackageArch();
-	    y2milestone("Extracting Xen kernel from the installation source (arch=%1) ...", arch);
+	    y2milestone("Extracting Xen kernel from the installation source...");
 
-	    string kpkg = VM_Common::GetPackage("kernel-xen", "suse/" + arch);
+	    string kpkg = VM_Common::GetPackage("kernel-xen");
 	    kernel_path = VM_Common::ExtractKernelImage(kpkg, target_dir + "/", "./boot/vmlinuz-*-xen", "vmlinuz-*-xen");
 	    if (kernel_path != "")
 	    {
@@ -1159,7 +1158,7 @@
 	VM_Common::SetSourceState(src_status);
 
 	// create disk image file with autoyast profile
-	if (VM_Common::autoyast_profile != nil && VM_Common::autoyast_profile != "")
+	if (VM_Common::autoyast_profile != nil && VM_Common::autoyast_profile != "" && VM_Common::GetVirtualizationType() != "full")
 	{
 	    VM_Common::CreateImageWithProfile(target_dir + "/autoyast.img", VM_Common::autoyast_profile);
 
