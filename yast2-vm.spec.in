@@ -2,8 +2,8 @@
 
 
 @HEADER@
-BuildRequires:	yast2-devel-packages yast2-users
-Requires:	yast2 yast2-installation yast2-users
+BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools
+Requires:	yast2 yast2-installation
 
 Summary:	Start installation in a Virtual Machine
 

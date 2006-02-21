@@ -31,9 +31,8 @@
 
 	list<string> tmp = VM::GetDiskProposal();
 
-	ret = $[ "preformatted_proposal" :
-		 HTML::List (tmp)
-	];
+	ret = VM::GetDiskProposalWarning();
+	ret = add(ret, "preformatted_proposal", HTML::List(tmp));
     }
     else if ( func == "AskUser" )
     {

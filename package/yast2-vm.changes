@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Feb 21 08:52:58 CET 2006 - lslezak@suse.cz
+
+- check valid disk devices in full virtualization mode (#145064)
+- .spec: removed yast2-devel-packages and yast2-users
+
+-------------------------------------------------------------------
 Fri Feb 17 15:42:04 CET 2006 - lslezak@suse.cz
 
 - boot device configuration in full virtualization mode,

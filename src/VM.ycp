@@ -539,4 +539,19 @@
 	return CallStringFunction("getBootDevice");
     }
 
+    global map<string,any> GetDiskProposalWarning()
+    {
+	map<string,any>() toEval = (map<string,any>())functions["getDiskProposalWarning"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("getDiskProposalWarning() function is missing!");
+	    return nil;
+	}
+    }
+
 }

@@ -327,6 +327,49 @@
 	return ret;
     }
 
+    global define map<string,any> getDiskProposalWarning()
+    {
+	map<string,any> ret = $[];
+
+	if (VM_Common::GetVirtualizationType() == "full")
+	{
+	    list<string> errors = [];
+	    boolean hdc_defined = false;
+	    // check wheter there is defined a non-IDE virtual device
+	    foreach(map<string,any> d, disks,
+		{
+		    string target = d["target"]:"";
+
+		    if (!regexpmatch(target, "^hd[a-d]$"))
+		    {
+			// %1 is device name (e.g. hda, sda...)
+			errors = add(errors, sformat(_("Disk <I>%1</I> cannot be used"), target));
+		    }
+
+		    if (target == "hdc")
+		    {
+			hdc_defined = true;
+		    }
+		}
+	    );
+
+	    // device conflict
+	    if (hdc_defined && boot_device == "d")
+	    {
+		errors = add(errors, _("Disk <I>hdc</I> cannot be used with CD-ROM emulation"));
+	    }
+
+	    if (size(errors) > 0)
+	    {
+		ret = add(ret, "warning_level", `blocker);
+		ret = add(ret, "warning", mergestring(errors, "<BR>"));
+	    }
+	}
+	// TODO check disks also in paravirtualization mode
+
+	return ret;
+    }
+
     global define list<string> getSourceProposal() {
 	y2milestone("source configuration: %1, %2, %3", VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
 	list<string> ret = VM_Common::CreateSourceProposal(VM_Common::inst_type, VM_Common::source_id, VM_Common::custom_source);
@@ -1247,6 +1290,7 @@
 	    "getDiskConfig" : VM_XEN::getDiskConfig,
 	    "resetDiskConfig" : VM_XEN::resetDiskConfig,
 	    "getDiskProposal" : VM_XEN::getDiskProposal,
+	    "getDiskProposalWarning" : VM_XEN::getDiskProposalWarning,
 
 	    "getSourceConfig" : VM_XEN::getSourceConfig,
 	    "setSourceConfig" : VM_XEN::setSourceConfig,
