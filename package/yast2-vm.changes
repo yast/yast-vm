@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Feb 23 18:26:48 CET 2006 - lslezak@suse.cz
+
+- don't remove CD-ROM after reboot in full virtualization mode
+  (#145064)
+
+-------------------------------------------------------------------
 Tue Feb 21 11:29:27 CET 2006 - lslezak@suse.cz
 
 - display warning in full virtualization mode if AutoYast

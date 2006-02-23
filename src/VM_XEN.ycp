@@ -949,8 +949,6 @@
 	    {
 		// set boot from hard disk
 		ret = ret && WriteStringOption(configpath, "boot", "c");
-		// remove CD-ROM configuration
-		ret = ret && SCR::Write(configpath + "cdrom", nil);
 
 		// flush the changes
 		ret = ret && SCR::Write(.etc.xen, nil);

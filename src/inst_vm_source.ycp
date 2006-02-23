@@ -408,8 +408,8 @@ define symbol FullOptionsDialog()
 	+ _("<P>The new virtual machine can be booted from a CDROM or hard disk.</P>")
 	// help text for OS selection in full virtualization mode (3/3)
 	+ _("<P>It is assumed a new OS installation will occur if the VM is booted
-from a CDROM. In this case, after the installation the CDROM will be
-removed and the virtual machine will be booted from hard disk.</P>");
+from a CDROM. In this case, after the installation the virtual machine will be
+booted from hard disk.</P>");
 
     Wizard::SetContents (title, contents, help_text, true, true);
 
