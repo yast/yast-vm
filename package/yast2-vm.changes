@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Feb 24 18:51:18 CET 2006 - lslezak@suse.cz
+
+- new DHCP option in the network configuratino dialog (#153385)
+- allow to boot from CD-ROM in full virtualization mode
+
+-------------------------------------------------------------------
 Thu Feb 23 18:26:48 CET 2006 - lslezak@suse.cz
 
 - don't remove CD-ROM after reboot in full virtualization mode

@@ -359,10 +359,12 @@ are supported in the installation."));
 
 define void RefreshFullOptionsDialog()
 {
-    boolean enabled = (symbol) UI::QueryWidget (`id(`rb_group), `CurrentButton) == `cdrom;
+    symbol enabled = (symbol) UI::QueryWidget (`id(`rb_group), `CurrentButton);
 
-    UI::ChangeWidget(`id(`cdromimage), `Enabled, enabled);
-    UI::ChangeWidget(`id(`select_file), `Enabled, enabled);
+    UI::ChangeWidget(`id(`cdromimage), `Enabled, enabled == `iso);
+    UI::ChangeWidget(`id(`select_file), `Enabled, enabled == `iso);
+
+    UI::ChangeWidget(`id(`cddev), `Enabled, enabled == `cdrom);
 }
 
 define symbol FullOptionsDialog()
@@ -376,16 +378,47 @@ define symbol FullOptionsDialog()
 
     y2milestone("VTx config: cdrom_image: %1, boot_device: %2", cd, boot);
 
+    list<string> cd_devs = [];
+    list<term> cd_items = [];
+
+    list<map> cd_hwinfo = (list<map>)SCR::Read(.probe.cdrom);
+
+    if (cd_hwinfo != nil)
+    {
+	foreach(map dev, cd_hwinfo,
+	{
+	    string device = dev["dev_name"]:"";
+	    string model = dev["model"]:"";
+
+	    y2milestone("CD-ROM model: %1, device: %2", model, device);
+
+	    if (device != nil && device != "")
+	    {
+		cd_devs = add(cd_devs, device);
+		// format CD device name: %1 is model name (e.g. "TOSHIBA DVD-ROM SD-M1402"), %2 is device name (e.g. /dev/hdc)
+		cd_items = add(cd_items, `item(`id(device), sformat(_("%1 (%2)"), model, device), device == cd));
+	    }
+	}
+	);
+    }
+
     term contents = `HBox(
 	`HSpacing(2),
 	`RadioButtonGroup(`id(`rb_group),
 	    `Frame(_("Boot System From"),
 		`VBox(
 		    `VSpacing(0.5),
-		    `Left(`RadioButton(`id(`cdrom), `opt(`notify), _("CD-ROM Device"), boot == "d")),
+		    `Left(`RadioButton(`id(`cdrom), `opt(`notify), _("CD-ROM Device"), boot == "d" && contains(cd_devs, cd))),
 		    `HBox(
                         `HSpacing(2),
-                        `TextEntry(`id(`cdromimage), `opt(`hstretch), _("&ISO Image File"), cd),
+			`ComboBox(`id(`cddev), _("Device Name"), cd_items),
+			`HStretch()
+		    ),
+		    `VSpacing(0.5),
+		    `Left(`RadioButton(`id(`iso), `opt(`notify), _("&ISO Image File"), boot == "d" && !contains(cd_devs, cd))),
+		    `HBox(
+                        `HSpacing(2),
+                        `TextEntry(`id(`cdromimage), `opt(`hstretch), _("&File Name"), boot == "d" && !contains(cd_devs, cd) ? cd : ""),
                         `HSpacing(1),
                         `VBox(
                             `Label(""),
@@ -394,7 +427,7 @@ define symbol FullOptionsDialog()
                         `HSpacing(1)
 		    ),
 		    `VSpacing(0.5),
-		    `Left(`RadioButton(`id(`disk), `opt(`notify), _("Hard Disk"), boot == "c")),
+		    `Left(`RadioButton(`id(`disk), `opt(`notify), _("Virtual Hard Disk"), boot == "c")),
 		    `VSpacing(0.5)
 		)
 	    )
@@ -429,17 +462,33 @@ booted from hard disk.</P>");
 
 	if (ret == `next)
 	{
-	    string bootdev = (symbol)(UI::QueryWidget(`id(`rb_group), `CurrentButton)) == `cdrom ? "d" : "c";
-	    string cdimg = (string)(UI::QueryWidget(`id(`cdromimage), `Value));
+	    symbol bootdev_symbol = (symbol)(UI::QueryWidget(`id(`rb_group), `CurrentButton));
+	    string bootdev = (bootdev_symbol == `disk) ? "c" : "d";
 
-	    if (bootdev == "d" && cdimg == "")
+	    y2internal("bootdev_symbol: %1",  bootdev_symbol);
+	    y2internal("bootdev: %1", bootdev);
+
+	    string cdimg = "";
+
+	    if (bootdev_symbol == `cdrom)
+	    {
+		cdimg = (string)(UI::QueryWidget(`id(`cddev), `Value));
+	    }
+	    else
+	    {
+		cdimg = (string)(UI::QueryWidget(`id(`cdromimage), `Value));
+	    }
+
+	    if (bootdev_symbol == `iso && cdimg == "")
 	    {
 		// error - entered empty ISO image file name
 		Report::Error(_("Select an ISO image file for CD-ROM emulation."));
 	    }
 	    else
 	    {
-		VM_XEN::SetFullOptions( $["boot_device":bootdev, "cdrom_image":cdimg] );
+		map<string,string> opts = $["boot_device":bootdev, "cdrom_image":cdimg];
+		y2milestone("Full virtualization options: %1", opts);
+		VM_XEN::SetFullOptions( opts );
 		break;
 	    }
 	}
@@ -472,15 +521,18 @@ booted from hard disk.</P>");
 	    "SourceTypeDialog"	:
 		$[
 		    `fetch	    :	"SourceSelection",
-		    `abort	    :   `abort
+		    `abort	    :   `abort,
+		    `next	    :   `next
 		],
 	    "SourceSelection"	:
 		$[
-		    `abort	    :   `abort
+		    `abort	    :	`abort,
+		    `next	    :	`next
 		],
 	    "FullOptionsDialog"	:
 		$[
-		    `abort	    :   `abort
+		    `abort	    :   `abort,
+		    `next	    :   `next
 		]
 	    ];
 

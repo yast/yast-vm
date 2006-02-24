@@ -266,6 +266,7 @@
 
     global define boolean resetNetworkConfig() {
 	network = default_network;
+	VM_Common::use_dhcp = VM_Common::default_use_dhcp;
 	return true;
     }
 
@@ -411,6 +412,11 @@
 	    // Proposal item - %1 is number of virtual network card the virtual machine
 	    sformat (_("Number of Virtual Network Cards: %1"), size(network)),
 	];
+
+	if (VM_Common::use_dhcp)
+	{
+	    proposal = add(proposal, _("Use DHCP For Network Configuration"));
+	}
 
 	return proposal;
     }
@@ -606,7 +612,10 @@
 
 	ret = ret && WriteStringOption(configpath, "name", VM_Common::config_name);
 
-	ret = ret && WriteStringOption(configpath, "dhcp", "dhcp");
+	if (VM_Common::use_dhcp)
+	{
+	    ret = ret && WriteStringOption(configpath, "dhcp", "dhcp");
+	}
 
 	string vif = GetVIF(network);
 
@@ -1067,16 +1076,7 @@
 	    src_status = VM_Common::InstSourceStatus();
 	    y2milestone("src_status: %1", src_status);
 
-	    // disable all sources
-	    VM_Common::DisableAllSources();
 	    integer enabled_src = VM_Common::source_id;
-
-	    if (enabled_src == nil)
-	    {
-		y2error("Configured source ID (VM_Common::source_id) is nil!");
-		return false;
-	    }
-	    y2milestone("src_status: %1", VM_Common::InstSourceStatus());
 
 	    // check whether the custom installation source is already defined
 	    if (VM_Common::inst_type == `custom)
@@ -1095,13 +1095,23 @@
 		}
 	    }
 
+	    // disable all sources
+	    VM_Common::DisableAllSources();
+
+	    if (enabled_src == nil)
+	    {
+		y2error("Configured source ID (VM_Common::source_id) is nil!");
+		return false;
+	    }
+	    y2milestone("src_status: %1", VM_Common::InstSourceStatus());
+
 	    // enable the only one (selected) source
 	    Pkg::SourceSetEnabled(enabled_src, true);
 	    y2milestone("enabled src %1: %2", enabled_src, VM_Common::InstSourceStatus());
 
 	    // restart sources - use the only one enabled source
-	    list sources = Pkg::SourceStartCache(true);
-	    y2milestone("Source init: %1", sources);
+//	    list sources = Pkg::SourceStartCache(true);
+//	    y2milestone("Source init: %1", sources);
 
 	    // check whether required packages are provided by the installation source
 	    if (!Pkg::IsAvailable("kernel-xen"))
@@ -1176,7 +1186,7 @@
 		y2error("Required memory size %1, max. available %2", VM_Common::memory_size, maxmem);
 		return false;
 	    }
-
+/*
 	    // get current memory size
 	    integer dom0 = dom0Mem();
 	    // compute the new size
@@ -1191,6 +1201,7 @@
 		y2error("Cannot resize dom0 memory, command '%1' failed", command);
 		return false;
 	    }
+*/
 	}
 
 	return true;
@@ -1236,6 +1247,11 @@
     global define boolean SetFullOptions(map<string,string> opts)
     {
 	cdrom_image = opts["cdrom_image"]:"";
+
+	if (cdrom_image == nil)
+	{
+	    cdrom_image = "";
+	}
 
 	string bd = opts["boot_device"]:"c";
 

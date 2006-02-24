@@ -131,7 +131,10 @@
 	    `PushButton (`id (`add), Label::AddButton()),
 	    `PushButton (`id (`edit), Label::EditButton()),
 	    `PushButton (`id (`delete), Label::DeleteButton())
-	)
+	),
+	`VSpacing(0.3),
+	`CheckBox(`id(`dhcp), _("Use DHCP For Network Configuration"), VM_Common::use_dhcp),
+	`VSpacing(0.5)
     );
 
     // help text for network settings (1/2)
@@ -209,6 +212,7 @@
 	if (ret == `next)
 	{
 	    VM::SetNetworkConfig(network_conf);
+	    VM_Common::use_dhcp = (boolean) UI::QueryWidget (`id(`dhcp), `Value);
 	    break;
 	}
     }

@@ -52,6 +52,9 @@
 
     global string autoyast_profile = "";
 
+    global boolean default_use_dhcp = true;
+    global boolean use_dhcp = default_use_dhcp;
+
     string custom_kernel = "";
 
     string custom_initrd = "";
@@ -325,7 +328,7 @@
 
 	map ret = $[];
 
-	if (inst_type == `configured && (source_id == nil || source_id < 0))
+	if (inst_type == `configured && (source_id == nil || source_id < 0) && virtualization_type == "para")
 	{
 	    ret = $[ "warning" :
 		    // error message in proposal
@@ -440,8 +443,18 @@
     // uses source_id variable
     global define string GetPackage(string package) {
 	// get info about the package (media number and path to the package)
-	map<string,any> pkginfo = Pkg::PkgProperties(package);
-	y2milestone("pkginfo: %1", pkginfo);
+	map<string,any> pkginfo = $[];
+	list<map<string,any> > pkginfoA = Pkg::PkgPropertiesAll(package);
+	y2milestone("pkginfoAll: %1", pkginfoA);
+
+	foreach(map<string,any> pk, pkginfoA,
+	{
+	    if (pk["status"]:`unknown == `available)
+	    {
+		pkginfo = pk;
+	    }
+	}
+	);
 
 	string pkg_path = pkginfo["path"]:"";
 	string ret = "";
