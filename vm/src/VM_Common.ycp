@@ -1,0 +1,735 @@
+/**
+ * File:	modules/VM_Common.ycp
+ * Package:	VM configuration - common function for all virtualization architectures
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * $Id$
+ */
+{
+    module "VM_Common";
+
+    import "Report";
+    import "Pkg";
+    import "Package";
+    import "Arch";
+    import "ProductControl";
+    import "HTML";
+
+    textdomain "vm";
+
+    global integer source_id = 0;
+
+    global symbol inst_type = `configured;
+
+    global string custom_source = "";
+
+    global integer default_memory_size = 256;
+
+    global integer memory_size = default_memory_size;
+
+    global integer number_of_cpus = 1;
+
+    global string default_start_mode = "manual";
+
+    global string start_mode = default_start_mode;
+
+    global string default_MAC = "";
+
+    global string MAC_address = default_MAC;
+
+    global boolean random_MAC = true;
+
+    global string config_name = "";
+
+    // activation mode - in virtual machine installation proposal
+    global map start_mode_names = $[ "manual" : _("Manually"), "onboot" : _("On Boot") ];
+
+    global string extra_args = "";
+
+    global string extra_inst_args = "";
+
+    global string root_device = "";
+
+    global string autoyast_profile = "";
+
+    global boolean default_use_dhcp = true;
+    global boolean use_dhcp = default_use_dhcp;
+
+    string custom_kernel = "";
+
+    string custom_initrd = "";
+
+    boolean use_custom_kernel = false;
+
+    boolean modified = false;
+
+    string default_type = "para";
+    string virtualization_type = default_type; // cuurently "para" or "full"
+
+    global define string GetVirtualizationType()
+    {
+	return virtualization_type;
+    }
+
+    global define boolean SetVirtualizationType(string type)
+    {
+	if (!contains(["para", "full"], type))
+	{
+	    y2warning("uknown virtualilzation type: %1", type);
+	    return false;
+	}
+
+	modified = virtualization_type != type;
+	virtualization_type = type;
+
+	return true;
+    }
+
+    global boolean ResetVirtualizationType()
+    {
+	return SetVirtualizationType(default_type);
+    }
+
+    global string GetVirtualizationProposal()
+    {
+	string val = (virtualization_type == "para") ? _("Paravirtualization") : _("Full Virtualization");
+	return HTML::List([val]);
+    }
+
+
+    global boolean GetModified() {
+	return modified;
+    }
+
+    global void SetModified(boolean modif) {
+	modified = modif;
+    }
+
+    global map Export() {
+	map ret = $[
+	    "source_id" :	  source_id,
+	    "inst_type" :	  inst_type,
+	    "custom_source" :	  custom_source,
+	    "memory_size" :	  memory_size,
+	    "number_of_cpus" :	  number_of_cpus,
+	    "start_mode" :	  start_mode,
+	    "MAC_address" :	  MAC_address,
+	    "random_MAC" :	  random_MAC,
+	    "config_name" :	  config_name,
+	    "extra_args" :	  extra_args,
+	    "extra_inst_args" :	  extra_inst_args,
+	    "root_device" :	  root_device,
+	    "custom_kernel" :	  custom_kernel,
+	    "custom_initrd" :	  custom_initrd,
+	    "use_custom_kernel" : use_custom_kernel,
+	    "virtualization_type" : virtualization_type,
+	];
+
+	// export configured source as custom (source index may point later to another source)
+	if (inst_type == `configured && source_id != nil && source_id > 0)
+	{
+	    map general_data = Pkg::SourceGeneralData (source_id);
+	    string url = general_data["url"]:"";
+
+	    y2milestone("Exporting source config: %1", url);
+
+	    ret["custom_source"] = url;
+	    ret["inst_type"] = `custom;
+	}
+
+	return ret;
+    }
+
+    global void Import(map input) {
+	source_id =		input["source_id"]:0;
+	inst_type =		input["inst_type"]:`configured;
+	custom_source =		input["custom_source"]:"";
+	memory_size =		input["memory_size"]:default_memory_size;
+	number_of_cpus =	input["number_of_cpus"]:1;
+	start_mode =		input["start_mode"]:default_start_mode;
+	MAC_address =		input["MAC_address"]:default_MAC;
+	random_MAC =		input["random_MAC"]:true;
+	config_name =		input["config_name"]:"";
+	extra_args =		input["extra_args"]:"";
+	extra_inst_args =	input["extra_inst_args"]:"";
+	root_device =		input["root_device"]:"";
+	custom_kernel =		input["custom_kernel"]:"";
+	custom_initrd =		input["custom_initrd"]:"";
+	use_custom_kernel =	input["use_custom_kernel"]:false;
+	virtualization_type =	input["virtualization_type"]:default_type;
+    }
+
+    global string GetAutoYastProposal() {
+	// proposal items
+	return HTML::List([ sformat(_("AutoYast Profile: %1"), (autoyast_profile != "") ?
+	    // none AutoYast profile has been selected
+	    autoyast_profile : _("<I>none</I>"))]);
+    }
+
+    global map<string,any> GetAutoYastProposalWarning() {
+	map<string,any> ret = $[];
+
+	if (GetVirtualizationType() == "full" && autoyast_profile != "")
+	{
+	    // error in the installation proposal - don't allow to continue
+	    ret = $[
+		// warning text in proposal dialog
+		"warning" : _("AutoYast profile for the VM cannot be configured here in full virtualization mode.<BR>Configure it inside the VM after boot."),
+		"warning_level" : `warning
+	    ];
+	}
+
+	return ret;
+    }
+
+    global boolean SetAutoYastProfile(string profile) {
+	modified = (profile != autoyast_profile);
+	autoyast_profile = profile;
+	return true;
+    }
+
+    global string GetAutoYastProfile() {
+	return autoyast_profile;
+    }
+
+    global define list<string> CPUflags()
+    {
+	// check only the first processor (assume the same processors)
+	string cpuinfo_flags = (string) SCR::Read(.proc.cpuinfo.value."0"."flags");
+	list<string> cpuflags = (size(cpuinfo_flags) > 0) ? splitstring(cpuinfo_flags, " ") : [];
+
+	y2milestone("Detected CPU flags: %1", cpuflags);
+	return cpuflags;
+    }
+
+    global define boolean VirtualizationCPU()
+    {
+	list<string> cpuflags = CPUflags();
+
+	// vmx = Intel VT-x, svm = AMD Pacifica
+	return contains(cpuflags, "vmx") || contains(cpuflags, "svm");
+    }
+
+    global map<string, string> restart_mapping = $[
+	 // restart mode - when the virtual machine is restarted
+	 "always" : _("Always"),
+	 // restart mode - when the virtual machine is restarted
+	 "never" : _("Never"),
+	 // restart mode - when the virtual machine is restarted
+	 "onreboot" : _("On Reboot")
+    ];
+
+    global define string GetKernelImage() {
+	return custom_kernel;
+    }
+
+    global define boolean SetKernelImage(string im) {
+	custom_kernel = im;
+	return true;
+    }
+
+    global define string GetInitrdImage() {
+	return custom_initrd;
+    }
+
+    global define boolean SetInitrdImage(string im) {
+	custom_initrd = im;
+	return true;
+    }
+
+    global define boolean SetCustomKernel(boolean use_custom)
+    {
+	use_custom_kernel = use_custom;
+	return true;
+    }
+
+    global define boolean GetCustomKernel()
+    {
+	return use_custom_kernel;
+    }
+
+    global integer ProposeSelection () ``{
+	list <integer> sources = Pkg::SourceGetCurrent (false);
+
+	list<map> installed_products = (list<map>)Pkg::TargetProducts();
+	map last_product = $[];
+
+	if (size(installed_products) > 0)
+	{
+	    // select the last installed product
+	    last_product = installed_products[size(installed_products) - 1]:$[];
+	}
+
+	integer sid = nil;
+
+	foreach(integer src, sources, ``{
+		map general_data = Pkg::SourceGeneralData(src);
+
+		y2milestone("general_data: %1", general_data);
+
+		string srcurl = general_data["url"]:"";
+
+		// use only network sources in proposal
+		if (regexpmatch(srcurl, "^(ftp)|(nfs)|(smb)|(http)://"))
+		{
+		    y2milestone("Found network source: %1", src);
+		    sid = src;
+		}
+	    }
+	);
+
+	return sid;
+    }
+
+    global list<string> CreateSourceProposal(symbol inst_type, integer source_id, string custom)
+    {
+	list<string> ret = [];
+
+	if (use_custom_kernel)
+	{
+	    // %1 = kernel image file
+	    ret = [ sformat(_("Kernel Image: %1"), custom_kernel) ];
+
+	    if (custom_initrd != "")
+	    {
+		// %1 = intrd file name
+		ret = add(ret, sformat(_("RAM Disk Image: %1"), custom_initrd));
+	    }
+	}
+	else
+	{
+	    string desc = "";
+
+	    if (inst_type == `configured && source_id != nil && source_id > 0)
+	    {
+		map product_data = Pkg::SourceProductData (source_id);
+		map general_data = Pkg::SourceGeneralData (source_id);
+		desc = product_data["label"]:"unknown" + " (" + general_data["url"]:"" + ")";
+	    }
+	    else if (inst_type == `custom)
+	    {
+		// installation proposal header
+		desc =  _("Custom Installation Source") + " (" + custom_source + ")";
+	    }
+	    else if (inst_type == `slp)
+	    {
+		// installation proposal header
+		desc = _("SLP Installation Source");
+	    }
+
+	    // %1 = installation source description or URL
+	    ret = [ sformat(_("OS Image Source: %1"), desc) ];
+	}
+
+	return ret;
+    }
+
+    global map CreateSourceProposalWarning(symbol inst_type, integer source_id, string custom) {
+
+	map ret = $[];
+
+	if (inst_type == `configured && (source_id == nil || source_id < 0) && virtualization_type == "para")
+	{
+	    ret = $[ "warning" :
+		    // error message in proposal
+		    _("OS installation source is not configured."),
+		     "warning_level" : `blocker
+	    ];
+	}
+// TODO: check custom installation source - parse URL, try to open it...
+/*	else if (inst_type == `custom)
+	{
+	    // installation proposal header
+	    ret = _("Custom Installation Source") + " (" + custom_source + ")";
+	}
+*/
+	return ret;
+    }
+
+    // fsize in MB
+    global define boolean CreateDiskImage(string file, integer fsize, boolean sparse) ``{
+	boolean ret = true;
+
+	string dd_options = (sparse) ? (" bs=1 count=1 " + sformat ("seek=%1M", fsize)) : (" bs=1M " + sformat ("count=%1", fsize));
+	string cmd = "/bin/dd if=/dev/zero of=" + file + dd_options;
+
+	y2milestone("Creating disk image %1 (%2MB)", file, fsize);
+	y2debug("dd command: %1", cmd);
+	integer result = (integer) SCR::Execute (.target.bash, cmd);
+
+	if (result != 0)
+	{
+	    y2error("cannot create disk image %1", file);
+	    // try to remove part of the image if it exists
+	    SCR::Execute (.target.bash, "/bin/rm " + file);
+	    ret = false;
+	}
+
+	return ret;
+    }
+
+    global define string GetTmpDir() {
+	// get temporary directory
+	string tmpdir = (string)SCR::Read(.target.tmpdir);
+	if (tmpdir == "" || tmpdir == nil)
+	{
+	    y2warning("Using /tmp directory for temporary files!");
+	    tmpdir = "/tmp";
+	}
+
+	return tmpdir;
+    }
+
+
+    global define boolean CreateExt2Image(string image, integer image_size) {
+	// create sparse image file
+	if (!VM_Common::CreateDiskImage(image, image_size, true))
+	{
+	    return false;
+	}
+
+	// create Ext2 filesystem (built in FS, no kernel module required)
+	// reserve 0% percent for root
+	string command = "/sbin/mkfs.ext2 -m 0 " + image;
+	y2milestone("executing: %1", command);
+
+	integer out = (integer)SCR::Execute(.target.bash, command);
+	y2milestone("mkfs.ext2 result: %1", out);
+	return (out == 0);
+    }
+
+    global define boolean CreateImageWithProfile(string image, string profile)
+    {
+	// create 16MB image
+	if (!CreateExt2Image(image, 16*1024*1024))
+	{
+	    return false;
+	}
+
+	// make directory for temporary device mounting
+	string dir = GetTmpDir() + "/mnt";
+
+	// mount the image
+	string command = sformat("/bin/mount -o loop %1 %2", image, dir);
+	integer result = (integer)SCR::Execute (.target.bash, command);
+	if (result != 0)
+	{
+	    y2error("Cannot mount image %1 to %2", image, dir);
+	    return false;
+	}
+
+	// copy the profile
+	command = sformat("/bin/cp %1 %2", profile, dir);
+	result = (integer) SCR::Execute (.target.bash, command);
+	if (result != 0)
+	{
+	    y2error("Cannot copy profile %1 to %2", profile, dir);
+	    return false;
+	}
+
+	// unmount the image
+	command = sformat("/bin/umount %1", dir);
+	result = (integer) SCR::Execute (.target.bash, command);
+	if (result != 0)
+	{
+	    y2error("Cannot unmount directory %1", dir);
+	    return false;
+	}
+
+	return true;
+    }
+
+
+    // uses source_id variable
+    global define string GetPackage(string package) {
+	// get info about the package (media number and path to the package)
+	map<string,any> pkginfo = $[];
+	list<map<string,any> > pkginfoA = Pkg::PkgPropertiesAll(package);
+	y2milestone("pkginfoAll: %1", pkginfoA);
+
+	foreach(map<string,any> pk, pkginfoA,
+	{
+	    if (pk["status"]:`unknown == `available)
+	    {
+		pkginfo = pk;
+	    }
+	}
+	);
+
+	string pkg_path = pkginfo["path"]:"";
+	string ret = "";
+
+	// check whether the package was found
+	if (pkg_path != "" && pkg_path != nil)
+	{
+	    // get local location
+	    ret = Pkg::SourceProvideFile(source_id, pkginfo["medianr"]:0, pkg_path);
+	}
+
+	return ret;
+    }
+
+    global define boolean InstallPackages(list<string> packages) {
+	return Package::InstallAll(packages);
+    }
+
+    global define boolean CopyFile(string source, string target) {
+	y2milestone("copying file %1 to %2", source, target);
+	// -a (archive) = preserve mode and timestamps
+	// -b (backup) = make a backup of the target file
+	return (SCR::Execute(.target.bash, sformat("/bin/cp -a -b %1 %2", source, target))) == 0;
+    }
+
+    global define string PackageArch() {
+	string arch = "";
+
+	if (Arch::i386())
+	{
+	    arch = "i586";
+	}
+	else if (Arch::x86_64())
+	{
+	    arch = "x86_64";
+	}
+	else
+	{
+	    arch = Arch::arch_short();
+	    y2warning("Unknown architecture, using arch=%1", arch);
+	}
+
+	return arch;
+    }
+
+
+    global define string GetFileNameFromPath(string fname) {
+	string ret = "";
+
+	if (fname != nil)
+	{
+	    list<string> parts = splitstring(fname, "/");
+	    ret = parts[size(parts) - 1]:"";
+	}
+
+	return ret;
+    }
+
+    // kernel_filename = "./boot/vmlinuz-*-xen"
+    // kernel_regexp = "vmlinuz-*-xen"
+    // Extract kernel image from RPM file
+    global define string ExtractKernelImage(string package, string target, string kernel_filename, string kernel_regexp) {
+	string tmpdir = VM_Common::GetTmpDir();
+	string cmd = sformat("cd %1; /usr/bin/rpm2cpio %2 | /usr/bin/cpio -idvum '%3'", tmpdir, package, kernel_filename);
+
+	map out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2milestone("out: %1", out);
+
+	cmd = sformat("/usr/bin/find %1 -type f -name '%2'", tmpdir + "/boot", kernel_regexp);
+	out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2milestone("out: %1", out);
+
+	list<string> stdout = splitstring(out["stdout"]:"", "\n");
+	string file = stdout[0]:"";
+
+	y2milestone("found kernel: %1", file);
+
+	if (file != nil && file != "")
+	{
+	    CopyFile(file, target);
+	    return GetFileNameFromPath(file);
+	}
+
+	return "";;
+    }
+
+    global define map<integer,boolean> InstSourceStatus() {
+	map<integer,boolean> ret = $[];
+
+	list<integer> sources = Pkg::SourceGetCurrent(false);
+
+	foreach(integer src, sources, {
+		map general_data = Pkg::SourceGeneralData(src);
+		y2milestone("general_data: %1", general_data);
+		ret[src] = general_data["enabled"]:false;
+	    }
+	);
+
+	return ret;
+    }
+
+    global define map<string,string> DisableAllSources() {
+	map<string,string> ret = $[];
+
+	list<integer> sources = Pkg::SourceGetCurrent (false);
+
+	foreach(integer src, sources, {
+		Pkg::SourceSetEnabled(src, false);
+	    }
+	);
+
+	return ret;
+    }
+
+    global define void SetSourceState(map<integer,boolean> state) {
+	list<integer> sources = Pkg::SourceGetCurrent (false);
+	foreach(integer src, boolean enabled, state, {
+		Pkg::SourceSetEnabled(src, enabled);
+	    }
+	);
+    }
+
+    global define integer IsInstSourceDefined(string url) {
+	list<integer> sources = Pkg::SourceGetCurrent (false);
+	integer ret = -1;
+
+	foreach(integer src, sources, {
+		map general_data = Pkg::SourceGeneralData(src);
+		if (url == general_data["url"]:"")
+		{
+		    ret = src;
+		}
+	    }
+	);
+
+	return ret;
+    }
+
+
+    global define string ParseFstab(string fstab) {
+        map out = (map) SCR::Execute(.target.bash_output, sformat("/bin/grep \" / \" %1 | /usr/bin/cut -f 1 -d \" \"",  fstab));
+	string rdev = "";
+
+	if (out["exit"]:-1 == 0 )
+	{
+	    rdev = (string) (out["stdout"]:"");
+	    list<string> root_dev_list = splitstring(rdev, "\n");
+	    rdev = root_dev_list[0]:"";
+	    y2milestone("Found root device: %1", rdev);
+	}
+	else
+	{
+	    y2error("Cannot read fstab root device entry: %1", out);
+	}
+
+	return rdev;
+    }
+
+    global define list<string> SearchFile(string dir, string name) {
+	list<string> ret = [];
+	string cmd = sformat("cd %1; ls -1 %2", dir, name);
+	map outputmap = (map)SCR::Execute(.target.bash_output, cmd);
+
+	string outputstring = outputmap["stdout"]:"";
+
+	if (outputstring != nil && outputstring != "")
+	{
+	    ret = splitstring(outputstring, "\n");
+	    // remove empty lines
+	    ret = filter(string f, ret, {return f != nil && f != "";});
+	}
+
+	return ret;
+    }
+
+    global define boolean TryMount(string image, integer offset, string mntpoint) {
+	y2milestone("TryMount: image=%1, offset=%2, mntpoint=%3", image, offset, mntpoint);
+	boolean result = (boolean) SCR::Execute(.target.mount, [image, mntpoint], sformat("-o loop,offset=%1", offset));
+	y2milestone("result: %1", result);
+	return result;
+    }
+
+    global string vm_control_file = "/usr/share/YaST2/control/vm_install.xml";
+
+    global void InitProductControl() {
+	ProductControl::custom_control_file = vm_control_file;
+
+	if (!ProductControl::Init())
+	{
+	    Report::Error(sformat(_("Control file %1 was not found."), ProductControl::custom_control_file));
+	}
+    }
+
+    global define string getMACproposal() {
+	string mac = "";
+
+	if (random_MAC == true) {
+	    // part of proposal - MAC address is not specified, assign random
+	    mac = _("Random MAC address");
+
+	    if (MAC_address != nil && MAC_address != "")
+	    {
+		// add proposed value
+		mac = sformat("%1 (Proposed value '%2')", mac, MAC_address);
+	    }
+	}
+	else {
+	    mac = MAC_address;
+	}
+
+	return mac;
+    }
+
+    global define boolean CreateInstallationImage(string kernelpkg, string target) {
+	string arch = VM_Common::PackageArch();
+	// get installation package
+	string inst = VM_Common::GetPackage("install-initrd");
+	y2milestone("image rpm: %1", inst);
+
+	if (inst == nil || inst == "")
+	{
+	    y2error("Cannot obtain install-initrd package.");
+	    return false;
+	}
+
+	string tmpdir = VM_Common::GetTmpDir();
+	string cmd = sformat("cd %1; /usr/bin/rpm2cpio %2 | /usr/bin/cpio -idvum", tmpdir, inst);
+
+	map out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2debug("out: %1", out);
+
+	cmd = sformat("/bin/ls -1 %1/*.gz", tmpdir + "/usr/lib/install-initrd");
+	out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2debug("out: %1", out);
+
+	list<string> stdout = splitstring(out["stdout"]:"", "\n");
+	y2debug("found base initrd files: %1", stdout);
+
+	string file = stdout[0]:"";
+	y2milestone("found initrd: %1", file);
+
+	// create the image
+	cmd = sformat("%1/usr/sbin/mkinstallinitrd --kernel-rpm %2 --libdir %3 %4", tmpdir, kernelpkg, tmpdir + "/usr/lib/install-initrd", target);
+	out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2milestone("mkinstallinitrd output: %1", out);
+
+	return out["exit"]:1 == 0;
+    }
+
+    global string Propose_MAC_address(string option)
+    {
+	// use hostname and network domain name of the host machine and configuration name of VM
+	map<string,any> h_out = (map<string,any>)SCR::Execute(.target.bash_output, "/bin/hostname");
+	string host_n = h_out["stdout"]:"";
+
+	map<string,any> d_out = (map<string,any>)SCR::Execute(.target.bash_output, "/bin/domainname");
+	string dom_n = d_out["stdout"]:"";
+
+	string command = sformat("echo '%1' | md5sum", host_n + dom_n + VM_Common::config_name + option);
+	y2debug("Command: %1", command);
+
+	map<string,any> out = (map<string,any>)SCR::Execute(.target.bash_output, command);
+	list<string> result= splitstring(out["stdout"]:"", "\n");
+
+	y2debug("hash: %1", result[0]:"");
+	string ret = regexpsub(result[0]:"", "^(..)(..)(..)(..).*", "fe:fd:\\1:\\2:\\3:\\4");
+
+	// TODO detect if the address is already in use on the network
+
+	if (ret == nil)
+	{
+	    ret = "";
+	}
+
+	y2milestone("Proposed MAC: %1", ret);
+	return ret;
+    }
+}

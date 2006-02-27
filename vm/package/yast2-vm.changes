@@ -1,0 +1,267 @@
+-------------------------------------------------------------------
+Mon Feb 27 10:49:28 CET 2006 - lslezak@suse.cz
+
+- 2.13.21
+
+-------------------------------------------------------------------
+Fri Feb 24 18:51:18 CET 2006 - lslezak@suse.cz
+
+- new DHCP option in the network configuratino dialog (#153385)
+- allow to boot from CD-ROM in full virtualization mode
+
+-------------------------------------------------------------------
+Thu Feb 23 18:26:48 CET 2006 - lslezak@suse.cz
+
+- don't remove CD-ROM after reboot in full virtualization mode
+  (#145064)
+
+-------------------------------------------------------------------
+Tue Feb 21 11:29:27 CET 2006 - lslezak@suse.cz
+
+- display warning in full virtualization mode if AutoYast
+  profile is configured
+- check URL of an installation source
+- fixed package download from an inst. source
+- fixed crash due to uninitialized source (#150241)
+- 2.13.20
+
+-------------------------------------------------------------------
+Tue Feb 21 08:52:58 CET 2006 - lslezak@suse.cz
+
+- check valid disk devices in full virtualization mode (#145064)
+- .spec: removed yast2-devel-packages and yast2-users
+
+-------------------------------------------------------------------
+Fri Feb 17 15:42:04 CET 2006 - lslezak@suse.cz
+
+- boot device configuration in full virtualization mode,
+  start VM in background (#145064)
+- xen config file fixes
+- 2.13.19
+
+-------------------------------------------------------------------
+Mon Feb 13 17:29:54 CET 2006 - lslezak@suse.cz
+
+- 2.13.18
+
+-------------------------------------------------------------------
+Mon Feb 13 17:13:42 CET 2006 - lslezak@suse.cz
+
+- validate domain name (only alphanumeric and _-.:+ characterrs
+  are allowed) (#150054)
+
+-------------------------------------------------------------------
+Mon Feb 13 16:55:24 CET 2006 - lslezak@suse.cz
+
+- resize dom0 memory size if needed (#147612)
+
+-------------------------------------------------------------------
+Mon Feb 13 15:04:06 CET 2006 - lslezak@suse.cz
+
+- start 2nd stage at background, finish yast module (#149665)
+- show the network device config popup when adding new interface
+
+-------------------------------------------------------------------
+Mon Feb 13 12:55:11 CET 2006 - lslezak@suse.cz
+
+- don't start VM when file downloading from source fails (#147428)
+- initialize target (#150241)
+
+-------------------------------------------------------------------
+Mon Feb 13 11:24:32 CET 2006 - lslezak@suse.cz
+
+- increased default disk image size to 4GB (#149604)
+- generate default MAC address for network interface (#149177) 
+
+-------------------------------------------------------------------
+Mon Feb  6 14:32:16 CET 2006 - lslezak@suse.cz
+
+- full virtualization fix (use hvm loader and builder)
+- write vif option correctly (#145390)
+- allow non-network source
+- suppose VM crash if runtime is lower than 3 sec
+- 2.13.17
+
+-------------------------------------------------------------------
+Wed Feb  1 13:12:57 CET 2006 - lslezak@suse.cz
+
+- extract translatable strings from vm_install.xml control file
+  (#146651)
+- 2.13.16
+
+-------------------------------------------------------------------
+Mon Jan 30 14:44:55 CET 2006 - lslezak@suse.cz
+
+- don't write obsoleted 'nics' options to domain configuration
+  file (#145390)
+- 2.13.15
+
+-------------------------------------------------------------------
+Wed Jan 25 11:02:12 CET 2006 - lslezak@suse.cz
+
+- Use "RAM Disk" instead of "initrd" (#143673)
+- 2.13.14
+
+-------------------------------------------------------------------
+Mon Jan 23 16:53:39 CET 2006 - lslezak@suse.cz
+
+- merged proofed texts
+- 2.13.13
+
+-------------------------------------------------------------------
+Fri Jan 20 12:53:58 CET 2006 - lslezak@suse.cz
+
+- Improved help texts (#143669, #143672, #143674)
+- Use "RAM Disk" instead of "initrd" (#143673)
+- Fixes in the Full Virtualization mode
+- Propose sparse images
+- Create extra disk image for AutoYast profile
+- 2.13.12
+
+-------------------------------------------------------------------
+Tue Jan 17 11:07:32 CET 2006 - lslezak@suse.cz
+
+- fixed .spec file (missing inst_xen_mode.ycp in the file list)
+- 2.13.11
+
+-------------------------------------------------------------------
+Fri Jan 13 15:55:27 CET 2006 - lslezak@suse.cz
+
+- no network interfaces possible in virtual machine
+- AutoYast profile selection is part of the proposal
+- export selected installation source as URL in AutoYast
+- configure Xen virtualization mode (paravirtualization or
+  full virtualization) (GUI only)
+- 2.13.10
+
+-------------------------------------------------------------------
+Wed Jan 11 12:53:53 CET 2006 - lslezak@suse.cz
+
+- AutoYast client
+- 2.13.9
+
+-------------------------------------------------------------------
+Wed Jan  4 13:03:28 CET 2006 - lslezak@suse.cz
+
+- install xen-tools package
+- check whether kernel-xen and install-initrd packages
+  are available (#116395)
+- fixed $URL_INSTALL macro expansion
+- 2.13.8
+
+-------------------------------------------------------------------
+Mon Dec 19 14:18:36 CET 2005 - jsuchome@suse.cz
+
+- merged proofed texts
+- 2.13.7 
+
+-------------------------------------------------------------------
+Fri Dec 16 15:11:11 CET 2005 - lslezak@suse.cz
+
+- new client for Xen domain0 configuration (#117215)
+- spelling fixes
+- 2.13.6
+
+-------------------------------------------------------------------
+Mon Dec 12 17:07:25 CET 2005 - lslezak@suse.cz
+
+- removed UML support
+- 2.13.5
+
+-------------------------------------------------------------------
+Mon Dec 12 09:49:05 CET 2005 - lslezak@suse.cz
+
+- custom kernel and RAM disk configuration
+- workflow update for custom kernel
+- renamed search variable
+- new help texts + updates
+- xen - configure more virtual network interfaces, allow to use
+  physical partition as storage, use existing disk image
+- 2.13.4
+
+-------------------------------------------------------------------
+Tue Nov 22 11:08:39 CET 2005 - lslezak@suse.cz
+
+- installation boot parameter - boot option has been splitted into
+  two parts: boot option and additional installation boot option
+  (used only at the first stage, e.g. autoyast option)
+- xen - configure restart option
+- fixed error message (part of #117215)
+- version 2.13.3
+
+-------------------------------------------------------------------
+Fri Nov 11 10:30:05 CET 2005 - lslezak@suse.cz
+
+- added command line mode support
+- merged UML functionality (yast2-uml package can be dropped)
+- uml - configure UMID option, um-host-install-initrd package
+  is not used any more (#96323)
+- version 2.13.2
+
+-------------------------------------------------------------------
+Fri Oct 14 09:30:02 CEST 2005 - lslezak@suse.cz
+
+- moved generic code to VM_Common::
+- proposal definition is part of the package
+- version 2.13.1
+
+-------------------------------------------------------------------
+Tue Sep 27 11:21:31 CEST 2005 - lslezak@suse.cz
+
+- install required X packages (xorg-x11, xterm) (#117660)
+- write option ioemu for emulated disk (#117711)
+- version 2.13.0
+
+-------------------------------------------------------------------
+Mon Sep 19 09:34:47 CEST 2005 - lslezak@suse.cz
+
+- fixed 'Xen' spelling (#117226)
+
+-------------------------------------------------------------------
+Fri Sep  9 11:32:13 CEST 2005 - lslezak@suse.cz
+
+- write vif option properly into VM configuration file (#115791)
+- don't start an installatinon without network source (#114740) 
+- 2.12.4
+
+-------------------------------------------------------------------
+Fri Aug 26 13:30:30 CEST 2005 - lslezak@suse.cz
+
+- fixed layout of the tables (#112971)
+- use arch dependend kernel-xen and install-initrd package
+- reinitialize installtion sources
+- fixed logging
+- 2.12.3
+
+-------------------------------------------------------------------
+Fri Aug 19 12:46:23 CEST 2005 - lslezak@suse.cz
+
+- use properly custom installation source
+- mount partitions in virtual disk image
+- search for kernel files, copy them to domain0
+- search for root device name
+- update VM configuration file before starting the 2nd stage
+- create link in /etc/xen/auto when 'on boot' start
+  mode is selected
+- add TERM=xterm kernel option (to have colours in 2nd stage)
+- 2.12.2
+
+-------------------------------------------------------------------
+Fri Aug 12 12:24:14 CEST 2005 - lslezak@suse.cz
+
+- fixed creating of an installation initrd (#104339)
+- fixed configuration update after reboot (after first
+  installation stage)
+- 2.12.1
+
+-------------------------------------------------------------------
+Fri Aug 12 09:08:10 CEST 2005 - visnov@suse.cz
+
+- fix textdomain 
+
+-------------------------------------------------------------------
+Fri Aug  5 12:34:43 CEST 2005 - lslezak@suse.cz
+
+- initial release
+- 2.12.0
+
