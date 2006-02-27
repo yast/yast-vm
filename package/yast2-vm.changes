@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Mon Feb 27 10:49:28 CET 2006 - lslezak@suse.cz
+
+- 2.13.21
+
+-------------------------------------------------------------------
 Fri Feb 24 18:51:18 CET 2006 - lslezak@suse.cz
 
 - new DHCP option in the network configuratino dialog (#153385)
