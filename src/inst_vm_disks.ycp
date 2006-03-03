@@ -219,7 +219,7 @@ _("<P><B>Virtual Machine Device</B> is the name of the virtual disk inside the v
 	list<map> devmap = (list<map>)SCR::Read(.proc.partitions);
 	y2milestone("current partitions (/proc/partitions): %1", devmap);
 
-	list<string> devs = [];
+	list<term> devs = [];
 
 	if (devmap != nil)
 	{
@@ -228,7 +228,7 @@ _("<P><B>Virtual Machine Device</B> is the name of the virtual disk inside the v
 
 		    if (name != nil && name != "")
 		    {
-			devs = add(devs, name);
+			devs = add(devs, `item(`id(name), "/dev/" + name));
 		    }
 		}
 	    );
@@ -387,7 +387,18 @@ machine cannot modify the device in any way.</P>
 	    y2internal("sz: %1", sz);
 
 	    if (VM::GetVMMtype() == "xen") {
-		d = add(d, `item (`id(id_cnt), m["target"]:"", m["source"]:"", sz, (m["ro"]:false) ? UI::Glyph(`CheckMark) : "", (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
+		string prefix = "";
+
+		if (m["type"]:"" == "loop-create")
+		{
+		    prefix = "/var/lib/xen/images/";
+		}
+		else if (m["type"]:"" == "phys")
+		{
+		    prefix = "/dev/";
+		}
+
+		d = add(d, `item (`id(id_cnt), m["target"]:"", prefix + m["source"]:"", sz, (m["ro"]:false) ? UI::Glyph(`CheckMark) : "", (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
 	    }
 	    else if (VM::GetVMMtype() == "uml") {
 		d = add(d, `item (`id(id_cnt), m["size"]:0, (m["ro"]:false) ? UI::Glyph(`CheckMark) : "", (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
