@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Wed Mar  8 14:04:43 CET 2006 - lslezak@suse.cz
+
+- initialize package manager, source proposal fix (#152638)
+- removed unused code (product detection)
+- fixed network config reset
+- 2.13.24
+
+-------------------------------------------------------------------
 Wed Mar  8 11:33:03 CET 2006 - lslezak@suse.cz
 
 - fixed capitalization in DHCP label and proposal text

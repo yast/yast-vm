@@ -250,21 +250,11 @@
 
     global integer ProposeSelection () ``{
 	list <integer> sources = Pkg::SourceGetCurrent (false);
-
-	list<map> installed_products = (list<map>)Pkg::TargetProducts();
-	map last_product = $[];
-
-	if (size(installed_products) > 0)
-	{
-	    // select the last installed product
-	    last_product = installed_products[size(installed_products) - 1]:$[];
-	}
-
+	y2milestone("sources: %1", sources);
 	integer sid = nil;
 
 	foreach(integer src, sources, ``{
 		map general_data = Pkg::SourceGeneralData(src);
-
 		y2milestone("general_data: %1", general_data);
 
 		string srcurl = general_data["url"]:"";
@@ -300,7 +290,9 @@
 	{
 	    string desc = "";
 
-	    if (inst_type == `configured && source_id != nil && source_id > 0)
+	    y2milestone("inst_type: %1, source_id: %2", inst_type, source_id);
+
+	    if (inst_type == `configured && source_id != nil && source_id >= 0)
 	    {
 		map product_data = Pkg::SourceProductData (source_id);
 		map general_data = Pkg::SourceGeneralData (source_id);

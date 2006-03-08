@@ -126,6 +126,9 @@ Configure the management domain now?")))
 	return `abort;
     }
 
+    // initialize the package manager library
+    list sources = Pkg::SourceStartCache(true);
+    y2milestone("Source init: %1", sources);
 
     // initialize to xen VM type
     import "VM";

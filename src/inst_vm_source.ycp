@@ -465,8 +465,8 @@ booted from hard disk.</P>");
 	    symbol bootdev_symbol = (symbol)(UI::QueryWidget(`id(`rb_group), `CurrentButton));
 	    string bootdev = (bootdev_symbol == `disk) ? "c" : "d";
 
-	    y2internal("bootdev_symbol: %1",  bootdev_symbol);
-	    y2internal("bootdev: %1", bootdev);
+	    y2milestone("bootdev_symbol: %1",  bootdev_symbol);
+	    y2milestone("bootdev: %1", bootdev);
 
 	    string cdimg = "";
 

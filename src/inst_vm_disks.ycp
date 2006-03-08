@@ -77,7 +77,7 @@ file</B> which dynamically allocates disk space when it is needed.</P>");
 	while(!contains([`next, `accept, `back, `abort, `cancel], ui))
 	{
 	    ui = (symbol) UI::UserInput();
-	    y2internal("ui: %1", ui);
+	    y2debug("ui: %1", ui);
 
 	    if (ui == `next || ui == `accept)
 	    {
@@ -377,14 +377,14 @@ machine cannot modify the device in any way.</P>
 		sz = tostring(m["size"]:0);
 	    }
 
-	    y2internal("disk: %1", m);
+	    y2milestone("disk: %1", m);
 
 	    if (m["type"]:"" == "phys")
 	    {
 		// get size of the device, it's in sectors (512B)   (x*0.5 = x*512/1024)
 		sz = tostring((device_sizes[m["source"]:""]:0) / 1024);
 	    }
-	    y2internal("sz: %1", sz);
+	    y2milestone("sz: %1", sz);
 
 	    if (VM::GetVMMtype() == "xen") {
 		string prefix = "";

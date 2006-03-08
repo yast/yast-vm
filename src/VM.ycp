@@ -147,7 +147,7 @@
     }
 
     global boolean ResetNetworkProposal() {
-	return CallBooleanFunction("resetNetworkProposal");
+	return CallBooleanFunction("resetNetworkConfig");
     }
 
     global string GetStartMode() {
