@@ -552,11 +552,16 @@
 			iface = iface + ",";
 		    }
 
-		    iface = "mac=" + mac;
+		    iface = iface + "mac=" + mac;
 		}
 
-		if (bridge != "")
+		if (bridge != "" || (VM_Common::GetVirtualizationType() == "full"))
 		{
+		    if (bridge == "")
+		    {
+			bridge = "xenbr0";
+		    }
+
 		    if (iface != "")
 		    {
 			iface = iface + ",";

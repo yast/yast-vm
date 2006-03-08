@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Mar  8 15:48:40 CET 2006 - lslezak@suse.cz
+
+- fixed network configuration in full virtualization mode (#145064)
+- 2.13.25
+
+-------------------------------------------------------------------
 Wed Mar  8 14:04:43 CET 2006 - lslezak@suse.cz
 
 - initialize package manager, source proposal fix (#152638)
