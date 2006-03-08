@@ -133,7 +133,7 @@
 	    `PushButton (`id (`delete), Label::DeleteButton())
 	),
 	`VSpacing(0.3),
-	`CheckBox(`id(`dhcp), _("Use DHCP For Network Configuration"), VM_Common::use_dhcp),
+	`CheckBox(`id(`dhcp), _("Use DHCP for Network Configuration"), VM_Common::use_dhcp),
 	`VSpacing(0.5)
     );
 

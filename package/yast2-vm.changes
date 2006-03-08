@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Mar  8 11:33:03 CET 2006 - lslezak@suse.cz
+
+- fixed capitalization in DHCP label and proposal text
+- 2.13.23
+
+-------------------------------------------------------------------
 Fri Mar  3 16:11:26 CET 2006 - lslezak@suse.cz
 
 - display full file path and device prefix (#154016)

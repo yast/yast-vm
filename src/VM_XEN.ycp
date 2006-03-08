@@ -415,7 +415,7 @@
 
 	if (VM_Common::use_dhcp)
 	{
-	    proposal = add(proposal, _("Use DHCP For Network Configuration"));
+	    proposal = add(proposal, _("Use DHCP for network configuration"));
 	}
 
 	return proposal;
