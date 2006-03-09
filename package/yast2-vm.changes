@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Mar  9 13:33:50 CET 2006 - lslezak@suse.cz
+
+- merged proofread texts
+- 2.13.26
+
+-------------------------------------------------------------------
 Wed Mar  8 15:48:40 CET 2006 - lslezak@suse.cz
 
 - fixed network configuration in full virtualization mode (#145064)

@@ -82,7 +82,7 @@
     + _("<P>Set how much host system memory will be used by the virtual machine.</P>")
     + _("<P>The virtual machine can be started automatically on boot or manually when needed.</P>")
     + _("<P><I>Boot Options</I> are used as extra arguments for the kernel.</P>")
-    + _("<P>Use option 'root' (e.g. 'root=/dev/hda1') for root device configuration.</P>");
+    + _("<P>Use the <tt>root</tt> option, as in <tt>root=/dev/hda1</tt>, for root device configuration.</P>");
 
     Wizard::SetContents (title, contents, help_text, (boolean) WFM::Args(0),
 			 (boolean) WFM::Args(1));

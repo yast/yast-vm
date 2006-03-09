@@ -174,7 +174,7 @@
 	    // error in the installation proposal - don't allow to continue
 	    ret = $[
 		// warning text in proposal dialog
-		"warning" : _("AutoYast profile for the VM cannot be configured here in full virtualization mode.<BR>Configure it inside the VM after boot."),
+		"warning" : _("The AutoYaST profile for VM cannot be configured here in full virtualization mode.<BR>Configure it inside the VM after boot."),
 		"warning_level" : `warning
 	    ];
 	}
@@ -324,7 +324,7 @@
 	{
 	    ret = $[ "warning" :
 		    // error message in proposal
-		    _("OS installation source is not configured."),
+		    _("OS installation source is not configured"),
 		     "warning_level" : `blocker
 	    ];
 	}

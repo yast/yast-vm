@@ -344,7 +344,7 @@
 		    if (!regexpmatch(target, "^hd[a-d]$"))
 		    {
 			// %1 is device name (e.g. hda, sda...)
-			errors = add(errors, sformat(_("Disk <I>%1</I> cannot be used"), target));
+			errors = add(errors, sformat(_("Disk <tt>%1</tt> cannot be used"), target));
 		    }
 
 		    if (target == "hdc")
@@ -357,7 +357,7 @@
 	    // device conflict
 	    if (hdc_defined && boot_device == "d")
 	    {
-		errors = add(errors, _("Disk <I>hdc</I> cannot be used with CD-ROM emulation"));
+		errors = add(errors, _("Disk <tt>hdc</tt> cannot be used with CD-ROM emulation"));
 	    }
 
 	    if (size(errors) > 0)

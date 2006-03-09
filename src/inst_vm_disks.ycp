@@ -29,8 +29,9 @@
 
 	map<string,any> ret = nil;
 
-	string help_text = _("<P><B>Create Virtual Disk Image</B></P><P>Yast will
-create a new disk image of specified size.</P>") +
+	string help_text = _("<P><B>Create Virtual Disk Image</B></P><P>YaST
+creates a new disk image of the specified size.</P>
+") +
 
 _("<P><B>Virtual Machine Device</B> is the name of the virtual disk inside the virtual machine.</P>") +
 
@@ -38,8 +39,9 @@ _("<P>The image can be configured read-only. In this case, the virtual
 machine cannot modify the image in any way.</P>
 ") +
 
-	_("<P>It is possible to create <B>sparse image
-file</B> which dynamically allocates disk space when it is needed.</P>");
+	_("<P>It is possible to create a <B>sparse image
+file</B> that dynamically allocates disk space when it is needed.</P>
+");
 
 
 

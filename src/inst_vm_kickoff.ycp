@@ -127,8 +127,9 @@
 
 	// help text
 	string msg = _("Root device was not detected.
-Enter the root device (e.g. /dev/hda1),
-if it is not needed leave it empty.");
+Enter the root device, such as /dev/hda1.
+If it is not needed, leave it empty.
+");
 	// Label
 	string label = _("Root Device");
 

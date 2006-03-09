@@ -438,11 +438,12 @@ define symbol FullOptionsDialog()
     // help text for OS selection in full virtualization mode (1/3)
     string help_text = _("<B><BIG>Fully Virtualized Operating System</BIG></B>")
 	// help text for OS selection in full virtualization mode (2/3)
-	+ _("<P>The new virtual machine can be booted from a CDROM or hard disk.</P>")
+	+ _("<P>The new virtual machine can be booted from a CD-ROM or hard disk.</P>")
 	// help text for OS selection in full virtualization mode (3/3)
-	+ _("<P>It is assumed a new OS installation will occur if the VM is booted
-from a CDROM. In this case, after the installation the virtual machine will be
-booted from hard disk.</P>");
+	+ _("<P>It is assumed that a new OS installation will occur if the VM is booted
+from a CD-ROM. In this case, the virtual machine is
+booted from the hard disk after installation.</P>
+");
 
     Wizard::SetContents (title, contents, help_text, true, true);
 
