@@ -559,4 +559,13 @@
 	}
     }
 
+    global string GetImgPrefix()
+    {
+	return CallStringFunction("getImgPrefix");
+    }
+
+    global boolean SetImgPrefix(string p) {
+	return CallBooleanStringFunction("setImgPrefix", p);
+    }
+
 }

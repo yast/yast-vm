@@ -1283,6 +1283,33 @@
 	return boot_device;
     }
 
+    global define string GetImgPrefix()
+    {
+	return img_prefix;
+    }
+
+    global define boolean SetImgPrefix(string prefix)
+    {
+	if (prefix != nil && prefix != "")
+	{
+	    if (substring(prefix, 0, 1) != "/")
+	    {
+		prefix = "/" + prefix;
+	    }
+
+	    if (substring(prefix, size(prefix) - 1, 1) != "/")
+	    {
+		prefix = prefix + "/";
+	    }
+
+	    y2milestone("Setting image prefix to: %1", prefix);
+	    img_prefix = prefix;
+	    return true;
+	}
+
+	return false;
+    }
+
     global define map GetFunctions()
     {
 	return $[
@@ -1346,6 +1373,9 @@
 	    "getNetworkProposalWarning" : VM_XEN::getNetworkProposalWarning,
 
 	    "getBootDevice"	: VM_XEN::GetBootDevice,
+
+	    "getImgPrefix"	: VM_XEN::GetImgPrefix,
+	    "setImgPrefix"	: VM_XEN::SetImgPrefix,
 
 	    "import"	: VM_XEN::Import,
 	    "export"	: VM_XEN::Export,

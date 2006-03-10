@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Mar 10 15:17:41 CET 2006 - lslezak@suse.cz
+
+- image directory is configurable now (#156591)
+- check for existing config file, don't overwrite it (#156322)
+- 2.13.27
+
+-------------------------------------------------------------------
 Thu Mar  9 13:33:50 CET 2006 - lslezak@suse.cz
 
 - merged proofread texts

@@ -46,6 +46,7 @@ file</B> that dynamically allocates disk space when it is needed.</P>
 
 
 	term contents =
+	`VBox(
 	`Frame(_("Disk Configuration"),
 		`MarginBox(1.5, 0.2,
 			// heading in a popup dialog
@@ -68,7 +69,16 @@ file</B> that dynamically allocates disk space when it is needed.</P>
 			      `Left(`CheckBox(`id(`sparse), _("Create &Sparse Image File"), sparse)),
 			      `VSpacing(0.2)
 			      ))
-			));
+			)
+		),
+	`VSpacing(1),
+	`Frame(_("Location of Disk Images"),
+		`MarginBox(1.5, 0.2,
+		    // label - directory where the disk image will be created
+		    `TextEntry(`id(`dir), `opt(`hstretch), _("&Create Images in Directory"), VM::GetImgPrefix())
+		)
+		)
+	);
 
 	Wizard::SetContents(_("Virtual Disk Configuration"), contents, help_text, true, true);
 
@@ -108,6 +118,9 @@ file</B> that dynamically allocates disk space when it is needed.</P>
 		    if (VM::GetVMMtype() == "xen") {
 			ret = add(ret, "target", dev);
 			ret = add(ret, "source", dev);
+
+			string new_dir = (string) UI::QueryWidget (`id(`dir), `Value);
+			VM::SetImgPrefix(new_dir);
 		    }
 		}
 	    }
@@ -393,7 +406,7 @@ machine cannot modify the device in any way.</P>
 
 		if (m["type"]:"" == "loop-create")
 		{
-		    prefix = "/var/lib/xen/images/";
+		    prefix = VM::GetImgPrefix() + VM::GetConfigName() + "/";
 		}
 		else if (m["type"]:"" == "phys")
 		{

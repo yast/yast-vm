@@ -17,6 +17,7 @@
     import "Wizard";
     import "Popup";
     import "String";
+    import "Report";
 
     // screen title for virtual machine options
     string title = _("The Virtual Machine Options");
@@ -124,9 +125,16 @@
 	    string bootinst = (string) UI::QueryWidget (`id(`bootinstopts), `Value);
 	    string vmname = (string) UI::QueryWidget (`id(`vmname), `Value);
 
-	    // error message: machine name must be unique, entered name is alreadu in use
-	    string error = _("Machine name '%1' is already used.
-Enter another name.");
+	    list<string> configs = SCR::Dir(.etc.xen.section);
+
+	    if (contains(configs, "/etc/xen/" + vmname))
+	    {
+		// error message: machine name must be unique, entered name is alreadu in use
+		string error = sformat(_("Machine name '%1' is already used.
+Enter another name."), vmname);
+		Report::Error(error);
+		continue;
+	    }
 
 	    if (mem == nil || mem <= 0)
 	    {
