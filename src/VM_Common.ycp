@@ -393,7 +393,7 @@
     global define boolean CreateImageWithProfile(string image, string profile)
     {
 	// create 16MB image
-	if (!CreateExt2Image(image, 16*1024*1024))
+	if (!CreateExt2Image(image, 16))
 	{
 	    return false;
 	}
@@ -402,6 +402,7 @@
 	string dir = GetTmpDir() + "/mnt";
 
 	// mount the image
+        SCR::Execute (.target.bash, sformat ("test -d %1 || mkdir %1", dir));
 	string command = sformat("/bin/mount -o loop %1 %2", image, dir);
 	integer result = (integer)SCR::Execute (.target.bash, command);
 	if (result != 0)

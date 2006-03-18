@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Sat Mar 18 23:46:23 CET 2006 - jsrain@suse.de
+
+- fixed size of image for AutoYaST profile (#159369)
+- create mountpoint for autoinst.img (#159370)
+
+-------------------------------------------------------------------
 Fri Mar 10 15:17:41 CET 2006 - lslezak@suse.cz
 
 - image directory is configurable now (#156591)
