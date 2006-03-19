@@ -1,9 +1,10 @@
 -------------------------------------------------------------------
-Sun Mar 19 01:08:02 CET 2006 - jsrain@suse.de
+Sun Mar 19 01:10:24 CET 2006 - jsrain@suse.de
 
 - fixed size of image for AutoYaST profile (#159369)
 - create mountpoint for autoinst.img (#159370)
 - fixed writing AutoYaST image to domU config file
+- add -F to mkfs.ext2
 
 -------------------------------------------------------------------
 Fri Mar 10 15:17:41 CET 2006 - lslezak@suse.cz

@@ -382,7 +382,7 @@
 
 	// create Ext2 filesystem (built in FS, no kernel module required)
 	// reserve 0% percent for root
-	string command = "/sbin/mkfs.ext2 -m 0 " + image;
+	string command = "/sbin/mkfs.ext2 -F -m 0 " + image;
 	y2milestone("executing: %1", command);
 
 	integer out = (integer)SCR::Execute(.target.bash, command);
