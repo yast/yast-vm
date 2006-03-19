@@ -1176,7 +1176,7 @@
 	    VM_Common::CreateImageWithProfile(target_dir + "/autoyast.img", VM_Common::autoyast_profile);
 
 	    // add the disk image to the list
-	    disks = add(disks, $[ "target" : "hdt63", "type" : "loop-use", "source" : "autoyast.img", "ro" : false ] );
+	    disks = add(disks, $[ "target" : "hdt63", "type" : "loop-use", "source" : target_dir + "/autoyast.img", "ro" : true ] );
 	}
 
 	integer freemem = FreeMemory();
