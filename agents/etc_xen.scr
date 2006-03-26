@@ -1,6 +1,6 @@
 .etc.xen
 
-`ag_ini(`IniAgent( [ "/etc/xen/*" ],
+`ag_ini(`IniAgent( [ "/etc/xen/vm/*" ],
     $[
 	"options" : [ "line_can_continue", "global_values", "join_multiline", "comments_last" ],
 	"comments": [ "^[ \t]*#.*$", "#.*", "^[ \t]*$", ],

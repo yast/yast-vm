@@ -12,6 +12,7 @@
     textdomain "vm";
 
     import "VM";
+    import "VM_Common";
     import "HTML";
 
     string func = (string) WFM::Args (0);
@@ -52,18 +53,17 @@
     }
     else if ( func == "Description" )
     {
-	// Fill return map.
-	//
-	// Static values do just nicely here, no need to call a function.
-
-	ret =
-	    $[
-	      // this is a heading
-	      "rich_text_title"	:	_("Disks"),
-	      // this is a menu entry
-	      "menu_title"	:	_("&Disks"),
-	      "id"		:	"vm_disk_stuff"
-	    ];
+        if (VM_Common::proposal_type == "boot")
+            ret = $[];
+        else
+            ret =
+                $[
+                  // this is a heading
+                  "rich_text_title"	:	_("Disks"),
+                  // this is a menu entry
+                 "menu_title"	:	_("&Disks"),
+                 "id"		:	"vm_disk_stuff"
+                ];
     }
 
     return ret;

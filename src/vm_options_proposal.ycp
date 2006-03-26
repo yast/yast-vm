@@ -12,6 +12,7 @@
     textdomain "vm";
 
     import "VM";
+    import "VM_Common";
 
     string func = (string) WFM::Args (0);
     map param = (map) WFM::Args (1);
@@ -24,10 +25,10 @@
 
 	if (force_reset)
 	{
-	    VM::ResetMemorySize();
-	    VM::ResetStartMode();
-	    VM::ResetConfigName();
-	    VM::ResetExtraArgs();
+	    if (VM_Common::proposal_type == "install")
+		VM::ResetConfigName();
+	    else
+		VM::ResetStartMode();
 	}
 
 	return VM::getOptionsProposal();
@@ -46,9 +47,9 @@
 	ret =
 	    $[
 	      // this is a heading
-	      "rich_text_title"	:	_("Options"),
+	      "rich_text_title"	:	_("Virtualization Options"),
 	      // this is a menu entry
-	      "menu_title"	:	_("&Options"),
+	      "menu_title"	:	_("Virtualization &Options"),
 	      "id"		:	"vm_options_stuff"
 	    ];
     }

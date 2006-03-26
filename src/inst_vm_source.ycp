@@ -2,6 +2,7 @@
  * Module:	inst_vm_source.ycp
  *
  * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *		Michael G. Fritch <mgfritch@novell.com>
  *
  * Purpose:	Ask the user for installation source for the virtual machine.
  *
@@ -20,7 +21,7 @@
     import "Wizard";
     import "Report";
     import "Sequencer";
-
+    import "String";
 
     // screen title - installation source configuration
     string title = _("Installation Source");
@@ -60,73 +61,146 @@
 
     define void updateConfig(map<string,any> conf) {
 	y2debug("updateConfig(%1)", conf);
-	VM::SetSourceConfig(conf["source_id"]:0, conf["inst_type"]:`configured, conf["custom"]:"");
+	VM::SetSourceConfig(conf["source_id"]:0, conf["inst_type"]:`configured, conf["custom_source"]:"");
     }
 
-    define void RefreshSourceTypeDialog()
-    {
-	boolean enabled = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton) == `custom;
-	UI::ChangeWidget(`id(`kernel), `Enabled, enabled);
-	UI::ChangeWidget(`id(`select_kernel), `Enabled, enabled);
-	UI::ChangeWidget(`id(`initrd), `Enabled, enabled);
-	UI::ChangeWidget(`id(`select_initrd), `Enabled, enabled);
+    define void RefreshSourceTypeDialog() {
+	any rb = UI::QueryWidget (`id(`rbg), `CurrentButton);
+
+	// CDROM widgets
+	UI::ChangeWidget(`id(`cddev), `Enabled, (rb == `cdrom));
+	UI::ChangeWidget(`id(`kernel_cd), `Enabled, (rb == `cdrom));
+	UI::ChangeWidget(`id(`select_kernel_cd), `Enabled, (rb == `cdrom));
+	UI::ChangeWidget(`id(`initrd_cd), `Enabled, (rb == `cdrom));
+	UI::ChangeWidget(`id(`select_initrd_cd), `Enabled, (rb == `cdrom));
+
+	// ISO widgets
+	UI::ChangeWidget(`id(`cdromimage), `Enabled, (rb == `iso));
+	UI::ChangeWidget(`id(`select_cdromimage), `Enabled, (rb == `iso));
+	UI::ChangeWidget(`id(`kernel_iso), `Enabled, (rb == `iso));
+	UI::ChangeWidget(`id(`select_kernel_iso), `Enabled, (rb == `iso));
+	UI::ChangeWidget(`id(`initrd_iso), `Enabled, (rb == `iso));
+	UI::ChangeWidget(`id(`select_initrd_iso), `Enabled, (rb == `iso));
+
     }
+
 
     /**
-     * Popup dialog - source configuration
-     * return symbol
-     */
+    * Popup dialog - source configuration
+    * return symbol
+    */
     define symbol SourceTypeDialog() {
 
-	string help_text = _("<P><B>Operating System</B></P>") +
+	string caption = _("Operating System Installation");
 
-	_("<P>The kernel for the virtual machine can be extracted from the selected
-installation source or it can be selected explicitly. This is useful if
-the source does not contain required packages or if you want to use another
-operating system. RAM disk configuration is optional.</P>
-");
+        list<string> cd_devs = [];
+        list<term> cd_items = [];
+
+        list<map> cd_hwinfo = (list<map>)SCR::Read(.probe.cdrom);
+
+        if (cd_hwinfo != nil) {
+            foreach(map dev, cd_hwinfo,
+	    {
+	        string device = dev["dev_name"]:"";
+	        string model = dev["model"]:"";
+
+	        y2milestone("CD-ROM model: %1, device: %2", model, device);
+
+	        if (device != nil && device != "")
+	        {
+		    cd_devs = add(cd_devs, device);
+		    // format CD device name: %1 is model name (e.g. "TOSHIBA DVD-ROM SD-M1402"), %2 is device name (e.g. /dev/hdc)
+		    cd_items = add(cd_items, `item(`id(device), sformat(_("%1 (%2)"), model, device)/*, device == cd*/));
+	        }
+	    });
+        }
 
 	term contents =
-	    `Frame(_("Disk Image"),
-		`MarginBox(2, 0.3,
-		    // heading in a popup dialog
-		    `RadioButtonGroup(`id(`rbg),
-			`VBox(
-			    `VSpacing(0.3),
-			    `Left(`RadioButton(`id(`extract), `opt(`notify), _("&Extract Kernel and RAM Disk Image from an Installation Source"))),
-			    `VSpacing(1),
-			    `Left(`RadioButton(`id(`custom), `opt(`notify), _("Use &Custom Kernel and RAM Disk Image Files"))),
-//			    `VSpacing(0.2),
-			    `HBox(
-				`HSpacing(3),
-				`TextEntry(`id(`kernel), `opt(`hstretch), _("&Kernel Image"), VM::GetKernelImage()),
-				`HSpacing(1),
-				`VBox(
-				    `Label(""),
-				    `PushButton(`id(`select_kernel), _("Select Image..."))
-				)
-			    ),
-//			    `VSpacing(0.2),
-			    `HBox(
-				`HSpacing(3),
-				`TextEntry(`id(`initrd), `opt(`hstretch), _("&RAM Disk Image"), VM::GetInitrdImage()),
-				`HSpacing(1),
-				`VBox(
-				    `Label(""),
-				    `PushButton(`id(`select_initrd), _("Select Image..."))
-				)
-			    ),
-			    `VSpacing(0.2)
+	`MarginBox(1.5, 0.2, `VBox(
+		`RadioButtonGroup(`id(`rbg),
+			// heading in a popup dialog
+			`Frame(_("Install From"),
+				`MarginBox(1.5, 0.2, `VBox(
+					`Left(`RadioButton(`id(`extract), `opt(`notify), _("&SUSE Installation Source..."))),
+					`VSpacing(0.5),
+					`Left(`RadioButton(`id(`cdrom), `opt(`notify), _("&CD-ROM Device"))),
+					`HBox(
+						`HSpacing(3),
+						`ComboBox(`id(`cddev), "", cd_items),
+						`HStretch()
+					),
+					`HBox(
+						`HSpacing(3),
+						`TextEntry(`id(`kernel_cd), `opt(`hstretch), _("&Kernel"), VM::GetKernelImage()),
+						`HSpacing(1),
+						`VBox(
+							`Label(""),
+							`PushButton(`id(`select_kernel_cd), _("Browse..."))
+						)
+					),
+					`HBox(
+						`HSpacing(3),
+						`TextEntry(`id(`initrd_cd), `opt(`hstretch), _("&RAM Disk"), VM::GetInitrdImage()),
+						`HSpacing(1),
+						`VBox(
+							`Label(""),
+							`PushButton(`id(`select_initrd_cd), _("Browse..."))
+						)
+					),
+					`VSpacing(0.5),
+					`Left(`RadioButton(`id(`iso), `opt(`notify), _("&ISO Image File"))),
+					`HBox(
+						`HSpacing(3),
+						`TextEntry(`id(`cdromimage), `opt(`hstretch), ""),
+						`HSpacing(1),
+						`PushButton(`id(`select_cdromimage), _("Browse..."))
+					),
+					`HBox(
+						`HSpacing(3),
+						`TextEntry(`id(`kernel_iso), `opt(`hstretch), _("&Kernel"), VM::GetKernelImage()),
+						`HSpacing(1),
+						`VBox(
+							`Label(""),
+							`PushButton(`id(`select_kernel_iso), _("Browse..."))
+						)
+					),
+					`HBox(
+						`HSpacing(3),
+						`TextEntry(`id(`initrd_iso), `opt(`hstretch), _("&RAM Disk"), VM::GetInitrdImage()),
+						`HSpacing(1),
+						`VBox(
+							`Label(""),
+							`PushButton(`id(`select_initrd_iso), _("Browse..."))
+						)
+					)
+				))
 			)
-		    )
-		)
-	    );
+		),
+		`VSpacing(2),
+		`Frame(_("Installation Options"),
+			`MarginBox(1.5, 0.2,
+				`TextEntry(`id(`bootopts), `opt(`hstretch), "", VM::GetExtraArgs())))
+	));
 
-	Wizard::SetContents(_("Operating System"), contents, help_text, true, true);
+	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	help_text = help_text + _("<p>The installation of the operating system can be started from a SUSE installation source, a physical CD-ROM, or an ISO image file.</p>");
+	help_text = help_text + _("<p>When installing from a CD-ROM or ISO image file, a paravirtualized kernel must be specified. The RAM disk is optional. These files must be accessible from the VM Server's file system.</p>");
+	help_text = help_text + _("<p><b>Installation options</b> are optional arguments passed to the kernel during installation.</p>");
+
+	Wizard::SetContents(caption, contents, help_text, true, true);
 
 	symbol s = `dummy;
 
-	UI::ChangeWidget(`id(`rbg), `CurrentButton, (VM::GetCustomKernel()) ? `custom : `extract);
+	if (VM::GetCustomKernel() && VM::GetCustomIso()) {
+		UI::ChangeWidget(`id(`rbg), `CurrentButton, `iso);
+		UI::ChangeWidget(`id(`cdromimage), `Value, sconfig["custom_source"]:"");
+	}
+	else if (VM::GetCustomKernel()) {
+		UI::ChangeWidget(`id(`rbg), `CurrentButton, `cdrom);
+	}
+	else {
+		UI::ChangeWidget(`id(`rbg), `CurrentButton, `extract);
+	}
 
 	// initialize the widgets
 	RefreshSourceTypeDialog();
@@ -134,82 +208,183 @@ operating system. RAM disk configuration is optional.</P>
 	while(!contains([`next, `back, `abort, `cancel, `fetch], s))
 	{
 	    s = (symbol) UI::UserInput();
+	    y2milestone("s=%1", s);
 
-	    if (s == `next)
-	    {
+//FIXME: popup confirmation for abort???
+	    if (s == `next) {
 		symbol type = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton);
+		string cddev = "";
+		string kernel = "";
+		string initrd = "";
+		string old_cddev = sconfig["custom_source"]:""; // remember the old source, just in case it needs to be removed from the disks config
 
-		if (type == `custom)
-		{
-		    string kernel = (string) UI::QueryWidget (`id(`kernel), `Value);
-		    string initrd = (string) UI::QueryWidget (`id(`initrd), `Value);
 
-		    if (kernel == nil || kernel == "")
-		    {
-			Report::Error("The kernel image file name cannot be empty.");
+		if (type == `cdrom || type == `iso) {
+		    if (type == `cdrom) {
+			cddev = (string) UI::QueryWidget (`id(`cddev), `Value);
+			kernel = (string) UI::QueryWidget (`id(`kernel_cd), `Value);
+			initrd = (string) UI::QueryWidget (`id(`initrd_cd), `Value);
+			if (cddev == nil || cddev == "") {
+				Report::Error(_("A CD-ROM device name must be selected."));
+				s = `again;
+				continue;
+			}
+			// check whether the file exists
+                    	if ((integer)SCR::Read(.target.size, cddev) < 0) {
+				// %1 is file name
+				Report::Error(sformat(_("The specified CD-ROM device %1 does not exist or
+three no media in the CD-ROM device.
+
+Please, ensure that the desired media is in the selected CD-ROM drive.
+"), cddev));
+				continue;
+			}
+		    }
+		    else { // `iso
+			cddev = (string) UI::QueryWidget (`id(`cdromimage), `Value);
+			kernel = (string) UI::QueryWidget (`id(`kernel_iso), `Value);
+			initrd = (string) UI::QueryWidget (`id(`initrd_iso), `Value);
+			if (cddev == nil || cddev == "") {
+				Report::Error(_("ISO file name cannot be empty."));
+				s = `again;
+				continue;
+			}
+		    }
+
+		    if (kernel == nil || kernel == "") {
+			Report::Error(_("The kernel file name cannot be empty."));
 			s = `again;
 			continue;
 		    }
 
 		    VM::SetCustomKernel(true);
+		    if (type == `iso) VM::SetCustomIso(true);
+		    else VM::SetCustomIso(false);
 
 		    VM::SetKernelImage(kernel);
 		    VM::SetInitrdImage(initrd);
 
-		    // set no installation source
-		    sconfig["inst_type"] = `none;
+		    // set custom installation source
+		    y2milestone("old sconfig: %1", sconfig);
+		    sconfig["inst_type"] = `custom;
+		    sconfig["custom_source"] = cddev;
 		    updateConfig(sconfig);
+		    y2milestone("new sconfig: %1", sconfig);
 		}
-		else
-		{
+
+
+		// remove the old disk entry(old_source, if it exists in the disks configuration
+		string old_source = regexpsub(old_cddev, "/dev/(.*)", "\\1");// remove /dev from the front of the string
+		if (old_source == nil || old_source == "") {
+			old_source = old_cddev; // fall back to cddev in case the regexp fails
+		}
+		if (old_source != nil && old_source != "") {
+			y2milestone("Removing old disk source: %1", old_source);
+			list<map<string,any> > disks = VM::GetDiskConfig();
+			list<map<string,any> > new_disks = [];
+			foreach(map<string,any> m, disks, ``{
+				if (m["source"]:"" != old_source)
+					new_disks = add(new_disks, m);
+			});
+			y2milestone("old disks=%1", disks);
+			y2milestone("new disks=%1", new_disks);
+			VM::SetDiskConfig(new_disks);
+		}
+
+
+
+		if (type == `cdrom || type == `iso) {
+		    string source = "";
+		    if (type == `cdrom) {
+			source = regexpsub(cddev, "/dev/(.*)", "\\1");// remove /dev from the front of the string
+		    }
+		    if (source == nil || source == "") {
+			source = cddev; // fall back to cddev in case the regexp fails
+		    }
+
+		    // add the cdrom/iso to the set of virtual disks
+		    list<string> valid_targets = VM::GetValidVirtualDevices(VM::GetConfiguredDiskTargets(VM::GetDiskConfig()));
+		    y2milestone("vaild_targets=%1", valid_targets);
+		    if (valid_targets != nil && size(valid_targets) > 0) {
+				string target = valid_targets[0]:"hdc";
+				list<map<string,any> > disks = VM::GetDiskConfig();
+				y2milestone("disks=%1", disks);
+				map<string,any> new_disk = nil;
+				if (type == `cdrom) 
+					new_disk = $[ "source" : source, "target" : target, "ro" : true, "type" : "phys" ];
+				else 
+					new_disk = $[ "source" : source, "target" : target, "ro" : true, "type" : "loop-use" ];
+				if (new_disk == nil) {
+					y2error("new_disk is empty");
+				}
+				y2milestone("adding: %1", new_disk);
+				disks = add(disks, new_disk);
+				VM::SetDiskConfig(disks);
+		    }
+		    else {
+			Report::Error(_("Cannot add a new virtual disk target."));
+			y2error("WARNING: Cannot set the virtual target for the cdrom device.  All valid virtual targets are used!!!");
+			continue;
+		    }
+		}
+		else { // extract for inst source (SuSE)
 		    s = `fetch;
 		    VM::SetCustomKernel(false);
+		    VM::SetCustomIso(false);
 		}
+		string boot = (string) UI::QueryWidget (`id(`bootopts), `Value);
+		VM::SetExtraArgs(boot);
 	    }
-	    else if (s == `select_kernel)
-	    {
-		string new_kernel = (string)UI::QueryWidget(`id(`kernel), `Value);
-		new_kernel = UI::AskForExistingFile(new_kernel, "*", _("Select Kernel Image"));
+	    else if (s == `select_kernel_cd) {
+		string new_kernel = (string)UI::QueryWidget(`id(`kernel_cd), `Value);
+		new_kernel = UI::AskForExistingFile(new_kernel, "*", _("Select Kernel"));
 
 		if (new_kernel != nil)
 		{
-		    UI::ChangeWidget(`id(`kernel), `Value, new_kernel);
+		    UI::ChangeWidget(`id(`kernel_cd), `Value, new_kernel);
 		}
 	    }
-	    else if (s == `select_initrd)
-	    {
-		string new_initrd = (string)UI::QueryWidget(`id(`initrd), `Value);
-		new_initrd = UI::AskForExistingFile(new_initrd, "*", _("Select RAM Disk Image"));
+	    else if (s == `select_kernel_iso) {
+		string new_kernel = (string)UI::QueryWidget(`id(`kernel_iso), `Value);
+		new_kernel = UI::AskForExistingFile(new_kernel, "*", _("Select Kernel"));
+
+		if (new_kernel != nil)
+		{
+		    UI::ChangeWidget(`id(`kernel_iso), `Value, new_kernel);
+		}
+	    }
+	    else if (s == `select_initrd_cd) {
+		string new_initrd = (string)UI::QueryWidget(`id(`initrd_cd), `Value);
+		new_initrd = UI::AskForExistingFile(new_initrd, "*", _("Select RAM Disk"));
 
 		if (new_initrd != nil)
 		{
-		    UI::ChangeWidget(`id(`initrd), `Value, new_initrd);
+		    UI::ChangeWidget(`id(`initrd_cd), `Value, new_initrd);
 		}
 	    }
-	    else if (s == `custom || s == `extract)
-	    {
+	    else if (s == `select_initrd_iso) {
+		string new_initrd = (string)UI::QueryWidget(`id(`initrd_iso), `Value);
+		new_initrd = UI::AskForExistingFile(new_initrd, "*", _("Select RAM Disk"));
+
+		if (new_initrd != nil)
+		{
+		    UI::ChangeWidget(`id(`initrd_iso), `Value, new_initrd);
+		}
+	    }
+	    else if (s == `select_cdromimage) {
+		string cdimg = (string)(UI::QueryWidget(`id(`cdromimage), `Value));
+		string new_img = UI::AskForExistingFile(cdimg, "*.iso", _("Select ISO Image"));
+	
+		if (new_img != nil)
+		{
+			UI::ChangeWidget(`id(`cdromimage), `Value, new_img);
+		}
+	    }
+	    else if (s == `extract || s == `cdrom || s == `iso) {
 		// refresh the dialog
 		RefreshSourceTypeDialog();
 	    }
-	}
-
-	boolean custom = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton) == `custom;
-	boolean old_setting = VM::GetCustomKernel();
-
-	// if kernel type has been changed ask user to reset kernel options
-	if ((s == `fetch || s == `next) && old_setting != custom)
-	{
-	    string current = sformat(_("Current Arguments: %1
-Current Installation Arguments: %2"), VM::GetExtraArgs(), VM::GetExtraInstArgs());
-
-	    string question = (custom) ? sformat(_("Set empty arguments for the selected kernel?\n%1"), current) :
-		sformat(_("Set default SUSE Linux installation arguments for kernel?\n%1"), current);
-
-	    if (Popup::YesNo(question))
-	    {
-		VM::ResetExtraArgs();
-		VM::ResetExtraInstArgs();
-	    }
+// FIXME: add catch for any unknown return values???
 	}
 
 	return s;
@@ -254,7 +429,7 @@ define symbol SourceSelection() {
 		    );
 
     // help text for backup dialog during update 1/7
-    string help_text = _("<P><B>Installation Source</B></P>")
+    string help_text = _("<P><B><big>Installation Source</big></B></P>")
     + _("<P>Select the installation source from which to install the virtual machine.</P>");
 //    + _("<P>Only network installation sources, such as FTP or NFS, are supported.</P>");
 
@@ -274,14 +449,14 @@ define symbol SourceSelection() {
 
 	ret = (symbol) Wizard::UserInput ();
 
-	if (ret == `abort && Popup::ConfirmAbort (`painless))
+	if (ret == `abort || ret == `cancel) {
+		if (Popup::ReallyAbort(VM_Common::GetModified()))
+			break;
+	}
+	else if (ret == `back) {
 	    break;
-
-	if (ret == `cancel || ret == `back)
-	    break;
-
-	if (ret == `next)
-	{
+	}
+	else if (ret == `next) {
 	    // check if selected installation source is valid
 	    integer current = (integer) UI::QueryWidget (`id(`sources), `CurrentItem);
 
@@ -311,7 +486,8 @@ define symbol SourceSelection() {
 
 	    map parsed_url = URL::Parse(srcurl);
 
-	    if (!URL::Check(srcurl) || parsed_url["host"]:"" == "")
+//	    if (!URL::Check(srcurl) || parsed_url["host"]:"" == "") // FIXME: why the check for parsed_url["host"]???  Shouldn't physical media (CD/DVD) work fine?
+	    if (!URL::Check(srcurl))
 	    {
 		Report::Error(_("Entered URL value is not valid."));
 	    }
@@ -326,7 +502,7 @@ define symbol SourceSelection() {
 		}
 		else if (selected_type == `custom)
 		{
-		    sconfig["custom"] = selected_custom_source;
+		    sconfig["custom_source"] = selected_custom_source;
 		}
 		else
 		{
@@ -343,9 +519,7 @@ define symbol SourceSelection() {
 are supported in the installation."));
 	    }*/
 	}
-
-	if (ret == `inst_src)
-	{
+	else if (ret == `inst_src) {
 	    // start installation source configuration module
 	    WFM::CallFunction("inst_source", []);
 	    // refresh table content
@@ -370,7 +544,7 @@ define void RefreshFullOptionsDialog()
 define symbol FullOptionsDialog()
 {
     // screen title for the Xen mode selection
-    string title = _("Operating System");
+    string caption = _("Operating System Installation");
 
     map<string,string> fulloption = VM_XEN::GetFullOptions();
     string cd = fulloption["cdrom_image"]:"";
@@ -383,8 +557,7 @@ define symbol FullOptionsDialog()
 
     list<map> cd_hwinfo = (list<map>)SCR::Read(.probe.cdrom);
 
-    if (cd_hwinfo != nil)
-    {
+    if (cd_hwinfo != nil) {
 	foreach(map dev, cd_hwinfo,
 	{
 	    string device = dev["dev_name"]:"";
@@ -402,67 +575,61 @@ define symbol FullOptionsDialog()
 	);
     }
 
-    term contents = `HBox(
-	`HSpacing(2),
-	`RadioButtonGroup(`id(`rb_group),
-	    `Frame(_("Boot System From"),
-		`VBox(
-		    `VSpacing(0.5),
-		    `Left(`RadioButton(`id(`cdrom), `opt(`notify), _("CD-ROM Device"), boot == "d" && contains(cd_devs, cd))),
-		    `HBox(
-                        `HSpacing(2),
-			`ComboBox(`id(`cddev), _("Device Name"), cd_items),
-			`HStretch()
-		    ),
-		    `VSpacing(0.5),
-		    `Left(`RadioButton(`id(`iso), `opt(`notify), _("&ISO Image File"), boot == "d" && !contains(cd_devs, cd))),
-		    `HBox(
-                        `HSpacing(2),
-                        `TextEntry(`id(`cdromimage), `opt(`hstretch), _("&File Name"), boot == "d" && !contains(cd_devs, cd) ? cd : ""),
-                        `HSpacing(1),
-                        `VBox(
-                            `Label(""),
-                            `PushButton(`id(`select_file), _("Select Image..."))
-                        ),
-                        `HSpacing(1)
-		    ),
-		    `VSpacing(0.5),
-		    `Left(`RadioButton(`id(`disk), `opt(`notify), _("Virtual Hard Disk"), boot == "c")),
-		    `VSpacing(0.5)
+    term contents =
+	`MarginBox(1.5, 0.2,
+		`Frame(_("Install From"),
+			`MarginBox(0.5, 0.5,
+				`RadioButtonGroup(`id(`rb_group),
+					`VBox(
+						`Left(`RadioButton(`id(`cdrom), `opt(`notify), _("&CD-ROM Device"), boot == "d" && contains(cd_devs, cd))),
+						`HBox(
+							`HSpacing(3),
+							`ComboBox(`id(`cddev), _("&Device Name"), cd_items),
+							`HStretch()
+						),
+						`VSpacing(1),
+						`Left(`RadioButton(`id(`iso), `opt(`notify), _("&ISO Image File"), boot == "d" && !contains(cd_devs, cd))),
+						`HBox(
+							`HSpacing(3),
+							`TextEntry(`id(`cdromimage), `opt(`hstretch), _("&File Name"), boot == "d" && !contains(cd_devs, cd) ? cd : ""),
+							`HSpacing(1),
+							`VBox(
+								`Label(""),
+								`PushButton(`id(`select_file), _("Br&owse..."))
+							),
+							`HSpacing(1)
+						)
+					)
+				)
+			)
 		)
-	    )
-	),
-	`HSpacing(2)
-    );
+	);
 
-    // help text for OS selection in full virtualization mode (1/3)
-    string help_text = _("<B><BIG>Fully Virtualized Operating System</BIG></B>")
-	// help text for OS selection in full virtualization mode (2/3)
-	+ _("<P>The new virtual machine can be booted from a CD-ROM or hard disk.</P>")
-	// help text for OS selection in full virtualization mode (3/3)
-	+ _("<P>It is assumed that a new OS installation will occur if the VM is booted
-from a CD-ROM. In this case, the virtual machine is
-booted from the hard disk after installation.</P>
-");
 
-    Wizard::SetContents (title, contents, help_text, true, true);
+    // help text for OS selection in full virtualization mode (1/2)
+    string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+    // help text for OS selection in full virtualization mode (2/2)
+    help_text = help_text + _("<p>The installation of the operating system can be started from a physical CD-ROM or an ISO image file.</p>");
+
+    Wizard::SetContents (caption, contents, help_text, true, true);
+
+    UI::ChangeWidget(`id(`rb_group), `CurrentButton, `cdrom);
 
     symbol ret = nil;
 
-    while (true)
-    {
+    while (true) {
 	RefreshFullOptionsDialog();
 
 	ret = (symbol) Wizard::UserInput();
 
-	if (ret == `abort && Popup::ConfirmAbort(`painless))
+	if (ret == `abort || ret == `cancel) {
+		if (Popup::ReallyAbort(VM_Common::GetModified()))
+			break;
+	}
+	else if (ret == `back) {
 	    break;
-
-	if (ret == `cancel || ret == `back)
-	    break;
-
-	if (ret == `next)
-	{
+	}
+	else if (ret == `next) {
 	    symbol bootdev_symbol = (symbol)(UI::QueryWidget(`id(`rb_group), `CurrentButton));
 	    string bootdev = (bootdev_symbol == `disk) ? "c" : "d";
 
@@ -493,8 +660,7 @@ booted from the hard disk after installation.</P>
 		break;
 	    }
 	}
-	else if (ret == `select_file)
-	{
+	else if (ret == `select_file) {
 	    string cdimg = (string)(UI::QueryWidget(`id(`cdromimage), `Value));
 	    string new_img = UI::AskForExistingFile(cdimg, "*.iso", _("Select ISO Image"));
 
@@ -503,22 +669,142 @@ booted from the hard disk after installation.</P>
 		UI::ChangeWidget(`id(`cdromimage), `Value, new_img);
 	    }
 	}
+	else {
+		y2error("unexpected retcode: %1", ret);
+		continue;
+	}
     }
 
     return ret;
 }
+
+
+/**
+ * dialog - boot options configuration
+ * @return symbol dialog result
+ */
+define symbol BootOptionsDialog() {
+	// figure out what disks are configured.
+	list<string> used_targets = VM::GetConfiguredDiskTargets(VM::GetDiskConfig());
+	// propose some partions based on the configured disks.
+	list<string> valid_partitions = [];
+	foreach (string target, used_targets, {
+		if (target != nil && target != "") {
+			list<string> postfix = [];
+			if (findfirstof(target, String::CDigit()) != nil) {// already contains partition.
+				postfix = [ target ];
+			}
+			else {
+				postfix = ["1", "2", "3", "4", "5", "6"];
+				postfix = maplist(string postchar, postfix, { return target + postchar; });
+			}
+			valid_partitions = (list<string>) union(valid_partitions, postfix);
+		}
+	});
+	valid_partitions = toset(valid_partitions); //sort list and remove duplicates
+
+	string caption = _("Operating System Boot");
+	
+	term contents =
+		`MarginBox(1.5, 0.2, `VBox(
+			`Frame(_("Boot From"),
+				`MarginBox(1.5, 0.2, `VBox(
+					`ComboBox(`id(`device), `opt(`editable,`hstretch), _("&Partition Containing Kernel and RAM Disk"), valid_partitions),
+					`VSpacing(0.5),
+					`TextEntry(`id(`kernel), `opt(`hstretch), _("&Kernel"), VM::GetKernelImage()),
+					`VSpacing(0.5),
+					`TextEntry(`id(`initrd), `opt(`hstretch), _("RAM &Disk"), VM::GetInitrdImage())
+				))
+			),
+			`VSpacing(2),
+			`Frame(_("Boot Options"),
+				`MarginBox(1.5, 0.2,
+				`TextEntry(`id(`bootopts), `opt(`hstretch), "", VM::GetExtraArgs()))
+			)
+		));
+
+	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	help_text = help_text + _("<p>The VM will be booted using the kernel and RAM disk that are stored in the VM's disk. Specify which of the VM's partitions contains these files, and the path to each.</p>");
+	help_text = help_text + _("<p><b>Boot options</b> are optional arguments passed to the kernel each time it boots.</p>");
+
+	Wizard::SetContents(caption, contents, help_text, true, true);
+
+	UI::ChangeWidget (`id(`device), `Value, VM_Common::root_device);
+
+	symbol ui = `dummy;
+	while(!contains([`next, `back, `abort, `cancel], ui)) {
+
+		ui = (symbol) UI::UserInput();
+		y2milestone("ui=%1", ui);
+
+		if (ui == `abort || ui == `cancel) {
+			if (!Popup::ReallyAbort(VM_Common::GetModified()))
+				ui = `again;
+				continue;
+		}
+		else if (ui == `next) {
+			string device = (string) UI::QueryWidget (`id(`device), `Value);
+			string kernel = (string) UI::QueryWidget (`id(`kernel), `Value);
+			string initrd = (string) UI::QueryWidget (`id(`initrd), `Value);
+			string bootopts = (string) UI::QueryWidget (`id(`bootopts), `Value);
+	
+			if (device == nil || device == "") {
+				Report::Error(_("Partition Containing Kernel and RAM Disk cannot be empty."));
+				ui = `again;
+				continue;
+			}
+		// make sure the device is a defined virtual disk...
+		boolean success = false;
+		foreach(string target, used_targets, {
+			if (issubstring(device, target)) success = true;
+		});
+		if (!success) {
+			if (!Popup::ContinueCancelHeadline(_("Warning"), _("The Partition Containing Kernel and RAM Disk,
+does not match any configued disks."))) {
+				ui = `again;
+				continue;
+			}
+		}
+
+			if (kernel == nil || kernel == "") {
+				Report::Error(_("Kernel cannot be empty."));
+				ui = `again;
+				continue;
+			}
+
+/*			if (initrd == nil || initrd == "") {
+				Report::Error(_("RAM Disk cannot be empty."));
+				s = `again;
+				continue;
+			}*/
+	
+			VM::SetCustomKernel(true);
+	
+			VM::SetKernelImage(kernel);
+			VM::SetInitrdImage(initrd);
+			VM_Common::root_device = device;
+	
+			VM::SetExtraArgs(bootopts);
+		}
+		// FIXME: add catch for any unknown return values???
+	}
+	return ui;
+}
+
+
 
     Wizard::OpenNextBackDialog();
 
     map aliases = $[
 	    "SourceSelection"	: ``(SourceSelection()),
 	    "SourceTypeDialog"	: ``(SourceTypeDialog()),
-	    "FullOptionsDialog"	: ``(FullOptionsDialog())
+	    "FullOptionsDialog"	: ``(FullOptionsDialog()),
+	    "BootOptionsDialog"	: ``(BootOptionsDialog())
 	];
 
     map sequence = $[
 	    // start differnt workflow for full virtualization mode
-	    "ws_start"	: (VM::GetVirtualizationType() == "full") ? "FullOptionsDialog" : "SourceTypeDialog",
+	    "ws_start"	: (VM::GetVirtualizationType() == "full") ? "FullOptionsDialog" : ((VM_Common::proposal_type == "install") ? "SourceTypeDialog" : "BootOptionsDialog"),
 	    "SourceTypeDialog"	:
 		$[
 		    `fetch	    :	"SourceSelection",
@@ -533,6 +819,11 @@ booted from the hard disk after installation.</P>
 	    "FullOptionsDialog"	:
 		$[
 		    `abort	    :   `abort,
+		    `next	    :   `next
+		],
+	    "BootOptionsDialog" :
+		$[
+		    `abort	    :	`abort,
 		    `next	    :   `next
 		]
 	    ];

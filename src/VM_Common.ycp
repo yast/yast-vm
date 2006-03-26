@@ -2,6 +2,7 @@
  * File:	modules/VM_Common.ycp
  * Package:	VM configuration - common function for all virtualization architectures
  * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *		Michael G. Fritch <mgfritch@novell.com>
  *
  * $Id$
  */
@@ -14,6 +15,7 @@
     import "Arch";
     import "ProductControl";
     import "HTML";
+    import "PackageCallbacksInit";
 
     textdomain "vm";
 
@@ -27,11 +29,35 @@
 
     global integer memory_size = default_memory_size;
 
-    global integer number_of_cpus = 1;
+    global integer default_number_of_cpus = 1;
+
+    global integer number_of_cpus = default_number_of_cpus;
 
     global string default_start_mode = "manual";
 
     global string start_mode = default_start_mode;
+
+    global string on_poweroff = "destroy";
+
+    global string on_reboot = "restart";
+
+    global string on_crash = "restart";
+
+    global integer default_ne2000 = 0;  // if virtual network card is AMD PCnet, then 0, else 1(NE2000)
+
+    global integer ne2000 = default_ne2000;
+
+    global integer default_stdvga = 0;  // if graphics card is Cirrus Logic, then 0, else 1(Standard VGA)
+
+    global integer stdvga = default_stdvga;
+
+    global integer default_sdl = 1; // if graphics view is DirectMedia Layer(SDL) then 1, else 0 (VNC)
+
+    global integer sdl = default_sdl;
+
+    global integer default_localtime = 1;  // if hardware clock is set to local time then 1, else 0 (UTC)
+
+    global integer localtime = default_localtime;
 
     global string default_MAC = "";
 
@@ -42,29 +68,47 @@
     global string config_name = "";
 
     // activation mode - in virtual machine installation proposal
-    global map start_mode_names = $[ "manual" : _("Manually"), "onboot" : _("On Boot") ];
+    global map start_mode_names = $[ "manual" : _("Manually"), "onboot" : _("Automatically") ];
+
+// virtual network card - in virtual machine installation proposal
+    global map ne2000_names = $[ 0 : _("AMD PCnet"), 1 : _("NE2000") ];
+
+// virtual graphics card - in virtual machine installation proposal
+    global map stdvga_names = $[ 0 : _("Cirrus Logic"), 1 : _("Standard VGA") ];
+
+// graphics viewer - in virtual machine installation proposal
+    global map sdl_names = $[ 0 : _("VNC"), 1 : _("SDL") ];
+
+// hardware clock - in virtual machine installation proposal
+    global map localtime_names = $[ 0 : _("UTC"), 1 : _("Local Time") ];
 
     global string extra_args = "";
 
-    global string extra_inst_args = "";
+    global string hidden_args = "";
 
     global string root_device = "";
 
     global string autoyast_profile = "";
 
-    global boolean default_use_dhcp = true;
+    global boolean default_use_dhcp = false;
     global boolean use_dhcp = default_use_dhcp;
+    global boolean default_use_static = false;
+    global boolean use_static = default_use_static;
+    global string ip = "";
+    global string netmask = "";
+    global string gateway = "";
+
+    global string proposal_type = "install";
 
     string custom_kernel = "";
-
     string custom_initrd = "";
-
     boolean use_custom_kernel = false;
+    boolean use_custom_iso = false;
 
     boolean modified = false;
 
     string default_type = "para";
-    string virtualization_type = default_type; // cuurently "para" or "full"
+    string virtualization_type = default_type; // currently "para" or "full"
 
     global define string GetVirtualizationType()
     {
@@ -75,13 +119,12 @@
     {
 	if (!contains(["para", "full"], type))
 	{
-	    y2warning("uknown virtualilzation type: %1", type);
+	    y2warning("Unknown virtualization type: %1", type);
 	    return false;
 	}
 
 	modified = virtualization_type != type;
 	virtualization_type = type;
-
 	return true;
     }
 
@@ -113,15 +156,23 @@
 	    "memory_size" :	  memory_size,
 	    "number_of_cpus" :	  number_of_cpus,
 	    "start_mode" :	  start_mode,
+	    "on_poweroff" :	  on_poweroff,
+	    "on_reboot" :	  on_reboot,
+	    "on_crash" :	  on_crash,
+	    "ne2000" :		  ne2000,
+	    "stdvga" :		  stdvga,
+	    "sdl" :		  sdl,
+	    "localtime" :	  localtime,
 	    "MAC_address" :	  MAC_address,
 	    "random_MAC" :	  random_MAC,
 	    "config_name" :	  config_name,
 	    "extra_args" :	  extra_args,
-	    "extra_inst_args" :	  extra_inst_args,
+	    "hidden_args" :	  hidden_args,
 	    "root_device" :	  root_device,
 	    "custom_kernel" :	  custom_kernel,
 	    "custom_initrd" :	  custom_initrd,
 	    "use_custom_kernel" : use_custom_kernel,
+	    "use_custom_iso" : use_custom_iso,
 	    "virtualization_type" : virtualization_type,
 	];
 
@@ -147,21 +198,29 @@
 	memory_size =		input["memory_size"]:default_memory_size;
 	number_of_cpus =	input["number_of_cpus"]:1;
 	start_mode =		input["start_mode"]:default_start_mode;
+	on_poweroff = 		input["on_poweroff"]:"";
+	on_reboot = 		input["on_reboot"]:"";
+	on_crash = 		input["on_crash"]:"";
+	ne2000 =		input["ne2000"]:default_ne2000;
+	stdvga =		input["stdvga"]:default_stdvga;
+	sdl =			input["sdl"]:default_sdl;
+	localtime =		input["localtime"]:default_localtime;
 	MAC_address =		input["MAC_address"]:default_MAC;
 	random_MAC =		input["random_MAC"]:true;
 	config_name =		input["config_name"]:"";
 	extra_args =		input["extra_args"]:"";
-	extra_inst_args =	input["extra_inst_args"]:"";
+	hidden_args =		input["hidden_args"]:"";
 	root_device =		input["root_device"]:"";
 	custom_kernel =		input["custom_kernel"]:"";
 	custom_initrd =		input["custom_initrd"]:"";
 	use_custom_kernel =	input["use_custom_kernel"]:false;
+	use_custom_iso =	input["use_custom_iso"]:false;
 	virtualization_type =	input["virtualization_type"]:default_type;
     }
 
     global string GetAutoYastProposal() {
 	// proposal items
-	return HTML::List([ sformat(_("AutoYast Profile: %1"), (autoyast_profile != "") ?
+	return HTML::List([ sformat(_("AutoYaST Profile: %1"), (autoyast_profile != "") ?
 	    // none AutoYast profile has been selected
 	    autoyast_profile : _("<I>none</I>"))]);
     }
@@ -219,6 +278,19 @@
 	 "onreboot" : _("On Reboot")
     ];
 
+    // used for values on_poweroff, on_reboot, on_crash
+    global map<string, string> lifecycle_event_mapping = $[
+	 // lifecycle_event mode (on_poweroff, on_reboot, on_crash) - destroy virtual machine
+	 "destroy" : _("Destroy"),
+	 // lifecycle_event mode (on_poweroff, on_reboot, on_crash) - restart virtual machine
+	 "restart" : _("Restart"),
+	 // lifecycle_event mode (on_poweroff, on_reboot, on_crash) - preserve virtual machine
+	 "preserve" : _("Preserve"),
+	 // lifecycle_event mode (on_poweroff, on_reboot, on_crash) - rename and restart virtual machine
+	 "rename-restart" : _("Rename and restart"),
+    ];
+
+
     global define string GetKernelImage() {
 	return custom_kernel;
     }
@@ -248,6 +320,18 @@
 	return use_custom_kernel;
     }
 
+    global define boolean SetCustomIso(boolean use_custom)
+    {
+	use_custom_iso = use_custom;
+	return true;
+    }
+
+    global define boolean GetCustomIso()
+    {
+	return use_custom_iso;
+    }
+
+
     global integer ProposeSelection () ``{
 	list <integer> sources = Pkg::SourceGetCurrent (false);
 	y2milestone("sources: %1", sources);
@@ -271,25 +355,70 @@
 	return sid;
     }
 
+    global boolean IsNetWareKernel(string kernel)
+    {
+        list<string> names = splitstring(kernel, "/");
+        string name = names[size(names) - 1]:"";
+        return (tolower(name) == "xnloader.sys");
+    }
+    
+    global void SetNetWareHiddenArgs()
+    {
+        string args = "";
+        
+	map out = (map)SCR::Execute(.target.bash_output, "date +%z");
+	if (out["exit"]:-1 == 0) {
+	    list<string> output = splitstring(out["stdout"]:"", "\n");
+	    string tz = output[0]:"";
+	    if (tz != "") {
+		args = "TZ=" + tz;
+	    }
+	}
+	
+	// FIXME:  display=
+	
+        VM_Common::hidden_args = args;
+    }
+    
+    global void SetLinuxHiddenArgs()
+    {
+        string arg = (VM_Common::proposal_type == "install") ? "install=$URL_INSTALL" : "";
+        VM_Common::hidden_args = arg;
+    }
+
+    global void SetHiddenArgs(string kernel)
+    {
+        if (IsNetWareKernel(kernel))
+            SetNetWareHiddenArgs();
+        else
+            SetLinuxHiddenArgs();
+    }
+    
     global list<string> CreateSourceProposal(symbol inst_type, integer source_id, string custom)
     {
 	list<string> ret = [];
 
 	if (use_custom_kernel)
 	{
-	    // %1 = kernel image file
-	    ret = [ sformat(_("Kernel Image: %1"), custom_kernel) ];
+	    if (use_custom_iso) {
+		ret = add(ret, sformat("%1 (%2)", _("Installation Device: ISO Image File"), custom));
+	    }
+	    else {
+		ret = add(ret, sformat("%1 (%2)", _("Installation Device: CD-ROM Device"), custom));
+	    }
+
+	    ret = add(ret, sformat(_("Kernel: %1"), custom_kernel));
 
 	    if (custom_initrd != "")
-	    {
-		// %1 = intrd file name
 		ret = add(ret, sformat(_("RAM Disk Image: %1"), custom_initrd));
-	    }
+
+            SetHiddenArgs(custom_kernel);
 	}
-	else
-	{
+	else {
 	    string desc = "";
 
+            SetLinuxHiddenArgs();
+            
 	    y2milestone("inst_type: %1, source_id: %2", inst_type, source_id);
 
 	    if (inst_type == `configured && source_id != nil && source_id >= 0)
@@ -310,7 +439,7 @@
 	    }
 
 	    // %1 = installation source description or URL
-	    ret = [ sformat(_("OS Image Source: %1"), desc) ];
+	    ret = [ sformat(_("SUSE Installation Source: %1"), desc) ];
 	}
 
 	return ret;
@@ -320,8 +449,14 @@
 
 	map ret = $[];
 
-	if (inst_type == `configured && (source_id == nil || source_id < 0) && virtualization_type == "para")
-	{
+	if (inst_type == `configured && (source_id == nil || source_id < 0) && virtualization_type == "para") {
+	    ret = $[ "warning" :
+		    // error message in proposal
+		    _("OS installation source is not configured"),
+		     "warning_level" : `blocker
+	    ];
+	}
+	else if (inst_type == `custom && (custom == nil || custom == "") && virtualization_type == "para") {
 	    ret = $[ "warning" :
 		    // error message in proposal
 		    _("OS installation source is not configured"),
@@ -338,22 +473,21 @@
 	return ret;
     }
 
-    // fsize in MB
-    global define boolean CreateDiskImage(string file, integer fsize, boolean sparse) ``{
+    global define boolean CreateDiskImage(string file, integer image_mb, boolean sparse) ``{
 	boolean ret = true;
 
-	string dd_options = (sparse) ? (" bs=1 count=1 " + sformat ("seek=%1M", fsize)) : (" bs=1M " + sformat ("count=%1", fsize));
-	string cmd = "/bin/dd if=/dev/zero of=" + file + dd_options;
+	string dd_options = (sparse) ? (" bs=1 count=1 " + sformat ("seek=%1", (image_mb*1024*1024)-1)) : (" bs=1M " + sformat ("count=%1", image_mb));
+	string cmd = "/bin/dd if=/dev/zero of='" + file + "'" + dd_options;
 
-	y2milestone("Creating disk image %1 (%2MB)", file, fsize);
+	y2milestone("Creating disk image %1 (%2MB)", file, image_mb);
 	y2debug("dd command: %1", cmd);
 	integer result = (integer) SCR::Execute (.target.bash, cmd);
 
 	if (result != 0)
 	{
-	    y2error("cannot create disk image %1", file);
+	    y2error("Cannot create disk image %1", file);
 	    // try to remove part of the image if it exists
-	    SCR::Execute (.target.bash, "/bin/rm " + file);
+	    SCR::Execute (.target.bash, "/bin/rm -- '" + file + "'");
 	    ret = false;
 	}
 
@@ -373,21 +507,26 @@
     }
 
 
-    global define boolean CreateExt2Image(string image, integer image_size) {
+    global define boolean CreateExt2Image(string image, integer image_mb) {
 	// create sparse image file
-	if (!VM_Common::CreateDiskImage(image, image_size, true))
+	if (!VM_Common::CreateDiskImage(image, image_mb, true))
 	{
 	    return false;
 	}
 
-	// create Ext2 filesystem (built in FS, no kernel module required)
+	// create Ext2 file system (built in FS, no kernel module required)
 	// reserve 0% percent for root
-	string command = "/sbin/mkfs.ext2 -F -m 0 " + image;
+	string command = "/sbin/mkfs.ext2 -F -m 0 -- '" + image + "'";
 	y2milestone("executing: %1", command);
 
 	integer out = (integer)SCR::Execute(.target.bash, command);
 	y2milestone("mkfs.ext2 result: %1", out);
-	return (out == 0);
+	if (out != 0)
+	{
+	    y2error("Cannot make a file system on the disk image");
+	    return false;
+	}
+	return true;
     }
 
     global define boolean CreateImageWithProfile(string image, string profile)
@@ -400,41 +539,48 @@
 
 	// make directory for temporary device mounting
 	string dir = GetTmpDir() + "/mnt";
+	SCR::Execute(.target.mkdir, dir);
 
 	// mount the image
-        SCR::Execute (.target.bash, sformat ("test -d %1 || mkdir %1", dir));
-	string command = sformat("/bin/mount -o loop %1 %2", image, dir);
+	string command = sformat("/bin/mount -o loop -- '%1' '%2'", image, dir);
 	integer result = (integer)SCR::Execute (.target.bash, command);
 	if (result != 0)
 	{
 	    y2error("Cannot mount image %1 to %2", image, dir);
+	    SCR::Execute (.target.bash, "/bin/rm -- '" + image + "'");
 	    return false;
 	}
 
+        boolean ret = true;
 	// copy the profile
-	command = sformat("/bin/cp %1 %2", profile, dir);
+	command = sformat("/bin/cp -- '%1' '%2'", profile, dir);
 	result = (integer) SCR::Execute (.target.bash, command);
 	if (result != 0)
 	{
 	    y2error("Cannot copy profile %1 to %2", profile, dir);
-	    return false;
+	    ret = false;
 	}
 
-	// unmount the image
-	command = sformat("/bin/umount %1", dir);
-	result = (integer) SCR::Execute (.target.bash, command);
-	if (result != 0)
-	{
-	    y2error("Cannot unmount directory %1", dir);
-	    return false;
-	}
+	SCR::Execute(.target.umount, dir);
 
-	return true;
+        if (! ret)
+	    SCR::Execute (.target.bash, "/bin/rm -- '" + image + "'");
+        
+	return ret;
     }
 
 
     // uses source_id variable
     global define string GetPackage(string package) {
+	PackageCallbacksInit::SetMediaCallbacks();
+	// ensure that appropriate sources are enabled and the remaining ones disabled
+	list<map<string,any> > source_data = Pkg::SourceEditGet();
+	source_data = maplist (map<string,any> src, source_data, {
+	    if (src["SrcId"]:-1 == source_id)
+		src["enabled"] = true;
+	    return src;
+	});
+	Pkg::SourceEditSet (source_data);
 	// get info about the package (media number and path to the package)
 	map<string,any> pkginfo = $[];
 	list<map<string,any> > pkginfoA = Pkg::PkgPropertiesAll(package);
@@ -442,7 +588,7 @@
 
 	foreach(map<string,any> pk, pkginfoA,
 	{
-	    if (pk["status"]:`unknown == `available)
+	    if (pk["status"]:`unknown == `available && pk["srcid"]:-1 == source_id)
 	    {
 		pkginfo = pk;
 	    }
@@ -457,6 +603,10 @@
 	{
 	    // get local location
 	    ret = Pkg::SourceProvideFile(source_id, pkginfo["medianr"]:0, pkg_path);
+	    string tmpdir = (string)SCR::Read (.target.tmpdir);
+	    string target = sformat ("%1/%2.rpm", tmpdir, package);
+	    SCR::Execute (.target.bash, sformat ("/bin/cp %1 %2", ret, target));
+	    ret = target;
 	}
 
 	return ret;
@@ -470,7 +620,7 @@
 	y2milestone("copying file %1 to %2", source, target);
 	// -a (archive) = preserve mode and timestamps
 	// -b (backup) = make a backup of the target file
-	return (SCR::Execute(.target.bash, sformat("/bin/cp -a -b %1 %2", source, target))) == 0;
+	return (SCR::Execute(.target.bash, sformat("/bin/cp -a -b -- '%1' '%2'", source, target))) == 0;
     }
 
     global define string PackageArch() {
@@ -508,15 +658,16 @@
 
     // kernel_filename = "./boot/vmlinuz-*-xen"
     // kernel_regexp = "vmlinuz-*-xen"
-    // Extract kernel image from RPM file
+    // Extract kernel from RPM file
     global define string ExtractKernelImage(string package, string target, string kernel_filename, string kernel_regexp) {
 	string tmpdir = VM_Common::GetTmpDir();
-	string cmd = sformat("cd %1; /usr/bin/rpm2cpio %2 | /usr/bin/cpio -idvum '%3'", tmpdir, package, kernel_filename);
+	SCR::Execute(.target.mkdir, tmpdir);
+	string cmd = sformat("cd '%1' && /usr/bin/rpm2cpio '%2' | /usr/bin/cpio -idvum -- '%3'", tmpdir, package, kernel_filename);
 
 	map out = (map)SCR::Execute(.target.bash_output, cmd);
 	y2milestone("out: %1", out);
 
-	cmd = sformat("/usr/bin/find %1 -type f -name '%2'", tmpdir + "/boot", kernel_regexp);
+	cmd = sformat("/usr/bin/find '%1' -type f -name '%2'", tmpdir + "/boot", kernel_regexp);
 	out = (map)SCR::Execute(.target.bash_output, cmd);
 	y2milestone("out: %1", out);
 
@@ -531,7 +682,7 @@
 	    return GetFileNameFromPath(file);
 	}
 
-	return "";;
+	return "";
     }
 
     global define map<integer,boolean> InstSourceStatus() {
@@ -588,7 +739,7 @@
 
 
     global define string ParseFstab(string fstab) {
-        map out = (map) SCR::Execute(.target.bash_output, sformat("/bin/grep \" / \" %1 | /usr/bin/cut -f 1 -d \" \"",  fstab));
+        map out = (map) SCR::Execute(.target.bash_output, sformat("/bin/grep -E \"[[:space:]]/[[:space:]]\" '%1' | /usr/bin/awk '{print $1}'",  fstab));
 	string rdev = "";
 
 	if (out["exit"]:-1 == 0 )
@@ -608,7 +759,7 @@
 
     global define list<string> SearchFile(string dir, string name) {
 	list<string> ret = [];
-	string cmd = sformat("cd %1; ls -1 %2", dir, name);
+	string cmd = sformat("cd -- '%1' && ls -1 -- '%2'", dir, name);
 	map outputmap = (map)SCR::Execute(.target.bash_output, cmd);
 
 	string outputstring = outputmap["stdout"]:"";
@@ -674,7 +825,8 @@
 	}
 
 	string tmpdir = VM_Common::GetTmpDir();
-	string cmd = sformat("cd %1; /usr/bin/rpm2cpio %2 | /usr/bin/cpio -idvum", tmpdir, inst);
+	SCR::Execute(.target.mkdir, tmpdir);
+	string cmd = sformat("cd -- '%1' && /usr/bin/rpm2cpio '%2' | /usr/bin/cpio -idvum", tmpdir, inst);
 
 	map out = (map)SCR::Execute(.target.bash_output, cmd);
 	y2debug("out: %1", out);
@@ -690,39 +842,30 @@
 	y2milestone("found initrd: %1", file);
 
 	// create the image
-	cmd = sformat("%1/usr/sbin/mkinstallinitrd --kernel-rpm %2 --libdir %3 %4", tmpdir, kernelpkg, tmpdir + "/usr/lib/install-initrd", target);
+	cmd = sformat("%1/usr/sbin/mkinstallinitrd --kernel-rpm '%2' --libdir '%3' '%4'", tmpdir, kernelpkg, tmpdir + "/usr/lib/install-initrd", target);
 	out = (map)SCR::Execute(.target.bash_output, cmd);
 	y2milestone("mkinstallinitrd output: %1", out);
 
 	return out["exit"]:1 == 0;
     }
 
+    string GetTwoHexDigits()
+    {
+        string hex = "0123456789abcdef";
+        return substring(hex, random(16), 1) + substring(hex, random(16), 1);
+    }
+
     global string Propose_MAC_address(string option)
     {
-	// use hostname and network domain name of the host machine and configuration name of VM
-	map<string,any> h_out = (map<string,any>)SCR::Execute(.target.bash_output, "/bin/hostname");
-	string host_n = h_out["stdout"]:"";
-
-	map<string,any> d_out = (map<string,any>)SCR::Execute(.target.bash_output, "/bin/domainname");
-	string dom_n = d_out["stdout"]:"";
-
-	string command = sformat("echo '%1' | md5sum", host_n + dom_n + VM_Common::config_name + option);
-	y2debug("Command: %1", command);
-
-	map<string,any> out = (map<string,any>)SCR::Execute(.target.bash_output, command);
-	list<string> result= splitstring(out["stdout"]:"", "\n");
-
-	y2debug("hash: %1", result[0]:"");
-	string ret = regexpsub(result[0]:"", "^(..)(..)(..)(..).*", "fe:fd:\\1:\\2:\\3:\\4");
+        srandom(time());
+        string ret = "00:16:3e:" + GetTwoHexDigits() + ":" + GetTwoHexDigits() + ":" + GetTwoHexDigits();
 
 	// TODO detect if the address is already in use on the network
-
-	if (ret == nil)
-	{
-	    ret = "";
-	}
 
 	y2milestone("Proposed MAC: %1", ret);
 	return ret;
     }
+
+
+/* EOF */
 }

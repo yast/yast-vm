@@ -7,6 +7,7 @@
  *
  * Authors:
  *   Ladislav Slezak <lslezak@suse.cz>
+ *   Michael G. Fritch <mgfritch@novell.com>
  *
  * $Id$
  *
@@ -22,24 +23,52 @@
     import "VM_Common";
     import "Mode";
     import "Sequencer";
+    import "CommandLine";
 
     textdomain "vm";
 
-    define symbol proposal()
-    {
-	return (symbol)WFM::CallFunction ("inst_proposal",
-		    [GetInstArgs::ButtonsProposal(true, true, VM::GetVMMtype())]);
+
+    define symbol select_create() {
+	return (symbol)WFM::CallFunction ("inst_xen_create", [false, true]);
     }
 
-    define symbol start()
-    {
-	if (!Mode::config())
-	{
-	    return (symbol)WFM::CallFunction("inst_vm_kickoff", [false, false]);
+
+    define symbol proposal() {
+	string proposal_type = sformat("%1_%2", VM::GetVMMtype(), VM_Common::proposal_type);
+	symbol retval = (symbol)WFM::CallFunction ("inst_proposal",
+		    [GetInstArgs::ButtonsProposal(true, true, proposal_type)]);
+
+	if (retval == `back) {
+		return `forceback;
+	}
+	return retval;
+    }
+
+
+    define symbol start() {
+	if (!Mode::config()) {
+		return (symbol)WFM::CallFunction("inst_vm_kickoff", [false, false]);
+	}
+	return `next;
+    }
+
+
+    define symbol prepare(string new_proposal_type) {
+	// set the proposal_type
+	VM_Common::proposal_type = new_proposal_type;
+
+	// reset the appropriate proposal settings
+	if (VM_Common::proposal_type == "boot") {
+		VM::ResetSource();
+		VM::ResetExtraArgs();
+	}
+	else {
+		VM::ResetAllSettings();
 	}
 
 	return `next;
     }
+
 
     define symbol GUIhandler() {
 	// create initial dialog
@@ -48,21 +77,83 @@
 
 
 	map aliases = $[
-		"proposal"	: ``(proposal()),
-		"start"		: ``(start())
+		"select_create"		: ``(select_create()), // creation options
+		"install_prepare"	: ``(prepare("install")), // change proposal_type to install and reset the proposal settings.
+		"install_proposal"	: ``(proposal()), // install options
+		"install_start"		: ``(start()), // start vm install
+		"boot_prepare"		: ``(prepare("boot")), // change proposal_type to boot and reset the proposal settings.
+		"boot_proposal"		: ``(proposal()), // boot options
+		"boot_start"		: ``(start()), // boot vm and display feedback dialog
+		"existing_prepare"	: ``(prepare("existing")), // change proposal_type to existing and reset the proposal settings.
+		"existing_proposal"	: ``(proposal()), // existing vm install options
+		"existing_start"	: ``(start()), // boot vm and display feedback dialog
 	    ];
 
 	map sequence = $[
-		"ws_start"	: "proposal",
-		"proposal"	:
+		"ws_start"          : "select_create",
+		"select_create"	    :
 		    $[
-			`next	    :	"start",
+			`install    :	"install_prepare",
+			`existing   :	"existing_prepare",
 			`abort	    :	`abort
 		    ],
-		"start"	:
+		"install_prepare"	:
 		    $[
-			`next	    :	`finish,
+			`forceback	:   "select_create",
+			`abort		:   `abort,
+			`next		:   "install_proposal",
+		    ],
+		"install_proposal"	:
+		    $[
+			`forceback	: "select_create",
+			`next	    :	"install_start",
 			`abort	    :	`abort
+		    ],
+		"install_start"	:
+		    $[
+		        `forceback  :   "install_proposal",
+			`next	    :	"boot_prepare",
+			`abort	    :	`abort
+		    ],
+		"boot_prepare"		:
+		    $[
+			`forceback	: "install_prepare",
+			`abort		: `abort,
+			`next		: "boot_proposal",
+		     ],
+		"boot_proposal"		:
+		    $[
+		        `forceback  :   "install_prepare",
+			`next	    :	"boot_start",
+			`abort	    :	`abort
+		    ],
+		"boot_start"	:
+		    $[
+		        `forceback  :   "boot_proposal",
+			`next	    :	`next,
+			`abort	    :	`abort,
+			`finish	    :	`finish,
+			`again	    :	"select_create"
+		    ],
+		"existing_prepare"	:
+		    $[
+			`forceback	:   "select_create",
+			`abort		:   `abort,
+			`next		:   "existing_proposal",
+		    ],
+		"existing_proposal"	:
+		    $[
+			`forceback	: "select_create",
+			`next		:	"existing_start",
+			`abort		:	`abort
+		    ],
+		"existing_start"	:
+		    $[
+		        `forceback  :   "existing_proposal",
+			`next	    :	`next,
+			`abort	    :	`abort,
+			`finish	    :	`finish,
+			`again	    :	"select_create"
 		    ]
 	];
 
@@ -73,100 +164,6 @@
 	Wizard::CloseDialog();
 
 	return ret;
-    }
-
-
-    define boolean startHandler(map options) {
-	boolean ret = false;
-
-	if (haskey(options, "vm")) {
-	    if (!VM::SetVMMtype(options["vm"]:""))
-	    {
-		CommandLine::Print(sformat(_("Cannot set VMM type to: %1"), options["vm"]:""));
-		return false;
-	    }
-	}
-	else
-	{
-	    CommandLine::Print(_("Mandatory option 'vm' is missing."));
-	    return false;
-	}
-
-	// set installation source options
-	if (haskey(options, "install")) {
-	    VM::SetSourceConfig(nil, `custom, options["install"]:"");
-	}
-
-	// set user related options
-	if (haskey(options, "user")) {
-	    VM::SetUserName(options["user"]:"");
-	    VM::SetTapDevice(options["user"]:"");
-	}
-	if (haskey(options, "home")) {
-	    VM::SetHomeDir(options["home"]:"");
-	}
-
-	// set disk image options
-	if (haskey(options, "disk") || haskey(options, "sparse")) {
-	    string diskopt = options["disk"]:"";
-	    string sparseopt = options["sparse"]:"";
-	    string targetopt = options["target"]:"";
-
-	    list<string> disksizes = splitstring(diskopt, ",");
-	    list<string> sparse = splitstring(sparseopt, ",");
-	    list<string> target = splitstring(targetopt, ",");
-
-	    list <map <string,any> > diskconfig = [];
-
-	    integer disksizes_size = size(disksizes);
-	    integer sparse_size = size(sparse);
-
-	    if (size(disksizes) > 0 || size(sparse) > 0)
-	    {
-		integer index = 0;
-		integer maxindex = (disksizes_size > sparse_size) ? disksizes_size - 1 : sparse_size - 1;
-
-		while (index <= maxindex)
-		{
-		    integer disksizeopt = tointeger(disksizes[index]:"1024");
-		    boolean sparseopt = tointeger(sparse[index]:"0") == 1;
-
-		    diskconfig = add(diskconfig, $["size" : disksizeopt, "sparse" : sparseopt]);
-
-		    index = index + 1;
-		}
-
-		VM::SetDiskConfig(diskconfig);
-	    }
-	}
-
-	// the other options
-	if (haskey(options, "mem")) {
-	    VM::SetMemorySize(tointeger(options["mem"]:"256"));
-	}
-	if (haskey(options, "startmode")) {
-	    VM::SetStartMode(options["startmode"]:"");
-	}
-	if (haskey(options, "MAC")) {
-	    VM::SetMAC(options["MAC"]:"");
-	}
-	if (haskey(options, "netif")) {
-	    VM::SetNetDevice(options["netif"]:"");
-	}
-
-	// disable progress
-	Progress::off();
-
-	// TODO: still needed?
-	// initialize package manager - otherwise Pkg::PkgGetFilelist returns empty list
-	Pkg::TargetInit("/", false);
-
-	// start VM installation
-	symbol result = (symbol)WFM::CallFunction("inst_vm_kickoff", [false, false]);
-
-	return result == `next;
-
-	return false;
     }
 }
 

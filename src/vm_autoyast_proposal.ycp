@@ -53,14 +53,17 @@
     }
     else if ( func == "Description" )
     {
-	ret = (Mode::config()) ? $[] :
-	    $[
-		// this is a heading
-		"rich_text_title"	: _("AutoYast"),
-		// this is a menu entry
-		"menu_title"		: _("AutoYast"),
-		"id"			: "vm_autoyast"
-	    ];
+	if (VM::GetVirtualizationType() == "para" && VM_Common::proposal_type == "install") {
+		ret = (Mode::config()) ? $[] :
+		    $[
+			// this is a heading
+			"rich_text_title"	: _("AutoYaST"),
+			// this is a menu entry
+			"menu_title"		: _("AutoYaST"),
+			"id"			: "vm_autoyast"
+		    ];
+	}
+	else return $[];
     }
 
     return ret;

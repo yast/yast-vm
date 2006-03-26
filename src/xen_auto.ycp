@@ -3,7 +3,7 @@
  *   xen_auto.ycp
  *
  * Package:
- *   Configuration of Xen virtual machine - AutoYast client
+ *   Configuration of Xen virtual machine - AutoYaST client
  *
  * Summary:
  *   Client for autoinstallation
@@ -52,7 +52,7 @@
     }
     /* Create a  summary*/
     else if (func == "Summary") {
-	// don't show AutoYast in the summary, in AutoYast config mode it doesn't make sense
+	// don't show AutoYaST in the summary, in AutoYaST config mode it doesn't make sense
 	map proposal = (map)WFM::CallFunction("xen_mode_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
 	string mode = proposal["preformatted_proposal"]:"";
 
@@ -91,7 +91,7 @@
 	VM_XEN::resetStartMode();
 	VM_XEN::resetRestart();
 	VM_XEN::resetExtraArgs();
-	VM_XEN::resetExtraInstArgs();
+	VM_XEN::resetHiddenArgs();
 	VM_XEN::resetDiskConfig();
 	VM_XEN::resetSourceConfig();
 	VM_XEN::resetNetworkConfig();

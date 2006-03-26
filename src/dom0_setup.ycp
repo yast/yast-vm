@@ -24,7 +24,7 @@
 				     // progress stage
 				     _("Install Packages"),
 				     // progress stage
-				     _("Configure Bootloader")
+				     _("Configure Boot Loader")
     ];
 
     list progress_descriptions = [];
@@ -32,26 +32,26 @@
     integer progress_length = size(progress_stages);
 
     // Headline for management domain installation
-    string headline = _("Configuring the Management Domain (domain0)");
+    string headline = _("Configuring the VM Server (domain 0)");
 
     // xen domain0 installation help text - 1/4
-    string help_text = _("<P><big><B>Domain0 Configuration</B></big></P><P>Configuration
-of the management domain (domain0) has two parts.</P>
+    string help_text = _("<p><big><b>VM Server Configuration</b></big></p><p>Configuration
+of the VM Server (domain 0) has two parts.</p>
 ") +
 
     // xen domain0 installation help text - 2/4
-    _("<P>The required packages are installed into the system first. Then the
+    _("<p>The required packages are installed into the system first. Then the
 boot loader is switched to GRUB if it is not already used and the Xen section is
-added to the boot loader menu if it is missing.</P>
+added to the boot loader menu if it is missing.</p>
 ") +
 
     // xen domain0 installation help text - 3/4
-_("<P>GRUB is needed because it supports the multiboot standard required
-to boot the Xen hypervisor and Linux kernel.</P>
+_("<p>GRUB is needed because it supports the multiboot standard required
+to boot the Xen hypervisor and Linux kernel.</p>
 ") +
 
     // xen domain0 installation help text - 4/4
-_("<P>When the configuration is successfully finished, it is possible to boot Xen from the boot loader menu.</P>");
+_("<p>When the configuration is successfully finished, it is possible to boot the VM Server from the boot loader menu.</p>");
 
     // error popup
     string error = _("An error occurred during installation.");
@@ -70,7 +70,7 @@ _("<P>When the configuration is successfully finished, it is possible to boot Xe
     // package stage
     Progress::NextStage();
 
-    list<string> packages = ["xen", "kernel-xen", "xen-tools", "xen-tools-ioemu"];
+    list<string> packages = ["xen", "kernel-xen", "xen-libs", "xen-tools", "xen-tools-ioemu"];
     boolean success = true;
     boolean bootloader_modified = false;
 
@@ -128,15 +128,15 @@ _("<P>When the configuration is successfully finished, it is possible to boot Xe
 
     // get all sections
     list sects = Bootloader::getSectionsList(`all);
-    y2milestone("bootloader sections: %1", sects);
+    y2milestone("boot loader sections: %1", sects);
 
-    if (!contains(sects, "XEN"))
+    if (!contains(sects, "xen"))
     {
 	// progressbar title - add missing Xen section to bootloader configuration
 	Progress::Title(_("Adding Xen section..."));
 	BootCommon::sections = add(BootCommon::sections, BootCommon::CreateLinuxSection("xen"));
 	sects = Bootloader::getSectionsList(`all);
-	y2milestone("bootloader sections: %1", sects);
+	y2milestone("boot loader sections: %1", sects);
 	// summary text - item in the task list
 	bootloader_changes = bootloader_changes + _("<LI>Add Xen section to the boot loader menu</LI>");
     }
@@ -175,7 +175,7 @@ _("<P>When the configuration is successfully finished, it is possible to boot Xe
     Progress::Finish();
 
     // popup message - ask user to reboot the machine into Xen kernel
-    Popup::LongMessage(_("The machine is ready to start the Xen management domain.
+    Popup::LongMessage(_("The machine is ready to start the VM Server.
 
 Reboot the machine and select the Xen section in the boot loader menu to start it.
 "));

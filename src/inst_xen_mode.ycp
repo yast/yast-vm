@@ -22,7 +22,7 @@
 
 
     // screen title for the Xen mode selection
-    string title = _("Xen Virtualization");
+    string title = _("Virtualization Mode");
 
     // build and show dialog
     Wizard::OpenAcceptDialog ();
@@ -30,7 +30,7 @@
     term contents = `HBox(
 	`HSpacing(2),
 	`RadioButtonGroup(`id(`rb_group),
-	    `Frame(_("Virtualization Mode"),
+	    `Frame( title,
 		`VBox(
 		    `VSpacing(0.5),
 		    `Left(`RadioButton(`id("para"), _("Paravirtualization (Requires Modified Guest OS)"), VM::GetVirtualizationType() == "para")),
@@ -44,7 +44,7 @@
     );
 
     // help text for virtualization mode setting (1/2)
-    string help_text = _("<p><b>Virtualization Mode</b><br></p>")
+    string help_text = _("<p><b><big>Virtualization Mode</big></b><br></p>")
 	// help text for virtualization mode setting (2/2)
 	+ _("<p>Xen supports two possible virtualization modes:
 paravirtualization and full virtualization.</p>")
@@ -61,7 +61,7 @@ It is possible to install an unmodified guest OS.</p>
 ")
 
 	// help text for virtualization mode setting (5/5)
-	+ _("<p>If the mode is changed, some settings, such as the OS kernel, are reset to default values.</p>");
+	+ _("<p>Not every option is available in each mode. Changing the mode will cause some settings to be reset to default values.</p>");
 
     Wizard::SetContents (title, contents, help_text, true, true);
 
@@ -88,22 +88,12 @@ It is possible to install an unmodified guest OS.</p>
 	{
 	    string selected = (string)(UI::QueryWidget(`id(`rb_group), `CurrentButton));
 
-	    if (selected != VM::GetVirtualizationType())
-	    {
-		// the virtualization type has been changed, reset kernel name to default
-		if (selected == "full")
-		{
-		    VM_Common::SetCustomKernel(true);
-		    VM_Common::SetKernelImage("/usr/lib/xen/boot/hvmloader");
-		    VM_Common::SetInitrdImage("");
-		}
-		else
-		{
-		    VM_Common::SetCustomKernel(false);
-		}
+	    if (selected != VM::GetVirtualizationType()) {
+		VM_Common::SetModified(true);
+		VM::SetVirtualizationType(selected);
+		VM::ResetAllSettings();
 	    }
 
-	    VM::SetVirtualizationType(selected);
 	    break;
 	}
     }

@@ -1,0 +1,92 @@
+/**
+ * Module:	inst_xen_create.ycp
+ *
+ * Authors:	Michael G. Fritch <mgfritch@novell.com>
+ *
+ * Purpose:	Ask user what type of Xen VM to create (new install or use existing).
+ *
+ * $Id: inst_xen_mode.ycp 28754 2006-03-09 12:33:30Z lslezak $
+ *
+ */
+
+{
+
+textdomain "vm";
+
+import "VM_Common";
+import "Wizard";
+import "Popup";
+import "Report";
+import "Label";
+import "Mode";
+
+
+// screen title for the Xen create selection
+string title = _("Create a Virtual Machine");
+
+// build and show dialog
+Wizard::OpenNextBackDialog ();
+
+term contents = `HBox(
+	`HSpacing(2),
+	`RadioButtonGroup(`id(`rb_group),
+		`Frame( _("Method for Installing the VM's Operating System"),
+			`VBox(
+			`VSpacing(0.5),
+			`Left(`RadioButton(`id("new"), _("Run an OS installation program"), (VM_Common::proposal_type != "existing"))),
+			`VSpacing(0.5),
+			`Left(`RadioButton(`id("existing"), _("Use a disk image or a physical disk that contains OS boot files"), (VM_Common::proposal_type == "existing"))),
+			`VSpacing(0.5)
+			)
+		)
+	),
+	`HSpacing(2)
+);
+
+// help text for virtualization creation setting (1/3)
+string help_text = _("<p><b><big>Create a Virtual Machine</big></b><br></p>")
+	// help text for virtualization creation setting (2/3)
+	+ _("<p>This module lets you create a virtual machine to run on the VM Server.  You can set up a VM's operating system in one of two ways:  (1) run an OS installation program or (2) use a disk image or an entire disk containing OS boot files.</p>")
+
+	// help text for virtualization creation setting (3/3)
+	+ _("<p>A virtual machine (VM) is an instance of virtual hardware, such as CPU, memory, network card, and block devices, and the operating system that runs on it.</p>");
+
+
+Wizard::SetContents (title, contents, help_text, false, true);
+
+symbol ret = nil;
+while (true) {
+
+	ret = (symbol) Wizard::UserInput();
+	
+	if (ret == `abort || ret == `cancel) {
+		if (Popup::ReallyAbort(VM_Common::GetModified()))
+			break;
+	}
+	else if (ret == `back) {
+		break;
+	}
+	else if (ret == `next) {
+		string selected = (string)(UI::QueryWidget(`id(`rb_group), `CurrentButton));
+		if (selected == "new")
+			ret = `install;
+		else if (selected == "existing")
+			ret = `existing;
+		else {
+			Report::Error(_("At least one item must be selected."));
+			continue;
+		}
+		break;
+	}
+	else {
+		y2error("unexpected retcode: %1", ret);
+		continue;
+	}
+
+}
+
+Wizard::CloseDialog();
+return ret;
+
+/* EOF */
+}

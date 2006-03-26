@@ -51,13 +51,28 @@
     }
     else if ( func == "Description" )
     {
-	ret = $[
-		// this is a heading
-		"rich_text_title"	: _("Operating System"),
-		// this is a menu entry
-		"menu_title"		: _("Operating &System"),
-		"id"			: "vm_source_stuff"
-	];
+
+	if (VM_Common::proposal_type == "install") {
+		ret = $[
+			// this is a heading
+			"rich_text_title"	: _("Operating System Installation"),
+			// this is a menu entry
+			"menu_title"		: _("Operating &System Installation"),
+			"id"			: "vm_source_stuff"
+		];
+	}
+	else if (VM::GetVirtualizationType() == "para") {
+		ret = $[
+			// this is a heading
+			"rich_text_title"	: _("Operating System Boot"),
+			// this is a menu entry
+			"menu_title"		: _("Operating &System Boot"),
+			"id"			: "vm_source_stuff"
+		];
+	}
+	else {
+		ret = $[];
+	}
     }
 
     return ret;

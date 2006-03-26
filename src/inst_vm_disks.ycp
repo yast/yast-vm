@@ -2,6 +2,7 @@
  * Module:	inst_vm_disks.ycp
  *
  * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *		Michael G. Fritch <mgfritch@novell.com>
  *
  * Purpose:	Ask the user for virtual disks configuration.
  *
@@ -12,115 +13,178 @@
     textdomain "vm";
 
     import "VM";
+    import "VM_Common";
     import "Label";
     import "Popup";
     import "Wizard";
     import "Report";
     import "Sequencer";
 
-    // dialog title - virtual disk configuration
-    string title = _("Virtual Disks");
 
     list<map<string,any> > disks = VM::GetDiskConfig();
-
     integer selected_disk = nil;
 
-    define map<string,any> ask_size (string device, integer s, boolean sparse, boolean ro) ``{
 
-	map<string,any> ret = nil;
+    /**
+    * Disk type dialog - choose type of disk to add: new loopback, existing loopback, or block device (physical)
+    * @return dialog result
+    */
+    define symbol DiskTypeDialog() {
 
-	string help_text = _("<P><B>Create Virtual Disk Image</B></P><P>YaST
-creates a new disk image of the specified size.</P>
-") +
+	string caption = _("Add Virtual Disk");
 
-_("<P><B>Virtual Machine Device</B> is the name of the virtual disk inside the virtual machine.</P>") +
+	term contents = 
+		`MarginBox(1.5, 0.2,
+			`RadioButtonGroup(`id(`rbg),
+				`Frame( caption,
+					`VBox(
+						`VSpacing(0.5),
+						`Left(`RadioButton(`id(`create), _("&Create New Disk Image"), true)),
+						`VSpacing(0.5),
+						`Left(`RadioButton(`id(`use), _("&Use Existing Disk Image"))),
+						`VSpacing(0.5),
+						`Left(`RadioButton(`id(`block), _("&Use Block Device"))),
+						`VSpacing(0.5)
+					)
+				)
+			)
+		);
 
-_("<P>The image can be configured read-only. In this case, the virtual
-machine cannot modify the image in any way.</P>
-") +
+	// help text
+	string help_text = sformat(_("<p><b><big>%1</big></b></p><p>You may create a new disk image, use an existing disk image, or use a block device.</p>"), caption);
 
-	_("<P>It is possible to create a <B>sparse image
-file</B> that dynamically allocates disk space when it is needed.</P>
-");
+	Wizard::SetContents(caption, contents, help_text, true, true);
+
+	symbol ui = `dummy;
+
+	while(!contains([`next, `back, `abort, `cancel], ui)) {
+		ui = (symbol) UI::UserInput();
+		if (ui == `abort || ui == `cancel) {
+			if (!Popup::ReallyAbort(VM_Common::GetModified()))
+				ui = `again;
+		}
+	}
+
+	if (ui == `next) {
+		ui = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton);
+	}
+
+	return ui;
+    }
 
 
+
+    /**
+    * Add(create) an new loopback image
+    * @param device target device in a VM
+    * @param size of the device (in MB)
+    * @param space true = create a space image file
+    * @param ro true = read-only access, false = read/write access
+    * @return map<string, any>
+    */
+    define map<string,any> AddNewLoopBackDialog (string device, string prefix, integer s, boolean sparse, boolean ro) ``{
+
+	list<string> valid_virtual_devices = VM::GetValidVirtualDevices(VM::GetConfiguredDiskTargets(disks));
+
+	string caption = _("Virtual Disk Image Creation");
 
 	term contents =
-	`VBox(
-	`Frame(_("Disk Configuration"),
 		`MarginBox(1.5, 0.2,
-			// heading in a popup dialog
-			`VBox(
-			      `ComboBox(`id(`size), `opt(`editable,`hstretch),
-					// combobox label
-					_("&Disk Size in MB:"),
-					["1024", "2048", "4096", "8192"]),
-			      `VSpacing(0.5),
-			      (VM::GetVMMtype() == "xen") ?
-				  // label - disk device widget (enter /dev/hda1, /dev/sdb3...)
-				  `TextEntry(`id(`device), `opt(`hstretch), _("&Virtual Machine Device"), device)
-			      : `Empty(),
-
-			      `VBox(
-
-			      `VSpacing(0.5),
-			      `Left(`CheckBox(`id(`ro), _("&Read-Only Access"), ro)),
-			      `VSpacing(0.5),
-			      `Left(`CheckBox(`id(`sparse), _("Create &Sparse Image File"), sparse)),
-			      `VSpacing(0.2)
-			      ))
+			`Frame(caption,
+				`MarginBox(1.5, 0.2,
+					`VBox(
+						`ComboBox(`id(`device), `opt(`editable,`hstretch),
+							// combobox label - the device name as it appers to the virtual machine
+							_("&Virtual Disk"),
+							valid_virtual_devices),
+						// label - directory where the disk image will be created
+						`TextEntry(`id(`dir), `opt(`hstretch), _("&Disk Image Directory"), prefix),
+						`ComboBox(`id(`size), `opt(`editable,`hstretch),
+							// combobox label
+							_("Maximum &Size in MB"),
+							["1024", "2048", "4096", "8192"]),
+						`VSpacing(1.5),
+						`Left(`CheckBox(`id(`sparse), _("Create &Sparse Image File"), sparse)),
+						`Left(`CheckBox(`id(`ro), _("&Read-Only Access"), ro)),
+						`VSpacing(0.2)
+					)
+				)
 			)
-		),
-	`VSpacing(1),
-	`Frame(_("Location of Disk Images"),
-		`MarginBox(1.5, 0.2,
-		    // label - directory where the disk image will be created
-		    `TextEntry(`id(`dir), `opt(`hstretch), _("&Create Images in Directory"), VM::GetImgPrefix())
-		)
-		)
-	);
+		);
 
-	Wizard::SetContents(_("Virtual Disk Configuration"), contents, help_text, true, true);
 
+	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	help_text = help_text + _("<p><b>Virtual disk</b> describes how the virtual disk appears to the virtual machine. This controls the ordering of virtual disks within the VM, and is specified using the Linux naming convention.</p>");
+	help_text = help_text + _("<p>The disk image file will be created in the <b>disk image directory</b> with the specified <b>maximum size</b>. A <b>sparse image file</b> only allocates disk space as it is needed.</p>");
+	help_text = help_text + _("<p>Virtual disks can be safely shared among multiple VMs only if every use of the disk is marked <b>read-only</b>. If it is read-only, it cannot be modified by the VM.</p>");
+
+	Wizard::SetContents(caption, contents, help_text, true, true);
+
+	UI::ChangeWidget (`id(`device), `Value, device);
+	UI::ChangeWidget (`id(`device), `InputMaxLength, 255);
 	UI::ChangeWidget (`id(`size), `ValidChars, "0123456789");
 	UI::ChangeWidget (`id(`size), `Value, tostring (s));
 
+	map<string,any> ret = nil;
+
 	symbol ui = `dummy;
-	while(!contains([`next, `accept, `back, `abort, `cancel], ui))
-	{
+	while(!contains([`next, `accept, `back, `abort, `cancel], ui)) {
+
 	    ui = (symbol) UI::UserInput();
 	    y2debug("ui: %1", ui);
 
-	    if (ui == `next || ui == `accept)
-	    {
+	    if (ui == `abort || ui == `cancel) {
+		if (!Popup::ReallyAbort(VM_Common::GetModified()))
+			ui = `again;
+	    }
+	    else if (ui == `next || ui == `accept) {
 		boolean sparse_file = (boolean) UI::QueryWidget (`id(`sparse), `Value);
-		string dev = (VM::GetVMMtype() == "xen") ? (string) UI::QueryWidget (`id(`device), `Value) : "";
+		string dev = (string) UI::QueryWidget (`id(`device), `Value);
+		string new_dir = (string) UI::QueryWidget (`id(`dir), `Value);
 		string sz = (string)UI::QueryWidget (`id(`size), `Value);
 		integer sz_int = tointeger(sz) ;
 		boolean new_ro = (boolean) UI::QueryWidget (`id(`ro), `Value);
 
-		if (dev == nil || dev == "")
-		{
+		if (dev == nil || dev == "") {
 		    // error message
-		    Report::Error(_("Device name cannot be empty."));
+		    Report::Error(_("The Virtual Disk field cannot be left empty."));
 		    ui = `again;
 		}
-		else if (sz_int == nil)
-		{
+
+		// make sure the dev has not already been defined for another virtual disk...
+		list<string> used_devices = VM::GetConfiguredDiskTargets(disks);
+		if (contains(used_devices, dev) && ui != `again) {
+			Report::Error(_("The Virtual Disk has already been used
+with another configured virtual disk image.
+
+Please select a different Virtual Disk."));
+			ui = `again;
+		}
+
+		if ((new_dir == nil || substring(new_dir, 0, 1) != "/") && ui != `again) {
 		    // error message
-		    Report::Error(_("Device size is invalid."));
+		    Report::Error(_("The Disk Image Directory must be an absolute path."));
 		    ui = `again;
 		}
-		else
-		{
+
+		if ((sz_int == nil || sz_int == 0) && ui != `again) {
+		    // error message
+		    Report::Error(_("An invalid disk size was specified."));
+		    ui = `again;
+		}
+
+		if (!contains(valid_virtual_devices, dev) && ui != `again) {
+		    if (!Popup::ContinueCancelHeadline(_("Warning"), _("The Virtual Disk might not be a supported virtual device.")))
+			ui = `again;
+		}
+
+		if (ui == `next || ui == `accept) { // no input errors
 		    ret = $[ "size" : sz_int, "sparse" : sparse_file, "type" : "loop-create", "ro" : new_ro ];
 
 		    if (VM::GetVMMtype() == "xen") {
 			ret = add(ret, "target", dev);
+			ret = add(ret, "prefix", new_dir);
 			ret = add(ret, "source", dev);
-
-			string new_dir = (string) UI::QueryWidget (`id(`dir), `Value);
-			VM::SetImgPrefix(new_dir);
 		    }
 		}
 	    }
@@ -130,77 +194,126 @@ file</B> that dynamically allocates disk space when it is needed.</P>
 	return ret;
     }
 
-    define map<string,any> UseLoopBackDialog(string device, string source, boolean ro) ``{
+
+    /**
+    * Add an existing loopback image
+    * @param device target device in a VM
+    * @param source image file
+    * @param ro true = read-only access, false = read/write access
+    * @return map<string, any>
+    */
+    define map<string,any> AddExistingLoopBackDialog(string device, string source, boolean ro) ``{
+
+	list<string> valid_virtual_devices = VM::GetValidVirtualDevices(VM::GetConfiguredDiskTargets(disks));
+
+	string caption = _("Virtual Disk Image Configuration");
+
+	term contents = 
+		`MarginBox(1.5, 0.2,
+			`Frame(caption,
+				`MarginBox(1.5, 0.2,
+					// heading in a popup dialog
+					`VBox(
+						`ComboBox(`id(`device), `opt(`editable,`hstretch),
+							// combobox label - the device name as it appers to the virtual machine
+							_("&Virtual Disk"),
+							valid_virtual_devices),
+						`HBox(
+							`TextEntry(`id(`source), `opt(`hstretch), _("&Disk Image File"), source),
+							`HSpacing(1),
+							`VBox(
+								`Label(""),
+								`PushButton(`id(`select_file), _("&Select Image..."))
+							)
+						),
+						`VSpacing(1.5),
+						`Left(`CheckBox(`id(`ro), _("&Read-Only Access"), ro)),
+						`VSpacing(0.2)
+					)
+				)
+			)
+		);
+
+	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	help_text = help_text + _("<p><b>Virtual disk</b> describes how the virtual disk appears to the virtual machine. This controls the ordering of virtual disks within the VM, and is specified using the Linux naming convention.</p>");
+	help_text = help_text + _("<p>The <b>disk image file</b> is an existing image file to be used by the VM.</p>");
+	help_text = help_text + _("<p>Virtual disks can be safely shared among multiple VMs only if every use of the disk is marked read-only. If it is <b>read-only</b>, it cannot be modified by the VM.</p>");
+
+	Wizard::SetContents(caption, contents, help_text, true, true);
+
+	UI::ChangeWidget (`id(`device), `Value, device);
+	UI::ChangeWidget (`id(`device), `InputMaxLength, 255);
 
 	map<string,any> ret = nil;
 
-	string help_text = _("<P><B>Use Virtual Disk Image</B>: An existing disk image can used by the virtual machine.</P>") +
-
-_("<P>The image can be configured read-only. In this case, the virtual
-machine cannot modify the image in any way.</P>
-") +
-
-_("<P><B>Virtual Machine Device</B> is the name of the virtual disk inside the virtual machine.</P>");
-
-	term contents = `Frame(_("Disk Configuration"),
-	    `MarginBox(1.5, 0.2,
-		// heading in a popup dialog
-		`VBox(
-		    `HBox(
-			`TextEntry(`id(`source), `opt(`hstretch), _("&Disk Image File"), source),
-			`HSpacing(1),
-			`VBox(
-			    `Label(""),
-			    `PushButton(`id(`select_file), _("Select Image..."))
-			)
-		    ),
-		    `VSpacing(0.5),
-		    (VM::GetVMMtype() == "xen") ?
-			// label - disk device widget (enter /dev/hda1, /dev/sdb3...)
-			`TextEntry(`id(`device), `opt(`hstretch), _("&Virtual Machine Device"), device)
-		    : `Empty(),
-
-		    `VSpacing(0.5),
-		    `Left(`CheckBox(`id(`ro), _("&Read-Only Access"), ro)),
-		    `VSpacing(0.2)
-		)
-	    )
-	);
-
-	Wizard::SetContents(_("Virtual Disk Configuration"), contents, help_text, true, true);
-
 	symbol ui = `dummy;
-	while(!contains([`next, `accept, `back, `abort, `cancel], ui))
-	{
+	while(!contains([`next, `accept, `back, `abort, `cancel], ui)) {
+
 	    ui = (symbol) UI::UserInput();
 	    string new_src = (string) UI::QueryWidget (`id(`source), `Value);
 
-	    if (ui == `next || ui == `accept)
-	    {
-		string dev = (VM::GetVMMtype() == "xen") ? (string) UI::QueryWidget (`id(`device), `Value) : "";
+	    if (ui == `abort || ui == `cancel) {
+		if (!Popup::ReallyAbort(VM_Common::GetModified()))
+			ui = `again;
+	    }
+	    else if (ui == `next || ui == `accept) {
+		string dev = (string) UI::QueryWidget (`id(`device), `Value);
 		boolean new_ro = (boolean) UI::QueryWidget (`id(`ro), `Value);
 
-		if (dev == nil || dev == "")
-		{
+		if (dev == nil || dev == "") {
 		    // error message
-		    Report::Error(_("Device name cannot be empty."));
+		    Report::Error(_("The Virtual Disk field cannot be left empty."));
 		    ui = `again;
 		}
-		else if (new_src == nil || new_src == "")
-		{
+
+		// make sure the dev has not already been defined for another virtual disk...
+		list<string> used_devices = VM::GetConfiguredDiskTargets(disks);
+		if (contains(used_devices, dev) && ui != `again) {
+			Report::Error(_("The Virtual Disk has already been used
+with another configured virtual disk image.
+
+Please, select a different Virtual Disk."));
+			ui = `again;
+		}
+
+		if ((new_src == nil || new_src == "") && ui != `again) {
 		    // error message
-		    Report::Error(_("Source file name is missing."));
+		    Report::Error(_("The Disk Image File field cannot be left empty."));
 		    ui = `again;
 		}
-		else
-		{
+
+		if ((new_src == nil || substring(new_src, 0, 1) != "/") && ui != `again) {
+		    // error message
+		    Report::Error(_("The Disk Image File must be an absolute path."));
+		    ui = `again;
+		}
+
+		if (ui != `again) {
 		    // check whether the file exists
-		    if ((integer)SCR::Read(.target.size, new_src) < 0)
-		    {
-			// %1 is file name
-			Report::Error(sformat(_("File %1 does not exist."), new_src));
-			continue;
+		    if ((integer)SCR::Read(.target.size, new_src) < 0) {
+			Report::Error(_("The specified Disk Image File does not exist."));
+			ui = `again;
 		    }
+		    else if (! new_ro) {
+			// If file is read-only in the filesystem, the user must check read-only
+			integer i = (integer)SCR::Execute(.target.bash, sformat("stat --format=%%A %1| grep -q w", new_src));
+			if (i != 0) {
+			    // File is read-only; UI specified read-write.
+			    if (!Popup::ContinueCancelHeadline(_("Warning"), _("The Disk Image File is read-only in the filesystem,
+so it will be exported to the VM as read-only.")))
+				ui = `again;
+			    else
+				new_ro = true;
+			}
+		    }
+		}
+
+		if (!contains(valid_virtual_devices, dev) && ui != `again) {
+		    if (!Popup::ContinueCancelHeadline(_("Warning"), _("The Virtual Disk might not be a supported virtual device.")))
+			ui = `again;
+		}
+
+		if (ui == `next || ui == `accept) { // no input errors
 		    ret = $[ "source" : new_src, "type" : "loop-use", "ro" : new_ro ];
 
 		    if (VM::GetVMMtype() == "xen") {
@@ -208,12 +321,9 @@ _("<P><B>Virtual Machine Device</B> is the name of the virtual disk inside the v
 		    }
 		}
 	    }
-	    else if (ui == `select_file)
-	    {
+	    else if (ui == `select_file) {
 		new_src = UI::AskForExistingFile(new_src, "*", _("Select Disk Image"));
-
-		if (new_src != nil)
-		{
+		if (new_src != nil) {
 		    UI::ChangeWidget(`id(`source), `Value, new_src);
 		}
 	    }
@@ -223,91 +333,126 @@ _("<P><B>Virtual Machine Device</B> is the name of the virtual disk inside the v
 	return ret;
     }
 
+
     /**
-     * Popup dialog - disk configuration
-     * @param device target device in a VM
-     * @param phys source (physical) device (in dom0)
-     * @param ro true = read only access, false = read/write access
-     */
-    define map<string,any> ask_disk(string device, string phys, boolean ro) ``{
+    * Add a block device (in dom0)
+    * @param device target device in a VM
+    * @param phys source (physical) device (in dom0)
+    * @param ro true = read-only access, false = read/write access
+    * @return map<string, any>
+    */
+    define map<string,any> AddBlockDeviceDialog(string device, string phys, boolean ro) ``{
 
 	list<map> devmap = (list<map>)SCR::Read(.proc.partitions);
 	y2milestone("current partitions (/proc/partitions): %1", devmap);
 
-	list<term> devs = [];
+	list<string> valid_phys_devices = [];
+	list<term> valid_phys_devices_term = [];
 
-	if (devmap != nil)
-	{
-	    foreach(map d, devmap, {
-		    string name = d["name"]:"";
-
-		    if (name != nil && name != "")
-		    {
-			devs = add(devs, `item(`id(name), "/dev/" + name));
-		    }
-		}
-	    );
+	// generate a list of valid block devices (in dom0)
+	if (devmap != nil) {
+		foreach(map d, devmap, {
+			string name = d["name"]:"";
+			if (name != nil && name != "") {
+				name = "/dev/" + name;
+				valid_phys_devices_term = add(valid_phys_devices_term, `item(`id(name), name));
+				valid_phys_devices = add(valid_phys_devices, name);
+			}
+		});
 	}
 
-	string help_text = _("<P><B>Block Device</B>: The virtual machine can use only block devices accessible from domain 0.</P>") +
+	list<string> valid_virtual_devices = VM::GetValidVirtualDevices(VM::GetConfiguredDiskTargets(disks));
 
-_("<P><B>Virtual Machine Device</B> is the name of the virtual device presented to the virtual machine.") +
-
-_("<P>The block device can be configured <B>read-only</B>. In this case, the virtual
-machine cannot modify the device in any way.</P>
-");
-
-
-
+	string caption = _("Virtual Disk Configuration");
 
 	term contents =
+		`MarginBox(1.5, 0.2,
+			`Frame(caption,
+				`MarginBox(1.5, 0.2,
+					// heading in a popup dialog
+					`VBox(
+						`ComboBox(`id(`device), `opt(`editable,`hstretch),
+							// combobox label - the device name as it appers to the virtual machine
+							_("&Virtual Disk"),
+							valid_virtual_devices),
+						`ComboBox(`id(`phys), `opt(`editable, `hstretch), 
+							// combobox label - the block device to use (in dom0)
+							_("Block Device"),
+							valid_phys_devices_term),
+						`VSpacing(1.5),
+						`Left(`CheckBox(`id(`ro), _("&Read-Only Access"), ro)),
+						`VSpacing(0.2)
+					)
+				)
+			)
+		);
 
-	`Frame(_("Disk Configuration"),
-		`MarginBox(2, 0.3,
-			// heading in a popup dialog
-			`VBox(
-			    `ComboBox(`id(`phys), `opt(`editable, `hstretch), _("Block Device (Source)"), devs),
-			    `VSpacing(0.8),
-			    // label - disk device widget (enter /dev/hda1, /dev/sdb3...)
-			    `TextEntry(`id(`device), `opt(`hstretch), _("&Virtual Machine Device (Target)"), device),
+	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	help_text = help_text + _("<p><b>Virtual disk</b> describes how the virtual disk appears to the virtual machine. This controls the ordering of virtual disks within the VM, and is specified using the Linux naming convention.</p>");
+	help_text = help_text + _("<p>The <b>block device</b> is a block device on the VM Server.</p>");
+	help_text = help_text + _("<p>Virtual disks can be safely shared among multiple VMs only if every use of the disk is marked read-only. If it is <b>read-only</b>, it cannot be modified by the VM.</p>");
 
-			    `VSpacing(1),
-			    `Left(`CheckBox(`id(`ro), _("&Read-Only Access"), ro)),
-			    `VSpacing(0.8)
-			  )
-		    ));
+	Wizard::SetContents(caption, contents, help_text, true, true);
 
-	Wizard::SetContents(_("Virtual Disk Configuration"), contents, help_text, true, true);
+	UI::ChangeWidget (`id(`device), `Value, device);
+	UI::ChangeWidget (`id(`device), `InputMaxLength, 255);
 	UI::ChangeWidget(`id(`phys), `Value, phys);
+	UI::ChangeWidget (`id(`phys), `InputMaxLength, 255);
 
-	symbol s = `dummy;
 	string new_dev = "";
 	string new_phys = "";
 
-	while(!contains([`next, `back, `abort, `cancel], s))
-	{
-	    s = (symbol) UI::UserInput();
+	symbol ui = `dummy;
+	while(!contains([`next, `back, `abort, `cancel], ui)) {
 
-	    if (s == `next)
-	    {
+	    ui = (symbol) UI::UserInput();
+
+	    if (ui == `abort || ui == `cancel) {
+		if (!Popup::ReallyAbort(VM_Common::GetModified()))
+			ui = `again;
+	    }
+	    else if (ui == `next) {
 		new_dev = (string) UI::QueryWidget (`id(`device), `Value);
 		new_phys = (string) UI::QueryWidget (`id(`phys), `Value);
 
-		if (new_phys == "" || new_dev == "")
-		{
+		if (new_dev == nil || new_dev == "") {
 		    // error message
-		    Report::Error(_("Device name cannot be empty."));
-		    s = `again;
+		    Report::Error(_("The Virtual Disk field cannot be left empty."));
+		    ui = `again;
 		}
+
+		// make sure the dev has not already been defined for another virtual disk...
+		list<string> used_devices = VM::GetConfiguredDiskTargets(disks);
+		if (contains(used_devices, new_dev) && ui != `again) {
+			Report::Error(_("The Virtual Disk has already been used
+with another configured virtual disk image.
+
+Please select a different Virtual Disk."));
+			ui = `again;
+		}
+
+		if ((new_phys == nil || new_phys == "") && ui != `again) {
+		    // error message
+		    Report::Error(_("The Block Device field cannot be left empty."));
+		    ui = `again;
+		}
+
+		if (!contains(valid_virtual_devices, new_dev) && ui != `again) {
+		    if (!Popup::ContinueCancelHeadline(_("Warning"), _("The Virtual Disk might not be a supported virtual device.")))
+			ui = `again;
+		}
+
+		if (!contains(valid_phys_devices, new_phys) && ui != `again) {
+			if (!Popup::ContinueCancelHeadline(_("Warning"), _("The Block Device might not be a valid block device in domain 0.")))
+				ui = `again;
+		}
+		
 	    }
 	}
 
 	boolean new_ro = (boolean) UI::QueryWidget (`id(`ro), `Value);
 
-//	UI::CloseDialog();
-
-	if (s != `next)
-	{
+	if (ui != `next) {
 	    return nil;
 	}
 
@@ -317,53 +462,14 @@ machine cannot modify the device in any way.</P>
 	return ret;
     }
 
-    /**
-     * Popup dialog - disk configuration
-     * @param device target device in a VM
-     * @param phys source (physical) device (in dom0)
-     * @param ro true = read only access, false = read/write access
-     */
-    define symbol LoopbackTypeDialog() {
-
-	// help text
-	string help_text = _("<P><B>Loopback File Configuration</B></P><P>An existing disk image can be assigned to the virtual machine or it is possible to create a new empty disk image.</P>");
-
-	term contents =
-	    `Frame(_("Disk Image"),
-		`MarginBox(2, 0.3,
-		    // heading in a popup dialog
-		    `RadioButtonGroup(`id(`rbg),
-			`VBox(
-			    `VSpacing(1),
-			    `Left(`RadioButton(`id(`create), _("&Create New Disk Image"), true)),
-			    `VSpacing(1),
-			    `Left(`RadioButton(`id(`use), _("&Use Existing Disk Image"))),
-			    `VSpacing(0.8)
-			)
-		    )
-		)
-	    );
-
-	Wizard::SetContents(_("Configuration of Disk Image"), contents, help_text, true, true);
-
-	symbol s = `dummy;
-
-	while(!contains([`next, `back, `abort, `cancel], s))
-	{
-	    s = (symbol) UI::UserInput();
-	}
-
-	if (s == `next)
-	{
-	    s = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton);
-	}
-
-	return s;
-    }
 
 
-    define void refresh_table(list<map<string,any> > disks)
-    {
+/**
+ * Redraw the DiskOverview table
+ * @param list<map<string,any> > containing all the current disk settings
+ * @return void
+ */
+    define void refresh_table(list<map<string,any> > disks) {
 	integer id_cnt = 0;
 	list <term> d = [];
 	list<map> devmap = (list<map>)SCR::Read(.proc.partitions);
@@ -406,11 +512,17 @@ machine cannot modify the device in any way.</P>
 
 		if (m["type"]:"" == "loop-create")
 		{
-		    prefix = VM::GetImgPrefix() + VM::GetConfigName() + "/";
+		    prefix = m["prefix"]:VM::GetImgPrefix();
+		    if (findlastof(prefix, "/") < size(prefix)-1) { // no ending /
+			prefix = sformat("%1/%2/", m["prefix"]:VM::GetImgPrefix(), VM::GetConfigName());
+		    }
+		    else {
+			prefix = sformat("%1%2/", m["prefix"]:VM::GetImgPrefix(), VM::GetConfigName());
+		    }
 		}
 		else if (m["type"]:"" == "phys")
 		{
-		    prefix = "/dev/";
+		    prefix = "";
 		}
 
 		d = add(d, `item (`id(id_cnt), m["target"]:"", prefix + m["source"]:"", sz, (m["ro"]:false) ? UI::Glyph(`CheckMark) : "", (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
@@ -424,63 +536,60 @@ machine cannot modify the device in any way.</P>
 	UI::ChangeWidget (`id(`disks), `Items, d);
     }
 
+
+/**
+ * Display an overview table containing a list of configured disks, with add, edit, and delete buttons
+ * @return dialog result
+ */
 define symbol DiskOverview() {
     // build and show dialog
 
-    term heading = (VM::GetVMMtype() == "uml") ?
-		// table - column heading
-		`header (`Right(_("Disk Size (MB)")), `Center(_("Sparse File")))
-	    :
-		// table - column heading
-		`header (_("Virtual Device"), _("Source"), `Right(_("Disk Size (MB)")), `Center(_("Read Only")), `Center(_("Sparse File")));
+    // dialog title - virtual disk configuration
+    string caption = _("Virtual Disks");
 
-    term contents = `VBox(
-			`Table(`id(`disks),
-			    heading, []
-			),
-			`HBox(
-			    // add dots - %1 is translated 'Add' button label
-			    `MenuButton (sformat(_("%1..."), Label::AddButton()),
-			    // Menu item
-				[ `item(`id(`add_loop), _("Add Loopback Device...")), `item(`id(`add_phys), _("Add Block Device...")) ]),
-			    `PushButton (`id (`edit), Label::EditButton()),
-			    `PushButton (`id (`delete), Label::DeleteButton())
+    // table - column heading
+    term heading = `header (_("Virtual Disk"), _("Source"), `Right(_("Disk Size (MB)")), `Center(_("Read-Only")), `Center(_("Sparse File")));
+
+    term contents =
+		`MarginBox(1.5, 1,
+			`VBox(
+				`Table(`id(`disks), heading, []),
+				`HBox(
+					`PushButton (`id (`add), Label::AddButton()),
+					`PushButton (`id (`edit), Label::EditButton()),
+					`PushButton (`id (`delete), Label::DeleteButton())
+				)
 			)
-		    );
+		);
+
 
     // help text for disk setup
-    string help_text = _("<P><B>Virtual Disk Setup<B></P>")
-    + _("<P>Here, configure number and size of virtual disks.
-The content of each virtual disk is stored in a file in the host system.</P>
-");
+    string help_text = sformat(_("<p><b><big>%1</big><b></p>"), caption);
+    help_text = help_text + _("<p>Each virtual machine can have a number of virtual disks. The storage for these virtual disks comes from either a file or a block device on the VM Server.</p>");
 
-    // TODO: add sparse option help text
-
-    Wizard::SetContents (title, contents, help_text, true, true);
+    Wizard::SetContents (caption, contents, help_text, true, true);
     Wizard::SetNextButton(`next, Label::OKButton());
 
     refresh_table(disks);
 
     symbol ret = nil;
 
-    while (true)
-    {
+    while (true) {
+
 	ret = (symbol) Wizard::UserInput();
 
-	if (ret == `abort && Popup::ConfirmAbort (`painless))
+	if (ret == `abort || ret == `cancel) {
+		if (Popup::ReallyAbort(VM_Common::GetModified()))
+			break;
+	}
+	else if (ret == `back || ret == `add) {
 	    break;
-
-	if (ret == `cancel || ret == `back || ret == `add_loop || ret == `add_phys)
-	    break;
-
-	if (ret == `edit)
-	{
+	}
+	else if (ret == `edit) {
 	    selected_disk = (integer) UI::QueryWidget (`id(`disks), `CurrentItem);
 	    break;
 	}
-
-	if (ret == `delete)
-	{
+	else if (ret == `delete) {
 	    integer id = (integer) UI::QueryWidget (`id(`disks), `CurrentItem);
 
 	    if (id != nil)
@@ -500,9 +609,7 @@ The content of each virtual disk is stored in a file in the host system.</P>
 		refresh_table(disks);
 	    }
 	}
-
-	if (ret == `next)
-	{
+	else if (ret == `next) {
 	    if (size (disks) <= 0)
 	    {
 		// error popup
@@ -514,6 +621,10 @@ The content of each virtual disk is stored in a file in the host system.</P>
 	    VM::SetDiskConfig(disks);
 	    break;
 	}
+	else {
+		y2error("unexpected retcode: %1", ret);
+		continue;
+	}
     }
 
     Wizard::RestoreNextButton();
@@ -522,8 +633,8 @@ The content of each virtual disk is stored in a file in the host system.</P>
 }
 
 
-symbol AddLoopBack() {
-    map<string,any> m = ask_size("", 1024, true, false);
+symbol AddNewLoopBack() {
+    map<string,any> m = AddNewLoopBackDialog("", VM::GetImgPrefix(), 4096, true, false);
     symbol ret = `back;
 
     if (m != nil)
@@ -532,13 +643,13 @@ symbol AddLoopBack() {
 	ret = `next;
     }
 
-    y2milestone("AddLoopBack: %1", ret);
+    y2milestone("AddNewLoopBack: %1", ret);
 
     return ret;
 }
 
-symbol AddImageLoopBack() {
-    map<string,any> m = UseLoopBackDialog("", "", false);
+symbol AddExistingLoopBack() {
+    map<string,any> m = AddExistingLoopBackDialog("", "", false);
     symbol ret = `back;
 
     if (m != nil)
@@ -547,13 +658,13 @@ symbol AddImageLoopBack() {
 	ret = `next;
     }
 
-    y2milestone("AddImageLoopBack: %1", ret);
+    y2milestone("AddExistingLoopBack: %1", ret);
 
     return ret;
 }
 
-symbol AddPhysical() {
-    map<string,any> m = ask_disk("hda", "", true);
+symbol AddBlockDevice() {
+    map<string,any> m = AddBlockDeviceDialog("", "", false);
 
     symbol ret = `back;
 
@@ -563,53 +674,62 @@ symbol AddPhysical() {
 	ret = `next;
     }
 
-    y2milestone("AddPhysical: %1", ret);
+    y2milestone("AddBlockDevice: %1", ret);
 
     return ret;
 }
 
+
+/**
+ * Edit a select disk in the disk overview table
+ * @return dialog result
+ */
 symbol EditDisk() {
     if (selected_disk != nil)
     {
-	// check whether the current disk is physical or loopback mounted
-
 	map<string,any> d = disks[selected_disk]:$[];
+	map<string,any> new_disk = nil;
+
+	// Temporarily remove the selected disk, to avoid false warnings.
+	disks[selected_disk] = $[];
 
 	if (d["type"]:"" == "phys")
 	{
-	    d = ask_disk(d["target"]:"", d["source"]:"", d["ro"]:true);
+	    new_disk = AddBlockDeviceDialog(d["target"]:"", d["source"]:"", d["ro"]:false);
 	}
 	else if (d["type"]:"" == "loop-create")
 	{
-	    d = ask_size(d["target"]:"", d["size"]:0, d["sparse"]:false, d["ro"]:false);
+	    new_disk = AddNewLoopBackDialog(d["target"]:"", d["prefix"]:VM::GetImgPrefix(), d["size"]:4096, d["sparse"]:false, d["ro"]:false);
 	}
 	else if (d["type"]:"" == "loop-use")
 	{
-	    d = UseLoopBackDialog(d["target"]:"", d["source"]:"", d["ro"]:false);
+	    new_disk = AddExistingLoopBackDialog(d["target"]:"", d["source"]:"", d["ro"]:false);
 	}
 	else
 	{
 	    y2error("Unknown disk type %1", d["type"]:"");
 	}
 
-	if (d != nil)
-	{
+	if (new_disk != nil)
+	    disks[selected_disk] = new_disk;
+	else
 	    disks[selected_disk] = d;
 	}
-    }
 
     return `next;
 }
+
+
 
 
     Wizard::OpenNextBackDialog();
 
     map aliases = $[
 	    "DiskOverview"	: ``(DiskOverview()),
-	    "AddLoopBack"	: ``(AddLoopBack()),
-	    "AddImageLoopBack"	: ``(AddImageLoopBack()),
-	    "LoopBackType"	: ``(LoopbackTypeDialog()),
-	    "AddPhysical"	: ``(AddPhysical()),
+	    "AddNewLoopBack"	: ``(AddNewLoopBack()),
+	    "AddExistingLoopBack"	: ``(AddExistingLoopBack()),
+	    "DiskType"		: ``(DiskTypeDialog()),
+	    "AddBlockDevice"	: ``(AddBlockDevice()),
 	    "EditDisk"		: ``(EditDisk()),
 	];
 
@@ -618,36 +738,36 @@ symbol EditDisk() {
 	    "DiskOverview"	:
 		$[
 		    `next	    :	`next,
-		    `add_loop	    :	"LoopBackType",
-		    `add_phys	    :	"AddPhysical",
+		    `add	    :	"DiskType",
 		    `edit	    :	"EditDisk",
-		    `abort	    :   `abort
+		    `abort	    :	`abort
 		],
-	    "LoopBackType"	:
+	    "DiskType"		:
 		$[
-		    `create	    :	"AddLoopBack",
-		    `use	    :   "AddImageLoopBack",
-		    `abort	    :   `abort
+		    `create	    :	"AddNewLoopBack",
+		    `use	    :	"AddExistingLoopBack",
+		    `block	    :	"AddBlockDevice",
+		    `abort	    :	`abort
 		],
-	    "AddLoopBack"	:
-		$[
-		    `next	    :	"DiskOverview",
-		    `abort	    :   `abort
-		],
-	    "AddImageLoopBack"	:
+	    "AddNewLoopBack"	:
 		$[
 		    `next	    :	"DiskOverview",
-		    `abort	    :   `abort
+		    `abort	    :	`abort
 		],
-	    "AddPhysical"	:
+	    "AddExistingLoopBack"	:
 		$[
 		    `next	    :	"DiskOverview",
-		    `abort	    :   `abort
+		    `abort	    :	`abort
 		],
-	    "EditDisk"	:
+	    "AddBlockDevice"	:
 		$[
 		    `next	    :	"DiskOverview",
-		    `abort	    :   `abort
+		    `abort	    :	`abort
+		],
+	    "EditDisk"		:
+		$[
+		    `next	    :	"DiskOverview",
+		    `abort	    :	`abort
 		]
 	    ];
 

@@ -2,6 +2,7 @@
  * Module:	inst_vm_options.ycp
  *
  * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *		Michael G. Fritch <mgfritch@novell.com>
  *
  * Purpose:	Ask the user for various options for the virtual machine.
  *
@@ -20,152 +21,165 @@
     import "Report";
 
     // screen title for virtual machine options
-    string title = _("The Virtual Machine Options");
+    string title = _("Virtualization Options");
+
+    list<term> event_options = [
+	// combobox item
+	`item(`id("destroy"), _("Destroy")),
+	// combobox item
+	`item(`id("restart"), _("Restart")),
+	// combobox item
+	`item(`id("preserve"), _("Preserve")),
+	// combobox item
+	`item(`id("rename-restart"), _("Rename and restart")),
+    ];
 
     // build and show dialog
 
     Wizard::OpenAcceptDialog ();
 
-    term contents = `HVSquash(
-			      `VBox(
-				    // textentry label - virtual machine name
-				    `Left(`TextEntry(`id(`vmname), _("Machine &Name"), VM::GetConfigName())),
-				    `VSpacing(0.5),
-				    // textentry label - extra parameters for kernel
-				    `Left(`TextEntry(`id(`bootopts), _("Boot &Options"), VM::GetExtraArgs())),
-				    `VSpacing(0.5),
-				    // textentry label - extra installation parameters for kernel
-				    `Left(`TextEntry(`id(`bootinstopts), _("Additional Installation &Boot Options"), VM::GetExtraInstArgs())),
-				    `VSpacing(0.5),
-				    `Left(`ComboBox(`id(`memory), `opt(`editable),
-						    // combobox label
-						    _("&Memory Size in MB:"),
-						    ["256", "512"])),
-// SMP isn't currently supported
-//
-//				    `Left(`ComboBox(`id(`ncpus), `opt(`editable),
-//						    // combobox label
-//						    _("Number of CPUs:"),
-//						    ["1", "2", "4"])),
-				    `VSpacing(0.5),
-				    `Left(`ComboBox(`id(`startmode),
-						    // combobox label
-						    _("A&ctivation"),
-						    [
-						     // combobox item
-						     `item(`id("manual"), _("Manually")),
-						     // combobox item
-						     `item(`id("onboot"), _("On Boot")),
-						     ])),
-				    (VM::GetVMMtype() == "xen") ?
-					`VBox(
-					    `VSpacing(0.5),
-					    `Left(`ComboBox(`id(`restart),
-							    // combobox label
-							    _("Re&start the Virtual Machine"),
-							    [
-							     // combobox item
-							     `item(`id("always"), VM_Common::restart_mapping["always"]:"", VM::GetRestart() == "always"),
-							     // combobox item
-							     `item(`id("never"), VM_Common::restart_mapping["never"]:"", VM::GetRestart() == "never"),
-							     // combobox item
-							     `item(`id("onreboot"), VM_Common::restart_mapping["onreboot"]:"", VM::GetRestart() == "onreboot"),
-							     ])
-					    )
-					)
-				    :
-					`Empty()
-				    )
-			      );
+    term contents = `MarginBox(15, 1,
+			`HBox(
+				`VBox(
+					`TextEntry(`id(`vmname), `opt(`hstretch), _("&Name of Virtual Machine"), VM::GetConfigName()),
+					(VM_Common::proposal_type != "install") ?
+						`VBox(
+							`VSpacing(0.5),
+							`ComboBox(`id(`startmode), `opt(`hstretch),
+								// combobox label
+								_("Start the VM"),
+								[
+									// combobox item
+									`item(`id("manual"), _("Manually")),
+									// combobox item
+									`item(`id("onboot"), _("Automatically")),
+								]
+							),
+							`VSpacing(0.5),
+							`ComboBox(`id(`on_poweroff), `opt(`hstretch),
+								// combobox label
+								_("When the VM is Powered Off"),
+								event_options
+							),
+							`VSpacing(0.5),
+							`ComboBox(`id(`on_reboot), `opt(`hstretch),
+								// combobox label
+								_("When the VM is Rebooted"),
+								event_options
+							),
+							`VSpacing(0.5),
+							`ComboBox(`id(`on_crash), `opt(`hstretch),
+								// combobox label
+								_("When the VM Crashes"),
+								event_options
+							)
+						)
+					:
+						`Empty()
+				)
+			)
+		);
+
 
     // help text - virtual machine options
-    string help_text = _("<P><B>Options</B></P>")
-    + _("<P>Set how much host system memory will be used by the virtual machine.</P>")
-    + _("<P>The virtual machine can be started automatically on boot or manually when needed.</P>")
-    + _("<P><I>Boot Options</I> are used as extra arguments for the kernel.</P>")
-    + _("<P>Use the <tt>root</tt> option, as in <tt>root=/dev/hda1</tt>, for root device configuration.</P>");
+    string help_text = _("<p><b><big>Virtualization Options</big></b></p>");
+    if (VM_Common::proposal_type != "boot")
+	help_text = help_text + _("<p>Each virtual machine must be given a unique name. The <b>name of virtual machine</b> supplied here will also be used as the name of the VM configuration file.</p>");
+    if (VM_Common::proposal_type != "install") {
+	help_text = help_text
+	+ _("<p>The VM can be started <b>automatically</b> when the VM Server starts, or <b>manually</b> via the command line.</p>")
+	+ _("<p>When various lifecycle events occur (<b>power off</b>, <b>reboot</b>, or <b>crash</b> of the VM), an action can automatically be taken. These actions are:</p>")
+	+ _("<ul>")
+	+ sformat("<li><p><b>%1</b>:%2</p></li>", _("Destroy"), _("The VM is cleaned up as normal."))
+	+ sformat("<li><p><b>%1</b>:%2</p></li>", _("Restart"), _("A new VM is started in place of the old one."))
+	+ sformat("<li><p><b>%1</b>:%2</p></li>", _("Preserve"), _("The VM will remain in memory until it is destroyed manually."))
+	+ sformat("<li><p><b>%1</b>:%2</p></li>", _("Rename and restart"), _("The VM is renamed and will remain in memory until it is destroyed manually, and a new VM is started."))
+	+ _("</ul>");
+    }
 
     Wizard::SetContents (title, contents, help_text, (boolean) WFM::Args(0),
 			 (boolean) WFM::Args(1));
 
-    UI::ChangeWidget (`id(`memory), `ValidChars, String::CDigit());
-    UI::ChangeWidget (`id(`memory), `Value, tostring (VM::GetMemorySize()));
+    if (VM_Common::proposal_type == "boot") 
+	UI::ChangeWidget(`id(`vmname), `Enabled, false);
+    else {
+	// allow only 0-9, a-z, A-Z, and the characters _-.:+ in domain name
+	UI::ChangeWidget (`id(`vmname), `ValidChars, String::CAlnum() + "_-:+");
+	// only allow string length of 255 chars max
+	UI::ChangeWidget (`id(`vmname), `InputMaxLength, 255);
+    }
 
-//    UI::ChangeWidget (`id(`ncpus), `ValidChars, "0123456789");
-//    UI::ChangeWidget (`id(`ncpus), `Value, tostring (number_of_cpus));
-
-    UI::ChangeWidget (`id(`startmode), `Value, VM::GetStartMode());
-
-    // allow only 0-9, a-z, A-Z, and the characters _-.:+ in domain name
-    UI::ChangeWidget (`id(`vmname), `ValidChars, String::CAlnum() + "_-.:+");
-
-    // set widget state
-    boolean enabled = (VM::GetVirtualizationType() == "para");
-    if (!enabled)
-    {
-	UI::ChangeWidget(`id(`bootopts), `Enabled, enabled);
-	UI::ChangeWidget(`id(`bootinstopts), `Enabled, enabled);
+    if (VM_Common::proposal_type != "install") {
+	UI::ChangeWidget(`id(`startmode), `Value, VM::GetStartMode());
+	UI::ChangeWidget(`id(`on_poweroff), `Value, VM::GetOnPowerOff());
+	UI::ChangeWidget(`id(`on_reboot), `Value, VM::GetOnReboot());
+	UI::ChangeWidget(`id(`on_crash), `Value, VM::GetOnCrash());
     }
 
     any ret = nil;
+    while (true) {
 
-    while (true)
-    {
 	ret = Wizard::UserInput ();
 
-	if (ret == `cancel || ret == `back)
-	    break;
+	if (ret == `abort || ret == `cancel) {
+		if (Popup::ReallyAbort(true))
+			break;
+	}
+	else if (ret == `back) {
+		break;
+	}
+	if (ret == `next) {
 
-	if (ret == `next)
-	{
-	    integer mem = tointeger ((string) UI::QueryWidget (`id(`memory), `Value));
-//	    integer tmp2 = tointeger ((string) UI::QueryWidget (`id(`ncpus), `Value));
-	    string mode = (string) UI::QueryWidget (`id(`startmode), `Value);
-	    string boot = (string) UI::QueryWidget (`id(`bootopts), `Value);
-	    string bootinst = (string) UI::QueryWidget (`id(`bootinstopts), `Value);
-	    string vmname = (string) UI::QueryWidget (`id(`vmname), `Value);
-
-	    list<string> configs = SCR::Dir(.etc.xen.section);
-
-	    if (contains(configs, "/etc/xen/" + vmname))
-	    {
-		// error message: machine name must be unique, entered name is alreadu in use
-		string error = sformat(_("Machine name '%1' is already used.
+	    if (VM_Common::proposal_type != "boot") {
+		    string vmname = (string) UI::QueryWidget (`id(`vmname), `Value);
+		    if (vmname == nil || vmname == "") {
+			// error message: don't allow empty name of virtual machine
+			Report::Error(_("Name of Virtual Machine cannot be left empty.
+Please, specify a Name of Virtual Machine."));
+			continue;
+		    }
+		    list<string> configs = SCR::Dir(.etc.xen.section);
+		    if (contains(configs, "/etc/xen/vm/" + vmname)) {
+			// error message: name of virtual machine must be unique, entered name is alreadu in use
+			string error = sformat(_("Name of Virtual Machine '%1' is already used.
 Enter another name."), vmname);
-		Report::Error(error);
-		continue;
+			Report::Error(error);
+			continue;
+	    	    }
+		    // do not allow machine names of '.' or '..'
+		    if (vmname == "." || vmname == "..") {
+			Report::Error(_("Name of Virtual Machine cannot be exactly '.' or '..'"));
+			continue;
+		    }
+		    VM::SetConfigName(vmname);
 	    }
 
-	    if (mem == nil || mem <= 0)
-	    {
-		// error popup - entered wrong memory size
-		string message = _("Invalid amount of memory.");
-		Popup::Message (message);
-		continue;
-	    }
-//	    TODO: else if (mem < available memory)
-
-	    // error message: requested memory size is greater that available free memory
-	    string memory_size_error = _("The requested memory size is larger than the amount of space currently available.
-There is %1MB free memory available.");
-
-	    VM::SetMemorySize(mem);
-	    y2milestone("start mode: %1", mode);
-	    VM::SetStartMode(mode);
-	    VM::SetConfigName(vmname);
-	    VM::SetExtraArgs(boot);
-	    VM::SetExtraInstArgs(bootinst);
-
-	    if (VM::GetVMMtype() == "xen") {
-		string restart = (string) UI::QueryWidget (`id(`restart), `Value);
-		VM::SetRestart(restart);
+	    if (VM_Common::proposal_type != "install") {
+		    string startmode = (string) UI::QueryWidget (`id(`startmode), `Value);
+		    y2milestone("startmode: %1", startmode);
+		    VM::SetStartMode(startmode);
+		    string on_poweroff = (string) UI::QueryWidget (`id(`on_poweroff), `Value);
+		    y2milestone("on_poweroff: %1", on_poweroff);
+		    VM::SetOnPowerOff(on_poweroff);
+		    string on_reboot = (string) UI::QueryWidget (`id(`on_reboot), `Value);
+		    y2milestone("on_reboot: %1", on_reboot);
+		    VM::SetOnReboot(on_reboot);
+		    string on_crash = (string) UI::QueryWidget (`id(`on_crash), `Value);
+		    y2milestone("on_crash: %1", on_crash);
+		    VM::SetOnCrash(on_crash);
 	    }
 
 	    break;
 	}
+	else {
+		y2error("unexpected retcode: %1", ret);
+		continue;
+	}
     }
 
     Wizard::CloseDialog ();
-
     return ret;
+
+
+/* EOF */
 }

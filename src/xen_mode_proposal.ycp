@@ -12,6 +12,7 @@
     textdomain "vm";
 
     import "VM";
+    import "VM_Common";
 
     import "Report";
     Report::DisplayErrors(true, 0);
@@ -39,17 +40,23 @@
 	symbol result = (symbol) WFM::CallFunction ("inst_xen_mode",
 						    [true, has_next]);
 
-	ret = $[ "workflow_sequence" : result ];
+	ret = $[
+		"workflow_sequence"	: result,
+		"mode_changed"		: true  // force inst_proposal to regenerate the rich_text_title and menu_title for each section
+	];
     }
     else if ( func == "Description" )
     {
-	ret = $[
-		// this is a heading
-		"rich_text_title"	: _("Virtualization Mode"),
-		// this is a menu entry
-		"menu_title"		: _("Virtualization Mode"),
-		"id"			: "xen_mode"
-	    ];
+	if (VM_Common::proposal_type == "boot") return $[]; // no useful proposal for this proposal_type
+	else {
+		ret = $[
+			// this is a heading
+			"rich_text_title"	: _("Virtualization Mode"),
+			// this is a menu entry
+			"menu_title"		: _("Virtualization Mode"),
+			"id"			: "xen_mode"
+		    ];
+	}
     }
 
     return ret;
