@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Mar 28 15:43:10 CEST 2006 - lslezak@suse.cz
+
+- x86_64 arch: use x86_64 packages, not i386 (#161267)
+- 2.13.29
+
+-------------------------------------------------------------------
 Sat Mar 25 22:46:13 MST 2006 - ccoffing@novell.com
 
 - Overhaul from Provo, to make module more feature complete.

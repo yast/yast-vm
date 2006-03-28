@@ -590,6 +590,12 @@
 	{
 	    if (pk["status"]:`unknown == `available && pk["srcid"]:-1 == source_id)
 	    {
+		// x86_64 arch: use x86_64 packages, not i386
+		if (Arch::x86_64() && pk["arch"]:"unknown" != "x86_64")
+		{
+		    continue;
+		}
+
 		pkginfo = pk;
 	    }
 	}
