@@ -47,7 +47,7 @@ added to the boot loader menu if it is missing.</p>
 
     // xen domain0 installation help text - 3/4
 _("<p>GRUB is needed because it supports the multiboot standard required
-to boot the Xen hypervisor and Linux kernel.</p>
+to boot Xen and Linux kernel.</p>
 ") +
 
     // xen domain0 installation help text - 4/4
