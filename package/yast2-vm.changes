@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Tue Apr  4 14:52:02 CEST 2006 - lslezak@suse.cz
+
+- dom0 configuration: modify firewall configuration - add the Xen
+  bridge into FW_FORWARD_ALWAYS_INOUT_DEV option (#154133),
+  fixed detection of a Xen section in bootloader
+- 2.13.31
+
+-------------------------------------------------------------------
 Wed Mar 29 15:27:15 CEST 2006 - lslezak@suse.cz
 
 - use "Xen" term only in the texts (#161737)

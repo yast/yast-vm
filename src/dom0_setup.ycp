@@ -24,7 +24,9 @@
 				     // progress stage
 				     _("Install Packages"),
 				     // progress stage
-				     _("Configure Boot Loader")
+				     _("Configure Boot Loader"),
+				     // progress stage
+				     _("Firewall Configuration")
     ];
 
     list progress_descriptions = [];
@@ -118,9 +120,6 @@ _("<p>When the configuration is successfully finished, it is possible to boot th
 	BootCommon::setLoaderType("grub");
 	// summary text - item in the task list
 	bootloader_changes = sformat(_("<LI>Switch to GRUB boot loader (current boot loader is '%1')</LI>"), loader_type);
-
-	BootCommon::location_changed = true;
-	BootCommon::changed = true;
     }
 
     // progressbar title - check if there is a Xen section
@@ -130,7 +129,7 @@ _("<p>When the configuration is successfully finished, it is possible to boot th
     list sects = Bootloader::getSectionsList(`all);
     y2milestone("boot loader sections: %1", sects);
 
-    if (!contains(sects, "xen"))
+    if (!contains(sects, "xen") && !contains(sects, "XEN"))
     {
 	// progressbar title - add missing Xen section to bootloader configuration
 	Progress::Title(_("Adding Xen section..."));
@@ -157,19 +156,55 @@ _("<p>When the configuration is successfully finished, it is possible to boot th
 	    Progress::Title(_("Writing boot loader configuration..."));
 
 	    Progress::set(false);
+	    BootCommon::location_changed = true;
+	    BootCommon::changed = true;
 	    success = Bootloader::Write();
 	    Progress::set(true);
 
 	    if (!success)
 	    {
 		Report::Error(error);
-		return `abort;
 	    }
+	}
+    }
+
+    // firewall stage - modify the firewall setting, add the xen bridge to FW_FORWARD_ALWAYS_INOUT_DEV
+    Progress::NextStage();
+
+    // check whether the firewall option exists
+    if (contains(SCR::Dir(.sysconfig.SuSEfirewall2), "FW_FORWARD_ALWAYS_INOUT_DEV"))
+    {
+	string xen_bridge = "xenbr0";
+	// read the current value
+	string forward = (string) SCR::Read(.sysconfig.SuSEfirewall2.FW_FORWARD_ALWAYS_INOUT_DEV);
+
+	// add xenbr0 if it's not already there
+	if (!contains(splitstring(forward, " "), xen_bridge))
+	{
+	    if (size(forward) > 0)
+	    {
+		// add a space
+		forward = forward + " ";
+	    }
+
+	    forward = forward + xen_bridge;
+
+	    // write the new value
+	    SCR::Write(.sysconfig.SuSEfirewall2.FW_FORWARD_ALWAYS_INOUT_DEV, forward);
+
+	    // flush the cache
+	    SCR::Write(.sysconfig.SuSEfirewall2, nil);
+
+	    y2milestone("Modified firewall option FW_FORWARD_ALWAYS_INOUT_DEV: '%1'", forward);
 	}
 	else
 	{
-	    return `abort;
+	    y2milestone("FW_FORWARD_ALWAYS_INOUT_DEV: '%1', not modified", forward);
 	}
+    }
+    else
+    {
+	y2milestone("Firewall option FW_FORWARD_ALWAYS_INOUT_DEV is not defined, firewall is not modified.");
     }
 
     Progress::Finish();
