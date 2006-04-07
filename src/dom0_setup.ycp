@@ -12,19 +12,14 @@
     import "Package";
     import "Progress";
     import "Report";
-    import "Bootloader";
-    import "BootCommon";
     import "Popup";
     import "Wizard";
-    import "Label";
 
     textdomain "vm";
 
     list <string> progress_stages = [
 				     // progress stage
 				     _("Install Packages"),
-				     // progress stage
-				     _("Configure Boot Loader"),
 				     // progress stage
 				     _("Firewall Configuration")
     ];
@@ -91,81 +86,6 @@ _("<p>When the configuration is successfully finished, it is possible to boot th
 	// error popup
 	Report::Error(_("Cannot install required packages.") + "\n" + abortmsg);
 	return `abort;
-    }
-
-    // bootloader stage
-    Progress::NextStage();
-
-    // progressbar title - read bootloader settings
-    Progress::Title(_("Reading boot loader configuration..."));
-
-    // disable bootloader progress
-    Progress::set(false);
-    Bootloader::Read();
-    Progress::set(true);
-
-    // progressbar title - check whether GRUB or LILO is used as bootloader
-    Progress::Title(_("Checking boot loader type..."));
-
-    string loader_type = BootCommon::getLoaderType(false);
-    string bootloader_changes = "";
-
-    // false = don't recheck
-    if (loader_type != "grub")
-    {
-	// progressbar title
-	Progress::Title(_("Switching to GRUB boot loader..."));
-
-	// set type to GRUB
-	BootCommon::setLoaderType("grub");
-	// summary text - item in the task list
-	bootloader_changes = sformat(_("<LI>Switch to GRUB boot loader (current boot loader is '%1')</LI>"), loader_type);
-    }
-
-    // progressbar title - check if there is a Xen section
-    Progress::Title(_("Searching for Xen section..."));
-
-    // get all sections
-    list sects = Bootloader::getSectionsList(`all);
-    y2milestone("boot loader sections: %1", sects);
-
-    if (!contains(sects, "xen") && !contains(sects, "XEN"))
-    {
-	// progressbar title - add missing Xen section to bootloader configuration
-	Progress::Title(_("Adding Xen section..."));
-	BootCommon::sections = add(BootCommon::sections, BootCommon::CreateLinuxSection("xen"));
-	sects = Bootloader::getSectionsList(`all);
-	y2milestone("boot loader sections: %1", sects);
-	// summary text - item in the task list
-	bootloader_changes = bootloader_changes + _("<LI>Add Xen section to the boot loader menu</LI>");
-    }
-
-    // confirm bootloader installation - dialog header
-    if (bootloader_changes != "")
-    {
-	// progressbar title - write the modified bootloader configuration
-	Progress::Title(_("Saving the boot loader configuration..."));
-
-	bootloader_changes = bootloader_changes + _("<LI>Activate the new configuration</LI>");
-
-	if (Popup::AnyQuestionRichText(_("Update of the Boot Loader Configuration"),
-	    sformat(_("<P><B>These actions will be performed:</B><UL>%1</UL></P>"), bootloader_changes),
-	    60, 10, Label::ContinueButton(), Label::CancelButton(), `yes_focus))
-	{
-	    // progressbar title - write the modified bootloader configuration
-	    Progress::Title(_("Writing boot loader configuration..."));
-
-	    Progress::set(false);
-	    BootCommon::location_changed = true;
-	    BootCommon::changed = true;
-	    success = Bootloader::Write();
-	    Progress::set(true);
-
-	    if (!success)
-	    {
-		Report::Error(error);
-	    }
-	}
     }
 
     // firewall stage - modify the firewall setting, add the xen bridge to FW_FORWARD_ALWAYS_INOUT_DEV

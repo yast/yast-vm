@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Apr  7 08:37:26 CEST 2006 - lslezak@suse.cz
+
+- don't modify bootloader configuration when confguring domain0,
+  it's modified by kernel-xen package (#163138)
+- 2.13.33
+
+-------------------------------------------------------------------
 Thu Apr  6 22:57:50 MDT 2006 - mgfritch@novell.com
 
 - Add dialog for managing virtual machines, similar to the 
