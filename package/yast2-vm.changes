@@ -1,4 +1,15 @@
 -------------------------------------------------------------------
+Thu Apr  6 22:57:50 MDT 2006 - mgfritch@novell.com
+
+- Add dialog for managing virtual machines, similar to the 
+  xm commands (xm list, xm create, xm destory, etc.)
+- Add help text for MAC address and Bridge Name (#145663)
+- Change Control Center icon name to 'Virtual Machine Management (Xen)'.
+- Move Control Center icon from 'Software' catagory to 'System'.
+- Various text string changes (help and UI).
+- 2.13.32
+
+-------------------------------------------------------------------
 Tue Apr  4 14:52:02 CEST 2006 - lslezak@suse.cz
 
 - dom0 configuration: modify firewall configuration - add the Xen

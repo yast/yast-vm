@@ -25,6 +25,7 @@ client_DATA =				\
 	inst_vm_network.ycp		\
 	inst_xen_mode.ycp		\
 	inst_xen_create.ycp		\
+	inst_vm_manage.ycp		\
 	dom0_setup.ycp			\
 	vm_network_proposal.ycp		\
 	xen_auto.ycp

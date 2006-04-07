@@ -43,7 +43,7 @@
 						`VSpacing(0.5),
 						`Left(`RadioButton(`id(`use), _("&Use Existing Disk Image"))),
 						`VSpacing(0.5),
-						`Left(`RadioButton(`id(`block), _("&Use Block Device"))),
+						`Left(`RadioButton(`id(`block), _("U&se Block Device"))),
 						`VSpacing(0.5)
 					)
 				)
@@ -51,7 +51,8 @@
 		);
 
 	// help text
-	string help_text = sformat(_("<p><b><big>%1</big></b></p><p>You may create a new disk image, use an existing disk image, or use a block device.</p>"), caption);
+	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption)
+		+ _("<p>A virtual disk can be added by creating a new disk image, selecting an existing disk image, or specifying a block device.</p>");
 
 	Wizard::SetContents(caption, contents, help_text, true, true);
 
@@ -86,7 +87,7 @@
 
 	list<string> valid_virtual_devices = VM::GetValidVirtualDevices(VM::GetConfiguredDiskTargets(disks));
 
-	string caption = _("Virtual Disk Image Creation");
+	string caption = _("Create New Disk Image");
 
 	term contents =
 		`MarginBox(1.5, 0.2,
@@ -114,7 +115,7 @@
 
 
 	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
-	help_text = help_text + _("<p><b>Virtual disk</b> describes how the virtual disk appears to the virtual machine. This controls the ordering of virtual disks within the VM, and is specified using the Linux naming convention.</p>");
+	help_text = help_text + _("<p>The <b>virtual disk</b> configuration describes how the virtual disk appears to the virtual machine. This controls the ordering of virtual disks within the VM, and is specified using the Linux naming convention.</p>");
 	help_text = help_text + _("<p>The disk image file will be created in the <b>disk image directory</b> with the specified <b>maximum size</b>. A <b>sparse image file</b> only allocates disk space as it is needed.</p>");
 	help_text = help_text + _("<p>Virtual disks can be safely shared among multiple VMs only if every use of the disk is marked <b>read-only</b>. If it is read-only, it cannot be modified by the VM.</p>");
 
@@ -206,7 +207,7 @@ Please select a different Virtual Disk."));
 
 	list<string> valid_virtual_devices = VM::GetValidVirtualDevices(VM::GetConfiguredDiskTargets(disks));
 
-	string caption = _("Virtual Disk Image Configuration");
+	string caption = _("Use Existing Disk Image");
 
 	term contents = 
 		`MarginBox(1.5, 0.2,
@@ -235,7 +236,7 @@ Please select a different Virtual Disk."));
 		);
 
 	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
-	help_text = help_text + _("<p><b>Virtual disk</b> describes how the virtual disk appears to the virtual machine. This controls the ordering of virtual disks within the VM, and is specified using the Linux naming convention.</p>");
+	help_text = help_text + _("<p>The <b>virtual disk</b> configuration describes how the virtual disk appears to the virtual machine. This controls the ordering of virtual disks within the VM, and is specified using the Linux naming convention.</p>");
 	help_text = help_text + _("<p>The <b>disk image file</b> is an existing image file to be used by the VM.</p>");
 	help_text = help_text + _("<p>Virtual disks can be safely shared among multiple VMs only if every use of the disk is marked read-only. If it is <b>read-only</b>, it cannot be modified by the VM.</p>");
 
@@ -363,7 +364,7 @@ so it will be exported to the VM as read-only.")))
 
 	list<string> valid_virtual_devices = VM::GetValidVirtualDevices(VM::GetConfiguredDiskTargets(disks));
 
-	string caption = _("Virtual Disk Configuration");
+	string caption = _("Use Block Device");
 
 	term contents =
 		`MarginBox(1.5, 0.2,
@@ -388,7 +389,7 @@ so it will be exported to the VM as read-only.")))
 		);
 
 	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
-	help_text = help_text + _("<p><b>Virtual disk</b> describes how the virtual disk appears to the virtual machine. This controls the ordering of virtual disks within the VM, and is specified using the Linux naming convention.</p>");
+	help_text = help_text + _("<p>The <b>virtual disk</b> configuration describes how the virtual disk appears to the virtual machine. This controls the ordering of virtual disks within the VM, and is specified using the Linux naming convention.</p>");
 	help_text = help_text + _("<p>The <b>block device</b> is a block device on the VM Server.</p>");
 	help_text = help_text + _("<p>Virtual disks can be safely shared among multiple VMs only if every use of the disk is marked read-only. If it is <b>read-only</b>, it cannot be modified by the VM.</p>");
 
@@ -565,7 +566,7 @@ define symbol DiskOverview() {
 
     // help text for disk setup
     string help_text = sformat(_("<p><b><big>%1</big><b></p>"), caption);
-    help_text = help_text + _("<p>Each virtual machine can have a number of virtual disks. The storage for these virtual disks comes from either a file or a block device on the VM Server.</p>");
+    help_text = help_text + _("<p>A virtual machine can have one or more virtual disks. Each virtual disk points to a file or block device on the VM Server.</p>");
 
     Wizard::SetContents (caption, contents, help_text, true, true);
     Wizard::SetNextButton(`next, Label::OKButton());

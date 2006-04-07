@@ -115,6 +115,21 @@
     }
 
 
+    global string GetConfigFilePath() {
+	string() toEval = (string())functions["getConfigFilePath"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("getConfigFilePath() function is missing!");
+	    return nil;
+	}
+    }
+
+
     global integer GetMemorySize() {
 	integer() toEval = (integer())functions["getMemorySize"]:nil;
 
@@ -669,6 +684,90 @@
 
     global boolean Prepare2() {
 	return CallBooleanFunction("Prepare2");
+    }
+
+    global list<map<string,any> > ParseDiskConfig(string diskstr) {
+	list<map<string,any> >(string) toEval = (list<map<string,any> >(string))functions["parseDiskConfig"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(diskstr);
+	}
+	else
+	{
+	    y2error("parseDiskConfig() function is missing!");
+	    return nil;
+	}
+    }
+
+    global symbol GetVirtualMachineState(string state) {
+	symbol(string) toEval = (symbol(string))functions["GetVirtualMachineState"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(state);
+	}
+	else
+	{
+	    y2error("GetVirtualMachineState() function is missing!");
+	    return nil;
+	}
+    }
+
+    global boolean ViewVirtualMachineConsole(string DomName, boolean startXTerm, boolean isNetWare, boolean displayError) {
+	boolean(string, boolean, boolean, boolean) toEval = (boolean(string, boolean, boolean, boolean))functions["ViewVirtualMachineConsole"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(DomName, startXTerm, isNetWare, displayError);
+	}
+	else
+	{
+	    y2error("ViewVirtualMachineConsole() function is missing!");
+	    return nil;
+	}
+    }
+
+    global boolean ShutdownVirtualMachine(string DomName, boolean displayError) {
+	boolean(string, boolean) toEval = (boolean(string, boolean))functions["ShutdownVirtualMachine"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(DomName, displayError);
+	}
+	else
+	{
+	    y2error("ShutdownVirtualMachine() function is missing!");
+	    return nil;
+	}
+    }
+
+    global boolean TerminateVirtualMachine(string DomName, boolean displayError) {
+	boolean(string, boolean) toEval = (boolean(string, boolean))functions["TerminateVirtualMachine"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(DomName, displayError);
+	}
+	else
+	{
+	    y2error("TerminateVirtualMachine() function is missing!");
+	    return nil;
+	}
+    }
+
+    global boolean StartVirtualMachine(string DomName, boolean displayError) {
+	boolean(string, boolean) toEval = (boolean(string, boolean))functions["StartVirtualMachine"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(DomName, displayError);
+	}
+	else
+	{
+	    y2error("StartVirtualMachine() function is missing!");
+	    return nil;
+	}
     }
 
     global boolean Start(boolean background) {

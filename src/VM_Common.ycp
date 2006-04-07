@@ -10,12 +10,15 @@
     module "VM_Common";
 
     import "Report";
+    import "Popup";
+    import "Label";
     import "Pkg";
     import "Package";
     import "Arch";
     import "ProductControl";
     import "HTML";
     import "PackageCallbacksInit";
+    import "String";
 
     textdomain "vm";
 
@@ -55,7 +58,7 @@
 
     global integer sdl = default_sdl;
 
-    global integer default_localtime = 1;  // if hardware clock is set to local time then 1, else 0 (UTC)
+    global integer default_localtime = 0;  // if hardware clock is set to local time then 1, else 0 (UTC)
 
     global integer localtime = default_localtime;
 
@@ -361,25 +364,38 @@
         string name = names[size(names) - 1]:"";
         return (tolower(name) == "xnloader.sys");
     }
-    
+
     global void SetNetWareHiddenArgs()
     {
         string args = "";
-        
-	map out = (map)SCR::Execute(.target.bash_output, "date +%z");
-	if (out["exit"]:-1 == 0) {
-	    list<string> output = splitstring(out["stdout"]:"", "\n");
-	    string tz = output[0]:"";
-	    if (tz != "") {
-		args = "TZ=" + tz;
-	    }
+	
+	// Set the display
+	string cmd = "set | grep 'DISPLAY' | grep -v 'BASH_EXECUTION_STRING'";
+	y2milestone("Executing: %1", cmd);
+	map retmap = (map) SCR::Execute(.target.bash_output, cmd);
+	y2milestone("retmap=%1", retmap);
+	string display_value = deletechars(retmap["stdout"]:"", "\n"); // remove all newlines
+	display_value = String::CutBlanks(display_value);
+	list<string> display_list = (list<string>)splitstring(display_value, "=:");
+	y2milestone("display_list=%1", display_list);
+	// Add display=
+	if (display_list[1]:"" == nil || display_list[1]:"" == "" || display_list[1]:"" == "localhost" || display_list[1]:"" == "127.0.0.1") {
+		// get the IP address of the 1st interface
+		import "IP";
+		list<map> ifconfig =(list<map>)SCR::Read(.run.ifconfig);
+		ifconfig = filter(map iface, ifconfig, ``( iface["name"]:"" == "eth0"));
+		integer ipint = ifconfig[0,"value", "inet", "addr"]:0;
+		args = args + sformat(" DISPLAY=%1:%2", IP::ToString(ipint), display_list[2]:"0");
 	}
-	
-	// FIXME:  display=
-	
+	else {
+		// use the display value as is...
+		args = args + display_value;
+	}
+
         VM_Common::hidden_args = args;
+	y2milestone("hidden_args=%1", hidden_args);
     }
-    
+
     global void SetLinuxHiddenArgs()
     {
         string arg = (VM_Common::proposal_type == "install") ? "install=$URL_INSTALL" : "";
@@ -393,7 +409,7 @@
         else
             SetLinuxHiddenArgs();
     }
-    
+
     global list<string> CreateSourceProposal(symbol inst_type, integer source_id, string custom)
     {
 	list<string> ret = [];
@@ -404,7 +420,7 @@
 		ret = add(ret, sformat("%1 (%2)", _("Installation Device: ISO Image File"), custom));
 	    }
 	    else {
-		ret = add(ret, sformat("%1 (%2)", _("Installation Device: CD-ROM Device"), custom));
+		ret = add(ret, sformat("%1 (%2)", _("Installation Device: CD/DVD Device"), custom));
 	    }
 
 	    ret = add(ret, sformat(_("Kernel: %1"), custom_kernel));
@@ -418,7 +434,7 @@
 	    string desc = "";
 
             SetLinuxHiddenArgs();
-            
+
 	    y2milestone("inst_type: %1, source_id: %2", inst_type, source_id);
 
 	    if (inst_type == `configured && source_id != nil && source_id >= 0)
@@ -682,8 +698,7 @@
 
 	y2milestone("found kernel: %1", file);
 
-	if (file != nil && file != "")
-	{
+	if (file != nil && file != "") {
 	    CopyFile(file, target);
 	    return GetFileNameFromPath(file);
 	}
@@ -871,6 +886,41 @@
 	y2milestone("Proposed MAC: %1", ret);
 	return ret;
     }
+
+
+/**
+ * Displays a formatted popup error message, with a details button.
+ * @param errorMessage string - a simple message describing the error
+ * @param out map - output of the executed command
+ * @param cmd string - the executed command
+ * @return void
+ */
+global void PopupErrorDetails(string errorMessage, map out, string cmd) ``{
+        string message = _("Undefined Error");
+        if (errorMessage != nil && errorMessage != "") message = errorMessage;
+        Popup::ClearFeedback(); // just in case there are leftovers.
+        if (!Popup::AnyQuestion( Label::ErrorMsg(), message, Label::OKButton(), _("Details"), `focus )) {
+                string description = sformat("<pre>command: %1 return \n %2 %3</pre>", cmd, out["stderr"]:"", out["stdout"]:"");
+                UI::OpenDialog (`opt(`decorated ),
+                        `HBox( `VSpacing(16),
+                                `VBox (
+                                        `HSpacing (100),
+                                        // popup window header
+                                        `Heading (message),
+                                        `VSpacing (0.5),
+                                        `RichText (description),
+                                        `VSpacing (1.0),
+                                        // push button label
+                                        `PushButton (`id(`ok), `opt(`default, `key_F10), Label::OKButton())
+                                )
+                        )
+                );
+
+                UI::SetFocus (`id(`ok));
+                UI::UserInput ();
+                UI::CloseDialog ();
+        }
+}
 
 
 /* EOF */

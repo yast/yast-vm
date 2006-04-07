@@ -17,14 +17,15 @@
 	string help_text = nil;
 
 	if (VM_Common::proposal_type == "install") {
-		help_text = _("<p><b><big>Virtual Machine Installation Settings</big></b></p>");
-		help_text = help_text + _("<p>These settings define an initial virtual machine environment used to install an operating system. Make changes as required.</p>");
-		help_text = help_text + _("<p>After specifying the settings, click Next to launch the OS installation program in a separate window. Follow the on-screen instructions to install the OS. After completing the OS installation, you will then be prompted to finalize the VM settings.</p>");
+		help_text = _("<p><b><big>Virtual Machine (Installation Settings)</big></b></p>");
+		help_text = help_text + _("<p>These settings define an initial VM environment to be used for the installation of the VM's operating system.</p>");
+		help_text = help_text + _("<p>Clicking Next launches the OS installation program in a separate window. Follow the on-screen instructions to install the OS.</p>");
+		help_text = help_text + _("<p>After completing the OS installation program, you will be prompted to finalize the VM settings.</p>");
 	}
 	else {
-		help_text = _("<p><b><big>Virtual Machine Settings</big></b></p>");
-		help_text = help_text + _("<p>These settings define the final virtual machine environment. Make changes as required.</p>");
-		help_text = help_text + _("<p>Click Next to save the settings to a VM configuration file (<tt>/etc/xen/vm/vm_name</tt>) and boot the VM's operating system. You can change the VM settings later by editing the VM configuration file.</p>");
+		help_text = _("<p><b><big>Virtual Machine (Final Settings)</big></b></p>");
+		help_text = help_text + _("<p>These settings define the final virtual machine environment.</p>");
+		help_text = help_text + _("<p>Click Next to save the settings to a VM configuration file (<tt>/etc/xen/vm/vm_name</tt>) and start the VM's operating system. You can change the VM settings later by editing the VM configuration file.</p>");
 	}
 
 	if (help_text != nil)

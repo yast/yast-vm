@@ -28,8 +28,13 @@
     textdomain "vm";
 
 
+    define symbol manage() {
+	return (symbol)WFM::CallFunction ("inst_vm_manage", [false, true]);
+    }
+
+
     define symbol select_create() {
-	return (symbol)WFM::CallFunction ("inst_xen_create", [false, true]);
+	return (symbol)WFM::CallFunction ("inst_xen_create", [true, true]);
     }
 
 
@@ -75,8 +80,8 @@
 	Wizard::CreateDialog();
 	Wizard::SetDesktopIcon ("vm");
 
-
 	map aliases = $[
+		"manage"		: ``(manage()), // manage virtual machines
 		"select_create"		: ``(select_create()), // creation options
 		"install_prepare"	: ``(prepare("install")), // change proposal_type to install and reset the proposal settings.
 		"install_proposal"	: ``(proposal()), // install options
@@ -90,70 +95,78 @@
 	    ];
 
 	map sequence = $[
-		"ws_start"          : "select_create",
-		"select_create"	    :
+		"ws_start"		: "manage",
+		"manage"		:
 		    $[
-			`install    :	"install_prepare",
-			`existing   :	"existing_prepare",
-			`abort	    :	`abort
+			`close		: `finish,
+			`add		: "select_create",
+			`next		: `next,
+			`finish		: `finish,
+			`abort		: `abort,
+		    ],
+		"select_create"		:
+		    $[
+			`install	: "install_prepare",
+			`existing	: "existing_prepare",
+			`abort		: "manage",
 		    ],
 		"install_prepare"	:
 		    $[
-			`forceback	:   "select_create",
-			`abort		:   `abort,
-			`next		:   "install_proposal",
+			`forceback	: "select_create",
+			`next		: "install_proposal",
+			`abort		: "manage",
 		    ],
 		"install_proposal"	:
 		    $[
 			`forceback	: "select_create",
-			`next	    :	"install_start",
-			`abort	    :	`abort
+			`next		: "install_start",
+			`abort		: "manage",
 		    ],
-		"install_start"	:
+		"install_start"		:
 		    $[
-		        `forceback  :   "install_proposal",
-			`next	    :	"boot_prepare",
-			`abort	    :	`abort
+			`forceback	: "install_proposal",
+			`next		: "boot_prepare",
+			`abort		: "manage",
 		    ],
 		"boot_prepare"		:
 		    $[
 			`forceback	: "install_prepare",
-			`abort		: `abort,
 			`next		: "boot_proposal",
+			`abort		: "manage",
 		     ],
 		"boot_proposal"		:
 		    $[
-		        `forceback  :   "install_prepare",
-			`next	    :	"boot_start",
-			`abort	    :	`abort
+		        `forceback	: "install_prepare",
+			`next		: "boot_start",
+			`abort		: "manage",
 		    ],
-		"boot_start"	:
+		"boot_start"		:
 		    $[
-		        `forceback  :   "boot_proposal",
-			`next	    :	`next,
-			`abort	    :	`abort,
-			`finish	    :	`finish,
-			`again	    :	"select_create"
+			`forceback	: "boot_proposal",
+			`again		: "select_create",
+			`next		: "manage",
+			`finish		: "manage",
+			`abort		: "manage",
 		    ],
 		"existing_prepare"	:
 		    $[
-			`forceback	:   "select_create",
-			`abort		:   `abort,
-			`next		:   "existing_proposal",
+			`forceback	: "select_create",
+			`next		: "existing_proposal",
+			`abort		: "manage",
 		    ],
 		"existing_proposal"	:
 		    $[
 			`forceback	: "select_create",
-			`next		:	"existing_start",
-			`abort		:	`abort
+			`next		: "existing_start",
+			`abort		: "manage",
 		    ],
 		"existing_start"	:
 		    $[
-		        `forceback  :   "existing_proposal",
-			`next	    :	`next,
-			`abort	    :	`abort,
-			`finish	    :	`finish,
-			`again	    :	"select_create"
+			`forceback	: "existing_proposal",
+			`again		: "select_create",
+			`next		: "manage",
+			`finish		: "manage",
+			`abort		: "manage",
 		    ]
 	];
 

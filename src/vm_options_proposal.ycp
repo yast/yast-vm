@@ -47,9 +47,9 @@
 	ret =
 	    $[
 	      // this is a heading
-	      "rich_text_title"	:	_("Virtualization Options"),
+	      "rich_text_title"	:	_("VM Properties"),
 	      // this is a menu entry
-	      "menu_title"	:	_("Virtualization &Options"),
+	      "menu_title"	:	_("VM &Properties"),
 	      "id"		:	"vm_options_stuff"
 	    ];
     }

@@ -21,7 +21,7 @@
     import "Report";
 
     // screen title for virtual machine options
-    string title = _("Virtualization Options");
+    string title = _("VM Properties");
 
     list<term> event_options = [
 	// combobox item
@@ -82,18 +82,18 @@
 
 
     // help text - virtual machine options
-    string help_text = _("<p><b><big>Virtualization Options</big></b></p>");
+    string help_text = sformat(_("<p><b><big>%1</big></b></p>"), title);
     if (VM_Common::proposal_type != "boot")
-	help_text = help_text + _("<p>Each virtual machine must be given a unique name. The <b>name of virtual machine</b> supplied here will also be used as the name of the VM configuration file.</p>");
+	help_text = help_text + _("<p>Each virtual machine must have a unique name. The <b>name of virtual machine</b> entered here will be used as the name of the VM configuration file.</p>");
     if (VM_Common::proposal_type != "install") {
 	help_text = help_text
-	+ _("<p>The VM can be started <b>automatically</b> when the VM Server starts, or <b>manually</b> via the command line.</p>")
+	+ _("<p>The VM can be started <b>automatically</b> when the VM Server starts, or <b>manually</b> via YaST or the command line.</p>")
 	+ _("<p>When various lifecycle events occur (<b>power off</b>, <b>reboot</b>, or <b>crash</b> of the VM), an action can automatically be taken. These actions are:</p>")
 	+ _("<ul>")
-	+ sformat("<li><p><b>%1</b>:%2</p></li>", _("Destroy"), _("The VM is cleaned up as normal."))
-	+ sformat("<li><p><b>%1</b>:%2</p></li>", _("Restart"), _("A new VM is started in place of the old one."))
-	+ sformat("<li><p><b>%1</b>:%2</p></li>", _("Preserve"), _("The VM will remain in memory until it is destroyed manually."))
-	+ sformat("<li><p><b>%1</b>:%2</p></li>", _("Rename and restart"), _("The VM is renamed and will remain in memory until it is destroyed manually, and a new VM is started."))
+	+ sformat("<li><p><b>%1</b>: %2</p></li>", _("Destroy"), _("The VM is cleaned up as normal."))
+	+ sformat("<li><p><b>%1</b>: %2</p></li>", _("Restart"), _("A new VM is started in place of the old one."))
+	+ sformat("<li><p><b>%1</b>: %2</p></li>", _("Preserve"), _("The VM will remain in memory until it is destroyed manually."))
+	+ sformat("<li><p><b>%1</b>: %2</p></li>", _("Rename and restart"), _("The VM is renamed and will remain in memory until it is destroyed manually, and a new VM is started."))
 	+ _("</ul>");
     }
 
@@ -140,10 +140,10 @@ Please, specify a Name of Virtual Machine."));
 		    }
 		    list<string> configs = SCR::Dir(.etc.xen.section);
 		    if (contains(configs, "/etc/xen/vm/" + vmname)) {
-			// error message: name of virtual machine must be unique, entered name is alreadu in use
-			string error = sformat(_("Name of Virtual Machine '%1' is already used.
-Enter another name."), vmname);
-			Report::Error(error);
+			// error message: name of virtual machine must be unique, entered name is already in use
+			Report::Error(_("Name of Virtual Machine is already used.
+Enter another name.
+"));
 			continue;
 	    	    }
 		    // do not allow machine names of '.' or '..'
@@ -151,6 +151,12 @@ Enter another name."), vmname);
 			Report::Error(_("Name of Virtual Machine cannot be exactly '.' or '..'"));
 			continue;
 		    }
+		    // don't allow the vmname to start with a number
+		    if (findfirstof(vmname, String::CDigit()) == 0) {
+			Report::Error(_("Name of Virtual Machine cannot begin with a number."));
+			continue;
+		    }
+
 		    VM::SetConfigName(vmname);
 	    }
 

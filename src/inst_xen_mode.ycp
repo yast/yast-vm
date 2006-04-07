@@ -33,9 +33,9 @@
 	    `Frame( title,
 		`VBox(
 		    `VSpacing(0.5),
-		    `Left(`RadioButton(`id("para"), _("Paravirtualization (Requires Modified Guest OS)"), VM::GetVirtualizationType() == "para")),
+		    `Left(`RadioButton(`id("para"), _("Paravirtualization (requires Xen-enabled guest OS)"), VM::GetVirtualizationType() == "para")),
 		    `VSpacing(0.5),
-		    `Left(`RadioButton(`id("full"), _("Full Virtualization (Unmodified Guest OS)"), VM::GetVirtualizationType() == "full")),
+		    `Left(`RadioButton(`id("full"), _("Full Virtualization (requires specialized hardware)"), VM::GetVirtualizationType() == "full")),
 		    `VSpacing(0.5)
 		)
 	    )
@@ -43,25 +43,17 @@
 	`HSpacing(2)
     );
 
-    // help text for virtualization mode setting (1/2)
-    string help_text = _("<p><b><big>Virtualization Mode</big></b><br></p>")
-	// help text for virtualization mode setting (2/2)
-	+ _("<p>Xen supports two possible virtualization modes:
-paravirtualization and full virtualization.</p>")
+    // help text for virtualization mode setting (1/5)
+    string help_text = sformat(_("<p><b><big>%1</big></b></p>"), title)
+	// help text for virtualization mode setting (2/5)
+	+ _("<p>Virtual machines can be created to run in either paravirtualization mode or full virtualization mode.</p>")
 
-	// help text for virtualization mode setting (3/3)
-	+ _("<p><b>Paravirtualization</b> requires a modified guest OS that
-supports Xen virtualization.</p>
-")
+	// help text for virtualization mode setting (3/5)
+	+ _("<p><b>Paravirtualization mode</b> uses selective emulation of the hardware devices. To run in paravirtualization mode, the OS must be optimized to run in the Xen virtual server environment. This type of optimized OS is often called a paravirtualized or Xen-enabled guest.</p>")
 
-	// help text for virtualization mode setting (4/4)
-	+ _("<p><b>Full virtualization</b> requires CPU with virtualization
-support. In this case, Xen completely emulates PC hardware in a virtual machine.
-It is possible to install an unmodified guest OS.</p>
-")
+	// help text for virtualization mode setting (4/5)
+	+ _("<p><b>Full virtualization mode</b> completely emulates all hardware devices but must run on a computer that supports hardware-assisted virtualization. Most popular operating systems can run in full virtualization mode.</p>");
 
-	// help text for virtualization mode setting (5/5)
-	+ _("<p>Not every option is available in each mode. Changing the mode will cause some settings to be reset to default values.</p>");
 
     Wizard::SetContents (title, contents, help_text, true, true);
 

@@ -11,7 +11,7 @@ textdomain="vm"
 
     <proposals config:type="list">
         <proposal>
-            <label>Virtual Machine Installation Settings</label>
+            <label>Virtual Machine (Installation Settings)</label>
             <name>xen_install</name>
             <stage>normal</stage>
             <enable_skip>no</enable_skip>
@@ -27,7 +27,7 @@ textdomain="vm"
             </proposal_modules>
         </proposal>
         <proposal>
-            <label>Virtual Machine Boot Settings</label>
+            <label>Virtual Machine (Final Settings)</label>
             <name>xen_boot</name>
             <stage>normal</stage>
             <enable_skip>no</enable_skip>
@@ -41,7 +41,7 @@ textdomain="vm"
             </proposal_modules>
         </proposal>
         <proposal>
-            <label>Virtual Machine Settings</label>
+            <label>Virtual Machine (Final Settings)</label>
             <name>xen_existing</name>
             <stage>normal</stage>
             <enable_skip>no</enable_skip>

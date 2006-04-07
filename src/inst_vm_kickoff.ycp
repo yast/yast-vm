@@ -144,14 +144,33 @@
 
     if (VM_Common::proposal_type == "install") {
         if (VM_Common::GetVirtualizationType() == "full") {
-	    Report::ShowText(_("Installation Started"), _("The virtual machine installation should now be running in a separate window.  When it has completed, click OK to configure the boot settings."));
+	    boolean cont = Popup::AnyQuestionRichText(_("Installation Started"),
+		_("The virtual machine installation should now be running in a separate window. When the installation has completed, click 'Continue' to finalize the boot settings."),
+		50, 15,
+		_("Continue"),
+		_("Cancel"),
+		`yes);
+
+		if (cont)
+			return `next;
+		else
+			return `forceback;
         }
         else {
             // If the user closed the "xm console", clean up the VM.
-            string cmd = sformat("%1 destroy %2", VM_XEN::xm, VM_Common::config_name);
-            SCR::Execute(.target.bash, cmd);
+            VM::TerminateVirtualMachine(VM_Common::config_name, false);
 
-	    Report::ShowText(_("Installation Complete"), _("The virtual machine boot settings now need to be configured."));
+	    boolean cont = Popup::AnyQuestionRichText(_("Installation Complete"),
+		_("The virtual machine settings now need to be finalized."),
+		50, 15,
+		_("Continue"),
+		_("Cancel"),
+		`yes);
+
+		if (cont)
+			return `next;
+		else 
+			return `forceback;
 	}
         return `next;
     }
@@ -162,6 +181,7 @@
 		_("Create More..."),
 		_("Finish"),
 		`yes);
+
 	if (more)
 	    return `again;
 	else
