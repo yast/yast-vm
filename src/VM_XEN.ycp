@@ -1781,13 +1781,13 @@ source is accessible."));
     }
 
 
-    global define boolean ViewVirtualMachineConsole(string DomName, boolean startXTerm, boolean isNetWare, boolean displayError) {
-	y2milestone("ViewVirtualMachineConsole(%1, %2, %3, %4)", DomName, startXTerm, isNetWare, displayError);
+    global define boolean ViewVirtualMachineConsole(string DomName, boolean isFullVirtualization, boolean isNetWare, boolean displayError) {
+	y2milestone("ViewVirtualMachineConsole(%1, %2, %3, %4)", DomName, isFullVirtualization, isNetWare, displayError);
 	if (DomName != nil && DomName != "") {
-		string cmd = sformat("%1 console '%2'", xm, DomName);
-		if (startXTerm) {
-			cmd = sformat("/usr/bin/xterm -geometry 80x%3 -T \"Xen - %2\" -e %1 console %2",
+		string cmd = sformat("/usr/bin/xterm -geometry 80x%3 -T \"Xen - %2\" -e %1 console %2",
 					xm, DomName, isNetWare ? 25 : 24);
+		if ( isFullVirtualization ) { // start VNC viewer
+			cmd = sformat("vncviewer localhost:%1", DomName);
 		}
 		y2milestone("Executing: %1", cmd);
 /*		map ret = (map)SCR::Execute(.target.bash_output, cmd);

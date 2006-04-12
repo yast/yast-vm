@@ -431,12 +431,14 @@ Required memory size %1, memory available %2
 				if (item["name"]:nil != nil && item["name"]:"" != "") {
 					if (isFullVirtualization(selected_table_item) && isSDL(selected_table_item)) continue; // nothing to display when using SDL 
 					Popup::ShowFeedback(_("Opening Virtual Machine Console"), _("Please Wait..."));
+					
 					boolean success = VM::ViewVirtualMachineConsole(
-						item["name"]:"",
-						(!isFullVirtualization(selected_table_item)), // show XTerm in para virt.
+						(isFullVirtualization(selected_table_item)) ? item["id"]:"" : item["name"]:"", // use VM id # to display VNC in full virtualizaion
+						isFullVirtualization(selected_table_item), // show XTerm in para virt.
 						VM_Common::IsNetWareKernel(item["kernel"]:""), // check for NetWare kernel
 						true // show any error messages
 					);
+					
 					refresh_table();
 					Popup::ClearFeedback();
 //					if (!success) Report::Error(_("Cannot open the virtual machine console."));

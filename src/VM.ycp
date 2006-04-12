@@ -714,12 +714,12 @@
 	}
     }
 
-    global boolean ViewVirtualMachineConsole(string DomName, boolean startXTerm, boolean isNetWare, boolean displayError) {
+    global boolean ViewVirtualMachineConsole(string DomName, boolean isFullVirtualization, boolean isNetWare, boolean displayError) {
 	boolean(string, boolean, boolean, boolean) toEval = (boolean(string, boolean, boolean, boolean))functions["ViewVirtualMachineConsole"]:nil;
 
 	if (toEval != nil)
 	{
-	    return toEval(DomName, startXTerm, isNetWare, displayError);
+	    return toEval(DomName, isFullVirtualization, isNetWare, displayError);
 	}
 	else
 	{
