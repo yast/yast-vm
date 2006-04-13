@@ -36,24 +36,48 @@ y2debug("param=%1", param);
 
 if (func == "Info")
 {
-    return (any)$[
-	"steps" : 1,
-	// progress step title
-	"title" : _("Configuring the virtual machine..."),
-	// TODO FIXME: use in XEN environment
-	"when" : false ? [ `installation, `update, `autoinst ] : [],
-    ];
+    // return nil when the system is not Xen domainU,
+    // no change is allowed
+    if (Arch::is_xenU())
+    {
+	y2milestone("Detected Xen DomainU");
+	ret = $[
+	    "steps" : 1,
+	    // progress step title
+	    "title" : _("Configuring the virtual machine..."),
+	    "when" : false ? [ `installation, `update, `autoinst ] : [],
+	];
+    }
+    else
+    {
+	y2milestone("Xen DomainU not detected, skipping domain configuration");
+	ret = nil;
+    }
 }
 else if (func == "Write")
 {
+    // be sure that we are in Xen domU
+    if (Arch::is_xenU())
+    {
 	// disable HW services - they are useless and usually failing in a virtual machine
-	list<string> disable_services = ["kbd", "hotplug", "hwscan", "powersaved"];
+	list<string> disable_services = ["acpid", "kbd"];
+
+	y2milestone("disabling services: %1", disable_services);
 	foreach(string s, disable_services, {
 		integer disabled = (integer) SCR::Execute(.target.bash, sformat("/sbin/insserv -r %1", s));
-		y2milestone("insserv - service %1 exit status: %2", s, disabled);
+		y2milestone("insserv: service %1 disabled: %2", s, (disabled == 0) ? true : false);
 	    }
 	);
 
+	// these services need force option to disable them
+	list<string> disable_services_force = ["boot.clock"];
+	y2milestone("disabling services (forced): %1", disable_services_force);
+	foreach(string s, disable_services_force, {
+		integer disabled = (integer) SCR::Execute(.target.bash, sformat("/sbin/insserv -r -f %1", s));
+		y2milestone("insserv-force: service %1 disabled: %2", s, (disabled == 0) ? true : false);
+	    }
+	);
+    }
 }
 else
 {
