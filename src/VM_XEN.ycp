@@ -1179,6 +1179,26 @@
 	    string extra_arg = "";
 	    extra_arg = VM_Common::hidden_args + " " + VM_Common::extra_args;
 
+	    boolean isNetWare = false;
+	    if (VM_Common::GetCustomKernel()) {
+	        isNetWare = VM_Common::IsNetWareKernel(VM_Common::GetKernelImage());
+            }
+
+	    // installation of paravirtualzed Linux using static IP
+	    // write extra network config for linuxrc
+	    if (VM_Common::GetVirtualizationType() == "para" && VM_Common::proposal_type == "install"
+		&& !VM_Common::use_dhcp && VM_Common::use_static && !isNetWare)
+	    {
+		// write network options
+		if (extra_arg != "")
+		{
+		    extra_arg = extra_arg + " ";
+		}
+
+		extra_arg = extra_arg + sformat("hostip=%1 netmask=%2 gateway=%3 netdevice=%4",
+		    VM_Common::ip, VM_Common::netmask, VM_Common::gateway, "eth0");
+	    }
+
 	    // add installation boot options
 	    if (extra_arg != "" && url != "")
 	    {
