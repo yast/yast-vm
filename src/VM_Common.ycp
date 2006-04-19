@@ -24,7 +24,7 @@
 
     global integer source_id = 0;
 
-    global symbol inst_type = `configured;
+    global symbol inst_type = `cdrom;
 
     global string custom_source = "";
 
@@ -106,7 +106,6 @@
     string custom_kernel = "";
     string custom_initrd = "";
     boolean use_custom_kernel = false;
-    boolean use_custom_iso = false;
 
     boolean modified = false;
 
@@ -175,12 +174,11 @@
 	    "custom_kernel" :	  custom_kernel,
 	    "custom_initrd" :	  custom_initrd,
 	    "use_custom_kernel" : use_custom_kernel,
-	    "use_custom_iso" : use_custom_iso,
 	    "virtualization_type" : virtualization_type,
 	];
 
 	// export configured source as custom (source index may point later to another source)
-	if (inst_type == `configured && source_id != nil && source_id > 0)
+	if (inst_type == `network_configured && source_id != nil && source_id > 0)
 	{
 	    map general_data = Pkg::SourceGeneralData (source_id);
 	    string url = general_data["url"]:"";
@@ -188,7 +186,7 @@
 	    y2milestone("Exporting source config: %1", url);
 
 	    ret["custom_source"] = url;
-	    ret["inst_type"] = `custom;
+	    ret["inst_type"] = `network_custom;
 	}
 
 	return ret;
@@ -196,7 +194,7 @@
 
     global void Import(map input) {
 	source_id =		input["source_id"]:0;
-	inst_type =		input["inst_type"]:`configured;
+	inst_type =		input["inst_type"]:`cdrom;
 	custom_source =		input["custom_source"]:"";
 	memory_size =		input["memory_size"]:default_memory_size;
 	number_of_cpus =	input["number_of_cpus"]:1;
@@ -217,7 +215,6 @@
 	custom_kernel =		input["custom_kernel"]:"";
 	custom_initrd =		input["custom_initrd"]:"";
 	use_custom_kernel =	input["use_custom_kernel"]:false;
-	use_custom_iso =	input["use_custom_iso"]:false;
 	virtualization_type =	input["virtualization_type"]:default_type;
     }
 
@@ -323,18 +320,6 @@
 	return use_custom_kernel;
     }
 
-    global define boolean SetCustomIso(boolean use_custom)
-    {
-	use_custom_iso = use_custom;
-	return true;
-    }
-
-    global define boolean GetCustomIso()
-    {
-	return use_custom_iso;
-    }
-
-
     global integer ProposeSelection () ``{
 	list <integer> sources = Pkg::SourceGetCurrent (false);
 	y2milestone("sources: %1", sources);
@@ -414,36 +399,40 @@
     {
 	list<string> ret = [];
 
-	if (use_custom_kernel)
+	if (inst_type == `cdrom || inst_type == `iso)
 	{
-	    if (use_custom_iso) {
+	    if (inst_type == `iso) {
 		ret = add(ret, sformat("%1 (%2)", _("Installation Device: ISO Image File"), custom));
 	    }
-	    else {
+	    else if (inst_type == `cdrom) {
 		ret = add(ret, sformat("%1 (%2)", _("Installation Device: CD/DVD Device"), custom));
 	    }
-
-	    ret = add(ret, sformat(_("Kernel: %1"), custom_kernel));
-
-	    if (custom_initrd != "")
-		ret = add(ret, sformat(_("RAM Disk Image: %1"), custom_initrd));
-
-            SetHiddenArgs(custom_kernel);
+	    if (use_custom_kernel) {
+		ret = add(ret, sformat(_("Kernel: %1"), custom_kernel));
+	
+		if (custom_initrd != "")
+			ret = add(ret, sformat(_("RAM Disk Image: %1"), custom_initrd));
+	
+		SetHiddenArgs(custom_kernel);
+	    }
+	    else { // SUSE installation source
+		SetLinuxHiddenArgs();
+	    }
 	}
-	else {
+	else { // network install (SUSE instsources only!)
 	    string desc = "";
 
             SetLinuxHiddenArgs();
 
 	    y2milestone("inst_type: %1, source_id: %2", inst_type, source_id);
 
-	    if (inst_type == `configured && source_id != nil && source_id >= 0)
+	    if (inst_type == `network_configured && source_id != nil && source_id >= 0)
 	    {
 		map product_data = Pkg::SourceProductData (source_id);
 		map general_data = Pkg::SourceGeneralData (source_id);
 		desc = product_data["label"]:"unknown" + " (" + general_data["url"]:"" + ")";
 	    }
-	    else if (inst_type == `custom)
+	    else if (inst_type == `network_custom || inst_type == `cdrom || inst_type == `iso)
 	    {
 		// installation proposal header
 		desc =  _("Custom Installation Source") + " (" + custom_source + ")";
@@ -465,14 +454,14 @@
 
 	map ret = $[];
 
-	if (inst_type == `configured && (source_id == nil || source_id < 0) && virtualization_type == "para") {
+	if (inst_type == `network_configured && (source_id == nil || source_id < 0) && virtualization_type == "para") {
 	    ret = $[ "warning" :
 		    // error message in proposal
 		    _("OS installation source is not configured"),
 		     "warning_level" : `blocker
 	    ];
 	}
-	else if (inst_type == `custom && (custom == nil || custom == "") && virtualization_type == "para") {
+	else if ((inst_type == `network_custom || inst_type == `cdrom || inst_type == `iso) && (custom == nil || custom == "") && virtualization_type == "para") {
 	    ret = $[ "warning" :
 		    // error message in proposal
 		    _("OS installation source is not configured"),
@@ -480,7 +469,7 @@
 	    ];
 	}
 // TODO: check custom installation source - parse URL, try to open it...
-/*	else if (inst_type == `custom)
+/*	else if (inst_type == `network_custom)
 	{
 	    // installation proposal header
 	    ret = _("Custom Installation Source") + " (" + custom_source + ")";

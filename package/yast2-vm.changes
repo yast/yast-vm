@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Wed Apr 19 15:41:23 MDT 2006 - mgfritch@novell.com
+
+- SCR::Read(.target.dir, "/etc/xen/vm") instead of 
+  SCR::Dir("/etc/xen/vm") to read list of used vm names (#165855)
+- Can now extract the kernel and initrd using a SUSE ISO or 
+  CD/DVD media. (#158529).
+- 2.13.36
+
+-------------------------------------------------------------------
 Fri Apr 14 12:21:05 CEST 2006 - lslezak@suse.cz
 
 - updated vm_finish client (#161720, #161721, #161756)

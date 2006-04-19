@@ -685,7 +685,6 @@
 
 	VM_Common::SetKernelImage("/usr/lib/xen/boot/hvmloader");
 	VM_Common::SetCustomKernel(true);
-	VM_Common::SetCustomIso(false);
 	VM_Common::SetInitrdImage("");
 
 	return true;
@@ -725,13 +724,160 @@
 	return boot_device;
     }
 
+    list<map<string,any> > parseDiskConfig(string diskstr) {
+	y2milestone("parseDiskConfig(%1)", diskstr);
+
+	list<map<string,any> > ret = [];
+
+//	diskstr = String::CutBlanks(diskstr);
+//	diskstr = regexpsub(diskstr, "\[(.*)\]", "\\1"); // remove square brackets '[' ']'
+	diskstr = deletechars(diskstr, "[]"); // remove square brackets '[' ']'
+	diskstr = String::CutBlanks(diskstr);
+	y2milestone("diskstr=%1", diskstr);
+
+	// parse string to create the list<map<string, any> > of disks
+	list<string> disklist = String::ParseOptions(diskstr, $["separator" : "'"]);
+	y2milestone("disklist=%1", disklist);
+	disklist = filter(string tmpstr, disklist, { return (tmpstr != nil && tmpstr != "" && tmpstr != ","); } );
+	y2milestone("disklist=%1", disklist);
+	
+	foreach(string tmpstr, disklist, {
+		map<string,any> disk_element = $[];
+		list<string> tmplist = splitstring(tmpstr, ",");
+		list<string> source = splitstring(tmplist[0]:"", ":");
+		list<string> target = splitstring(tmplist[1]:"", ":");
+
+		if (source[0]:"phys" == "file") // type loop-use
+			disk_element["type"] = "loop-use";
+		else // type phys
+			disk_element["type"] = "phys";
+		disk_element["source"] = source[1]:"";
+		if (size(target) > 1) // target[0] is ioemu option
+			disk_element["target"] = target[1]:""; 
+		else
+			disk_element["target"] = target[0]:"";
+		disk_element["ro"] = (tmplist[2]:"r" == "r");
+
+		ret = add(ret, disk_element);
+	});
+
+	y2milestone("parseDiskConfig() returned: %1", ret);
+	return ret;
+    }
+
+
+    global define boolean updateDiskConfig(string old_source, string new_source, string type) {
+	boolean success = true;
+
+	// remove the old disk entry (old_source), if it exists in the disks configuration
+	string old_disk = regexpsub(old_source, "/dev/(.*)", "\\1"); // remove /dev from the front of the string
+	if (old_disk == nil || old_disk == "") {
+		old_disk = old_source; // fall back to old_source in case the regexp fails
+	}
+	if (old_disk != nil && old_disk != "") {
+		y2milestone("Removing old disk source: %1", old_disk);
+		list<map<string,any> > new_disks = [];
+		foreach(map<string,any> m, getDiskConfig(), ``{
+			if (m["source"]:"" != old_disk)
+				new_disks = add(new_disks, m);
+		});
+		y2milestone("old disks=%1", getDiskConfig());
+		y2milestone("new disks=%1", new_disks);
+		setDiskConfig(new_disks);
+	}
+
+	// add the new_source (i.e. cdrom/iso) to the set of virtual disks
+	string source = regexpsub(new_source, "/dev/(.*)", "\\1");// remove /dev from the front of the string
+	if (source == nil || source == "") {
+		source = new_source; // fall back to new_source in case the regexp fails
+	}
+	if (source != nil && source != "") {
+		list<string> valid_targets = getValidVirtualDevices(getConfiguredDiskTargets(getDiskConfig()));
+		y2milestone("vaild_targets=%1", valid_targets);
+		if (valid_targets != nil && size(valid_targets) > 0) {
+			string target = valid_targets[0]:"hdc";
+			y2milestone("disks=%1", getDiskConfig());
+			map<string,any> new_disk = nil;
+			new_disk = $[ "source" : source, "target" : target, "ro" : true, "type" : type ];
+			if (new_disk == nil) {
+				y2error("new_disk is empty");
+				success = false;
+			}
+			y2milestone("adding: %1", new_disk);
+			setDiskConfig(add(disks, new_disk));
+		}
+		else {
+			Report::Error(_("Cannot add a new virtual disk target."));
+			y2error("WARNING: Cannot set the virtual target for the CD / DVD device.  All valid virtual targets are used!!!");
+			success = false;
+		}
+	}
+	return success;
+    }
+
+    string formatDiskConfig(list<map<string,any> > conf, boolean ioemu) {
+	string ret = "";
+
+	string ioemu_option = (ioemu) ? "ioemu:" : "";
+
+	foreach(map<string,any> d, conf, {
+		if (size(ret) > 0)
+		{
+		    ret = ret + ", ";
+		}
+
+		string rw_mode = (d["ro"]:true) ? "r" : "w";
+
+		if (d["type"]:"" == "phys")
+		{
+		    ret = ret + sformat("'phy:%1,%2%3,%4'", d["source"]:"", ioemu_option, d["target"]:"", rw_mode);
+		}
+		else if (d["type"]:"" == "loop-create")
+		{
+		    string source = d["prefix"]:img_prefix;
+		    if (findlastof(source, "/") < size(source)-1) { // no ending /
+			source = sformat("%1/%2/%3", d["prefix"]:img_prefix, VM_Common::config_name, d["source"]:"");
+		    }
+		    else {
+			source = sformat("%1%2/%3", d["prefix"]:img_prefix, VM_Common::config_name, d["source"]:"");
+		    }
+		    ret = ret + sformat("'file:%1,%2%3,%4'", source, ioemu_option, d["target"]:"", rw_mode);
+		}
+		else if (d["type"]:"" == "loop-use")
+		{
+		    ret = ret + sformat("'file:%1,%2%3,%4'", d["source"]:"", ioemu_option, d["target"]:"", rw_mode);
+		}
+	    }
+	);
+
+	ret = "[ " + ret + " ]";
+
+	y2milestone("Disk configuration: %1", ret);
+
+	return ret;
+    }
+
     global define boolean resetSourceConfig() {
 	if (VM_Common::GetVirtualizationType() == "full") {
 		return ResetFullOptions();
 	}
 	else { // para
 		if (VM_Common::proposal_type == "install") {
+			// look for a valid network inst source
+			VM_Common::inst_type = `network_configured; // FIXME: should the inst_type always be reset to `cdrom
 			VM_Common::source_id = VM_Common::ProposeSelection();
+			if (VM_Common::source_id == nil || VM_Common::source_id < 0) { // if no valid network inst source is found
+				VM_Common::inst_type = `cdrom;
+				// set the custom_source to the first probed cd device.
+				string old_custom_source = nil;
+				list<map> cd_hwinfo = (list<map>)SCR::Read(.probe.cdrom);
+				if (cd_hwinfo != nil) {
+					old_custom_source = VM_Common::custom_source; // remove the old source from the disk config
+					map first_dev = cd_hwinfo[0]:$[];
+					VM_Common::custom_source = first_dev["dev_name"]:"";
+				}
+				updateDiskConfig(old_custom_source, VM_Common::custom_source, "phys"); // add the cddev to the disk config
+			}
 			// reset custom kernel and initrd image setting
 			VM_Common::SetKernelImage("");
 			VM_Common::SetInitrdImage("");
@@ -753,7 +899,6 @@
 			}
 			VM_Common::SetCustomKernel(true);
 		}
-		VM_Common::SetCustomIso(false);
 	}
 	return true;
     }
@@ -826,9 +971,9 @@
     {
 	integer domain = 1;
 
-	list<string> configs = SCR::Dir(.etc.xen.section);
+	list<string> configs = (list<string>)SCR::Read(.target.dir, conf_path);
 
-	while (contains(configs, conf_path + conf_prefix + tostring(domain)))
+	while (contains(configs, conf_prefix + tostring(domain)))
 	{
 	    domain = domain + 1;
 	}
@@ -884,91 +1029,6 @@
 	optvalue = mergestring(optvalueList, "\\'");
 	y2debug("new optvalue: %1", optvalue);
 	return WriteOption(configpath, optname, "\'" + optvalue + "\'");
-    }
-
-
-    list<map<string,any> > parseDiskConfig(string diskstr) {
-	y2milestone("parseDiskConfig(%1)", diskstr);
-
-	list<map<string,any> > ret = [];
-
-//	diskstr = String::CutBlanks(diskstr);
-//	diskstr = regexpsub(diskstr, "\[(.*)\]", "\\1"); // remove square brackets '[' ']'
-	diskstr = deletechars(diskstr, "[]"); // remove square brackets '[' ']'
-	diskstr = String::CutBlanks(diskstr);
-	y2milestone("diskstr=%1", diskstr);
-
-	// parse string to create the list<map<string, any> > of disks
-	list<string> disklist = String::ParseOptions(diskstr, $["separator" : "'"]);
-	y2milestone("disklist=%1", disklist);
-	disklist = filter(string tmpstr, disklist, { return (tmpstr != nil && tmpstr != "" && tmpstr != ","); } );
-	y2milestone("disklist=%1", disklist);
-	
-	foreach(string tmpstr, disklist, {
-		map<string,any> disk_element = $[];
-		list<string> tmplist = splitstring(tmpstr, ",");
-		list<string> source = splitstring(tmplist[0]:"", ":");
-		list<string> target = splitstring(tmplist[1]:"", ":");
-
-		if (source[0]:"phys" == "file") // type loop-use
-			disk_element["type"] = "loop-use";
-		else // type phys
-			disk_element["type"] = "phys";
-		disk_element["source"] = source[1]:"";
-		if (size(target) > 1) // target[0] is ioemu option
-			disk_element["target"] = target[1]:""; 
-		else
-			disk_element["target"] = target[0]:"";
-		disk_element["ro"] = (tmplist[2]:"r" == "r");
-
-		ret = add(ret, disk_element);
-	});
-
-	y2milestone("parseDiskConfig() returned: %1", ret);
-	return ret;
-    }
-
-
-    string formatDiskConfig(list<map<string,any> > conf, boolean ioemu) {
-	string ret = "";
-
-	string ioemu_option = (ioemu) ? "ioemu:" : "";
-
-	foreach(map<string,any> d, conf, {
-		if (size(ret) > 0)
-		{
-		    ret = ret + ", ";
-		}
-
-		string rw_mode = (d["ro"]:true) ? "r" : "w";
-
-		if (d["type"]:"" == "phys")
-		{
-		    ret = ret + sformat("'phy:%1,%2%3,%4'", d["source"]:"", ioemu_option, d["target"]:"", rw_mode);
-		}
-		else if (d["type"]:"" == "loop-create")
-		{
-		    string source = d["prefix"]:img_prefix;
-		    if (findlastof(source, "/") < size(source)-1) { // no ending /
-			source = sformat("%1/%2/%3", d["prefix"]:img_prefix, VM_Common::config_name, d["source"]:"");
-		    }
-		    else {
-			source = sformat("%1%2/%3", d["prefix"]:img_prefix, VM_Common::config_name, d["source"]:"");
-		    }
-		    ret = ret + sformat("'file:%1,%2%3,%4'", source, ioemu_option, d["target"]:"", rw_mode);
-		}
-		else if (d["type"]:"" == "loop-use")
-		{
-		    ret = ret + sformat("'file:%1,%2%3,%4'", d["source"]:"", ioemu_option, d["target"]:"", rw_mode);
-		}
-	    }
-	);
-
-	ret = "[ " + ret + " ]";
-
-	y2milestone("Disk configuration: %1", ret);
-
-	return ret;
     }
 
     string GetVIF(list<map<string,string> > conf)
@@ -1139,25 +1199,20 @@
 
 	    // set installation source
 
-	    if (VM_Common::inst_type == `configured)
+	    if (VM_Common::inst_type == `network_configured)
 	    {
 		map general_data = Pkg::SourceGeneralData (VM_Common::source_id);
 		url = general_data["url"]:"";
 	    }
-	    else if (VM_Common::inst_type == `custom)
+	    else if (VM_Common::inst_type == `network_custom) {
+		url = VM_Common::custom_source;
+	    }
+	    else if (VM_Common::inst_type == `cdrom || VM_Common::inst_type == `iso)
 	    {
 		// find the virtaul disk device that matches this source
+		string virt_source = VM_Common::custom_source;
 		string virt_target = "";
-		string virt_source = "";
-		if (regexpmatch(VM_Common::custom_source, "^file:.*")) {
-			virt_source = sformat("file:%1", VM_Common::custom_source);
-		}
-		else if (regexpmatch(VM_Common::custom_source, "^/dev/.*")) {
-			virt_source = regexpsub(VM_Common::custom_source, "/dev/(.*)", "\\1");// remove /dev from the front of the string
-		}
-		else {
-			virt_source = VM_Common::custom_source;
-		}
+
 		foreach(map<string,any> m, disks, ``{
 			if (m["source"]:"" == virt_source)
 				virt_target = m["target"]:"";
@@ -1623,15 +1678,30 @@
 	    integer enabled_src = VM_Common::source_id;
 
 	    // check whether the custom installation source is already defined
-	    if (VM_Common::inst_type == `custom)
+	    if (VM_Common::inst_type == `network_custom || VM_Common::inst_type == `cdrom || VM_Common::inst_type == `iso)
 	    {
 		string url = VM_Common::custom_source;
+		if (VM_Common::inst_type == `cdrom) {
+			//url = sformat("hd://?device=/dev/%1 & filesystem=iso9660", VM_Common::custom_source); // FIXME: this is not correct! What is the correct URL for specifiing a specific device (cdrom or dvd)
+			url = "cd:///";
+		}
+		else if (VM_Common::inst_type == `iso) {
+			url = sformat("iso:///?iso=%1", VM_Common::custom_source);
+		}
+
 		integer src_defined = VM_Common::IsInstSourceDefined(url);
 
 		if (src_defined < 0)
 		{
 		    // Add a new installation source
 		    new_src = Pkg::SourceCreate(url, "");
+
+		    // FIXME: this if statement and following code must be removed when the correct URL for `cdrom inst_types is fixed.
+		    if ((new_src == nil || new_src < 0) && VM_Common::inst_type == `cdrom) {
+			url = "dvd:///";
+			new_src = Pkg::SourceCreate(url, "");
+		    }
+
 		    y2milestone("Adding new installation source: %1 = %2", url, new_src);
 		    enabled_src = new_src;
 		    VM_Common::source_id = new_src;
@@ -1642,9 +1712,14 @@
 	    // disable all sources
 	    VM_Common::DisableAllSources();
 
-	    if (enabled_src == nil)
+	    if (enabled_src == nil || enabled_src < 0)
 	    {
 		y2error("Configured source ID (VM_Common::source_id) is nil!");
+		Report::Error(_("Failed to extract the kernel
+from the installation source.
+
+Please check that your installation
+source is accessible."));
 		return false;
 	    }
 	    y2milestone("src_status: %1", VM_Common::InstSourceStatus());
@@ -1679,12 +1754,18 @@
 	    if (!Pkg::IsAvailable("kernel-" + kernel_ext))
 	    {
 		y2error("%1%2 package is not available", "kernel-", kernel_ext);
+		Report::Error(_("Failed to extract the kernel
+from the installation source.
+
+Please check that your installation
+source is accessible."));
 		return false;
 	    }
 
 	    if (!Pkg::IsAvailable("install-initrd"))
 	    {
 		y2error("install-initrd package is not available");
+		Report::Error(_("Failed to create the installation RAM disk."));
 		return false;
 	    }
 
@@ -2038,9 +2119,6 @@ source is accessible."));
 	    "getCustomKernel"	: VM_Common::GetCustomKernel,
 	    "setCustomKernel"	: VM_Common::SetCustomKernel,
 
-	    "getCustomIso"	: VM_Common::GetCustomIso,
-	    "setCustomIso"	: VM_Common::SetCustomIso,
-
 	    "getVirtualizationType" : VM_Common::GetVirtualizationType,
 	    "setVirtualizationType" : VM_Common::SetVirtualizationType,
 	    "resetVirtualizationType" : VM_Common::ResetVirtualizationType,
@@ -2061,6 +2139,7 @@ source is accessible."));
 	    "export"	: VM_XEN::Export,
 
 	    "parseDiskConfig" : VM_XEN::parseDiskConfig,
+	    "updateDiskConfig" : VM_XEN::updateDiskConfig,
 
 	    "Write" : VM_XEN::Write,
 	    "Prepare" : VM_XEN::Prepare,

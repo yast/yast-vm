@@ -138,8 +138,8 @@
 Please, specify a Name of Virtual Machine."));
 			continue;
 		    }
-		    list<string> configs = SCR::Dir(.etc.xen.section);
-		    if (contains(configs, "/etc/xen/vm/" + vmname)) {
+		    list<string> configs = (list<string>)SCR::Read(.target.dir, "/etc/xen/vm");
+		    if (contains(configs, vmname)) {
 			// error message: name of virtual machine must be unique, entered name is already in use
 			Report::Error(_("Name of Virtual Machine is already used.
 Enter another name.

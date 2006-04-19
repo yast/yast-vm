@@ -59,13 +59,16 @@ boolean DeleteVirtualMachine(integer table_item) {
 		// remove all disks not configured for use with another VM.
 		foreach(string src, sources, {
 			boolean remove_disk = true;
+			// don't remove files that have the .iso extension
+			if (regexpmatch(src, ".*\.iso$"))
+				remove_disk = false;
 			// look for another configured vm using this disk
 			if (contains(all_other_sources, src))
 				remove_disk = false;
 			// before deleting a disk source, make sure no other running VM is using it
 			string cmd = sformat("%1 list | grep %2", VM_XEN::xm, src);
 			integer retval = (integer) SCR::Execute(.target.bash, cmd);
-			if (retval == 0) 
+			if (retval == 0)
 				remove_disk = false;
 			// remove the disk source
 			if (remove_disk) {
