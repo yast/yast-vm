@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Thu Apr 20 12:58:34 MDT 2006 - mgfritch@novell.com
+
+- domU has only one console (#167204)
+
+-------------------------------------------------------------------
 Wed Apr 19 15:41:23 MDT 2006 - mgfritch@novell.com
 
 - SCR::Read(.target.dir, "/etc/xen/vm") instead of 
