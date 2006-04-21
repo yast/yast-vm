@@ -1,7 +1,15 @@
 -------------------------------------------------------------------
+Fri Apr 21 14:25:58 MDT 2006 - mgfritch@novell.com
+
+- Although console appears to be a tty, don't do character 
+  translations (#149175)
+- 2.13.38
+
+-------------------------------------------------------------------
 Thu Apr 20 12:58:34 MDT 2006 - mgfritch@novell.com
 
 - domU has only one console (#167204)
+- 2.13.37
 
 -------------------------------------------------------------------
 Wed Apr 19 15:41:23 MDT 2006 - mgfritch@novell.com
