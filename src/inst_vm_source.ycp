@@ -98,7 +98,7 @@
 			// heading in a popup dialog
 			`Frame(_("Install Using"),
 				`MarginBox(1.5, 0.2, `VBox(
-					`Left(`RadioButton(`id(`network), `opt(`notify), _("Network Installation &Source"))),
+					`Left(`RadioButton(`id(`network_configured), `opt(`notify), _("Network Installation &Source"))),
 					`VSpacing(0.5),
 					`Left(`RadioButton(`id(`cdrom), `opt(`notify), _("&CD / DVD Device"))),
 					`VSpacing(0.5),
@@ -123,10 +123,8 @@
 	symbol s = `dummy;
 
 	// set the default state for the radio buttons
-	if (sconfig["inst_type"]:`cdrom == `network_configured
-			|| sconfig["inst_type"]:`cdrom == `network_custom
-			|| sconfig["inst_type"]:`cdrom == `network)
-		UI::ChangeWidget(`id(`rbg), `CurrentButton, `network);
+	if (sconfig["inst_type"]:`cdrom == `network_configured || sconfig["inst_type"]:`cdrom == `network_custom)
+		UI::ChangeWidget(`id(`rbg), `CurrentButton, `network_configured);
 	else if (sconfig["inst_type"]:`cdrom == `iso)
 		UI::ChangeWidget(`id(`rbg), `CurrentButton, `iso);
 	else
@@ -142,13 +140,16 @@
 	    if (s == `next) {
 		symbol type = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton);
 
+		if (type == `network_configured) {
+			if (sconfig["inst_type"]:`cdrom == `network_custom)
+				type = `network_custom;
+			VM::SetCustomKernel(false);
+		}
+
 		y2milestone("old sconfig: %1", sconfig);
 		sconfig["inst_type"] = type;
 		updateConfig(sconfig);
 		y2milestone("new sconfig: %1", sconfig);
-
-		if (type == `network)
-			VM::SetCustomKernel(false);
 
 		string boot = (string) UI::QueryWidget (`id(`bootopts), `Value);
 		VM::SetExtraArgs(boot);
@@ -922,7 +923,8 @@ does not match any configued disks."))) {
 	    "ws_start"	: (VM::GetVirtualizationType() == "full") ? "FullOptionsDialog" : ((VM_Common::proposal_type == "install") ? "SourceTypeDialog" : "BootOptionsDialog"),
 	    "SourceTypeDialog"	:
 		$[
-		    `network	    :   "Network_SourceDialog",
+		    `network_configured	    :   "Network_SourceDialog",
+		    `network_custom	    :   "Network_SourceDialog",
 		    `cdrom	    :   "CD_SourceDialog",
 		    `iso	    :   "ISO_SourceDialog",
 		    `abort	    :   `abort,

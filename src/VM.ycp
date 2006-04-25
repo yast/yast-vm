@@ -930,7 +930,7 @@
 //	ResetMAC();
 //	ResetUserName();
 	ResetNetworkConfig();
-//	ResetVirtualizationType(); // NOTE: reseting this value causes strange settings since most are calculated base on virtualization type.
+//	ResetVirtualizationType(); // NOTE: reseting this value causes strange settings since most are calculated based on virtualization type.
 	ResetAutoYastProfile();
 	ResetMemorySize();
 	ResetNumberOfCpus();

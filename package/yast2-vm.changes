@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Tue Apr 25 12:18:21 MDT 2006 - mgfritch@novell.com
+
+- Must always create new disk images when they are added as a new 
+  disk to the table of disk images (#168206)
+- Always Unmount the YaST ini agent before writing settings to a 
+  config file (#168165)
+- 2.13.39 
+
+-------------------------------------------------------------------
 Fri Apr 21 14:25:58 MDT 2006 - mgfritch@novell.com
 
 - Although console appears to be a tty, don't do character 

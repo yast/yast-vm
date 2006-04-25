@@ -864,7 +864,7 @@
 	else { // para
 		if (VM_Common::proposal_type == "install") {
 			// look for a valid network inst source
-			VM_Common::inst_type = `network_configured; // FIXME: should the inst_type always be reset to `cdrom
+			VM_Common::inst_type = `network_configured;
 			VM_Common::source_id = VM_Common::ProposeSelection();
 			if (VM_Common::source_id == nil || VM_Common::source_id < 0) { // if no valid network inst source is found
 				VM_Common::inst_type = `cdrom;
@@ -1106,6 +1106,7 @@
 		SCR::Execute(.target.remove, configfilename);
 	}
 
+	SCR::UnmountAgent(.etc.xen);
 	path configpath = .etc.xen.value + topath(conf_path + VM_Common::config_name);
 
 	boolean ret = WriteOption(configpath, "disk", formatDiskConfig(disks, VM_Common::GetVirtualizationType() == "full"));
@@ -1517,84 +1518,6 @@
         VM_Common::hidden_args = "";
     }
 
-    global define boolean Prepare2() {
-	boolean ret = true;
-
-	kernel_path = VM_Common::GetKernelImage();
-	initrd_path = VM_Common::GetInitrdImage();
-
-	SCR::UnmountAgent(.etc.xen);
-	path configpath = .etc.xen.value + topath(conf_path + VM_Common::config_name);
-
-	// remove the disk with autoyast profile
-	if (VM_Common::GetVirtualizationType() != "full" && VM_Common::autoyast_profile != nil && VM_Common::autoyast_profile != "")
-	{
-	    // remove the last disk (image with autoyast profile)
-	    disks = remove(disks, size(disks) - 1);
-	    ret = WriteOption(configpath, "disk", formatDiskConfig(disks, VM_Common::GetVirtualizationType() == "full"));
- 
-	    string command = "/bin/rm " + img_prefix + VM_Common::config_name + "/autoyast.img";
-	    integer out = (integer)SCR::Execute(.target.bash, command);
-	    if (out != 0)
-	    {
-		y2warning("Cannot remove autoyast image, command: %1 failed", command);
-	    }
-	}
-	else {
-	    ret = WriteOption(configpath, "disk", formatDiskConfig(disks, VM_Common::GetVirtualizationType() == "full"));
-	}
-
-	// all following action are needed only in paravirtualization mode
-	if (VM_Common::GetVirtualizationType() == "full")
-	{
-	    // update boot configuration if the VM booted from a CD
-	    if (boot_device == "d")
-	    {
-		// set boot from hard disk
-		ret = ret && WriteStringOption(configpath, "boot", "c");
-
-		// flush the changes
-		ret = ret && SCR::Write(.etc.xen, nil);
-	    }
-
-	    return ret;
-	}
-	else {
-		ret = ret && WriteStringOption(configpath, "bootloader", "/usr/lib/xen/boot/domUloader.py");
-	}
-
-	ret = ret && WriteOption(configpath, "memory", tostring(VM_Common::memory_size));
-	ret = ret && WriteOption(configpath, "vcpus", tostring(VM_Common::number_of_cpus));
-
-
-	if (VM_Common::root_device == nil || VM_Common::root_device == "") {
-		ReadDiskImages(img_prefix + VM_Common::config_name);
-	}
-
-	// upadate config - root device, set default runlevel, remove install= option
-//	ret = ret && SCR::Write(configpath + "restart", nil);
-
-	VM_Common::SetHiddenArgs(kernel_path);
-	string extra = VM_Common::hidden_args + " " + VM_Common::extra_args;
-	ret = ret && WriteStringOption(configpath, "extra", extra);
-
-	if (VM_Common::proposal_type != "install" && VM_Common::GetVirtualizationType() == "para"/* && VM_Common::root_device != ""*/) {
-     	    string bootentry = sformat("%1:%2", VM_Common::root_device, kernel_path);
-	    if (initrd_path != "") {
-	        bootentry = bootentry + "," + initrd_path;
-	    }
-	    ret = ret && WriteStringOption(configpath, "bootentry", bootentry);
-	}
-
-	ret = ret && WriteStringOption(configpath, "on_poweroff", VM_Common::on_poweroff);
-	ret = ret && WriteStringOption(configpath, "on_reboot", VM_Common::on_reboot);
-	ret = ret && WriteStringOption(configpath, "on_crash", VM_Common::on_crash);
-
-	// flush the changes
-	ret = ret && SCR::Write(.etc.xen, nil);
-
-	return ret;
-    }
 
     /*global define boolean UpdateRoot(string root)
     {
@@ -1662,6 +1585,90 @@
 	y2milestone("dom0_memory size: %1", ret);
 	return ret;
     }
+
+
+    global define boolean Prepare2() {
+	boolean ret = true;
+
+	kernel_path = VM_Common::GetKernelImage();
+	initrd_path = VM_Common::GetInitrdImage();
+
+	SCR::UnmountAgent(.etc.xen);
+	path configpath = .etc.xen.value + topath(conf_path + VM_Common::config_name);
+
+	// remove the disk with autoyast profile
+	if (VM_Common::GetVirtualizationType() != "full" && VM_Common::autoyast_profile != nil && VM_Common::autoyast_profile != "")
+	{
+	    // remove the last disk (image with autoyast profile)
+	    disks = remove(disks, size(disks) - 1);
+ 
+	    string command = "/bin/rm " + img_prefix + VM_Common::config_name + "/autoyast.img";
+	    integer out = (integer)SCR::Execute(.target.bash, command);
+	    if (out != 0)
+	    {
+		y2warning("Cannot remove autoyast image, command: %1 failed", command);
+	    }
+	}
+
+	ret = WriteOption(configpath, "disk", formatDiskConfig(disks, VM_Common::GetVirtualizationType() == "full"));
+
+	// create disk image file(s)
+	y2milestone("Creating disk images...");
+	CreateDiskImages();
+
+
+	// all following action are needed only in paravirtualization mode
+	if (VM_Common::GetVirtualizationType() == "full")
+	{
+	    // update boot configuration if the VM booted from a CD
+	    if (boot_device == "d")
+	    {
+		// set boot from hard disk
+		ret = ret && WriteStringOption(configpath, "boot", "c");
+
+		// flush the changes
+		ret = ret && SCR::Write(.etc.xen, nil);
+	    }
+
+	    return ret;
+	}
+	else {
+		ret = ret && WriteStringOption(configpath, "bootloader", "/usr/lib/xen/boot/domUloader.py");
+	}
+
+	ret = ret && WriteOption(configpath, "memory", tostring(VM_Common::memory_size));
+	ret = ret && WriteOption(configpath, "vcpus", tostring(VM_Common::number_of_cpus));
+
+
+	if (VM_Common::root_device == nil || VM_Common::root_device == "") {
+		ReadDiskImages(img_prefix + VM_Common::config_name);
+	}
+
+	// upadate config - root device, set default runlevel, remove install= option
+//	ret = ret && SCR::Write(configpath + "restart", nil);
+
+	VM_Common::SetHiddenArgs(kernel_path);
+	string extra = VM_Common::hidden_args + " " + VM_Common::extra_args;
+	ret = ret && WriteStringOption(configpath, "extra", extra);
+
+	if (VM_Common::proposal_type != "install" && VM_Common::GetVirtualizationType() == "para"/* && VM_Common::root_device != ""*/) {
+     	    string bootentry = sformat("%1:%2", VM_Common::root_device, kernel_path);
+	    if (initrd_path != "") {
+	        bootentry = bootentry + "," + initrd_path;
+	    }
+	    ret = ret && WriteStringOption(configpath, "bootentry", bootentry);
+	}
+
+	ret = ret && WriteStringOption(configpath, "on_poweroff", VM_Common::on_poweroff);
+	ret = ret && WriteStringOption(configpath, "on_reboot", VM_Common::on_reboot);
+	ret = ret && WriteStringOption(configpath, "on_crash", VM_Common::on_crash);
+
+	// flush the changes
+	ret = ret && SCR::Write(.etc.xen, nil);
+
+	return ret;
+    }
+
 
     global define boolean Prepare() {
 	// build/extract xen kernel and installation initrd, copy them to a temp directory.
