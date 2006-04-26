@@ -1230,6 +1230,12 @@
 	    {
 		url = "slp://";
 	    }
+	    // Strip off any query string before writing the "install=" setting (#169829)
+	    string old_url = url;
+	    url = regexpsub(url, "^(.*)\\?.*", "\\1");
+	    if (url == nil || url == "") {
+		url = old_url; // fall back to the old url incase the regexpsub fails.
+	    }
 
 	    VM_Common::SetHiddenArgs(kernel_path);
 	    string extra_arg = "";
@@ -1630,34 +1636,32 @@
 		ret = ret && SCR::Write(.etc.xen, nil);
 	    }
 
-	    return ret;
+//	    return ret;
 	}
-	else {
+	else { // para virtualized
+
 		ret = ret && WriteStringOption(configpath, "bootloader", "/usr/lib/xen/boot/domUloader.py");
+
+		if (VM_Common::root_device == nil || VM_Common::root_device == "") {
+			ReadDiskImages(img_prefix + VM_Common::config_name);
+		}
+
+		// upadate config - root device, set default runlevel, remove install= option
+//		ret = ret && SCR::Write(configpath + "restart", nil);
+
+		VM_Common::SetHiddenArgs(kernel_path);
+		string extra = VM_Common::hidden_args + " " + VM_Common::extra_args;
+		ret = ret && WriteStringOption(configpath, "extra", extra);
+	
+		string bootentry = sformat("%1:%2", VM_Common::root_device, kernel_path);
+		if (initrd_path != "") {
+			bootentry = bootentry + "," + initrd_path;
+		}
+		ret = ret && WriteStringOption(configpath, "bootentry", bootentry);
 	}
 
 	ret = ret && WriteOption(configpath, "memory", tostring(VM_Common::memory_size));
 	ret = ret && WriteOption(configpath, "vcpus", tostring(VM_Common::number_of_cpus));
-
-
-	if (VM_Common::root_device == nil || VM_Common::root_device == "") {
-		ReadDiskImages(img_prefix + VM_Common::config_name);
-	}
-
-	// upadate config - root device, set default runlevel, remove install= option
-//	ret = ret && SCR::Write(configpath + "restart", nil);
-
-	VM_Common::SetHiddenArgs(kernel_path);
-	string extra = VM_Common::hidden_args + " " + VM_Common::extra_args;
-	ret = ret && WriteStringOption(configpath, "extra", extra);
-
-	if (VM_Common::proposal_type != "install" && VM_Common::GetVirtualizationType() == "para"/* && VM_Common::root_device != ""*/) {
-     	    string bootentry = sformat("%1:%2", VM_Common::root_device, kernel_path);
-	    if (initrd_path != "") {
-	        bootentry = bootentry + "," + initrd_path;
-	    }
-	    ret = ret && WriteStringOption(configpath, "bootentry", bootentry);
-	}
 
 	ret = ret && WriteStringOption(configpath, "on_poweroff", VM_Common::on_poweroff);
 	ret = ret && WriteStringOption(configpath, "on_reboot", VM_Common::on_reboot);
@@ -1690,7 +1694,7 @@
 		string url = VM_Common::custom_source;
 		if (VM_Common::inst_type == `cdrom) {
 			//url = sformat("hd://?device=/dev/%1 & filesystem=iso9660", VM_Common::custom_source); // FIXME: this is not correct! What is the correct URL for specifiing a specific device (cdrom or dvd)
-			url = "cd:///";
+			url = sformat("cd:///?devices=/dev/%1", VM_Common::custom_source);
 		}
 		else if (VM_Common::inst_type == `iso) {
 			url = sformat("iso:///?iso=%1", VM_Common::custom_source);
@@ -1705,7 +1709,7 @@
 
 		    // FIXME: this if statement and following code must be removed when the correct URL for `cdrom inst_types is fixed.
 		    if ((new_src == nil || new_src < 0) && VM_Common::inst_type == `cdrom) {
-			url = "dvd:///";
+			url = sformat("dvd:///?devices=/dev/%1", VM_Common::custom_source);
 			new_src = Pkg::SourceCreate(url, "");
 		    }
 

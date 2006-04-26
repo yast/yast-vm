@@ -180,13 +180,7 @@ Please select a different Virtual Disk."));
 		}
 
 		if (ui == `next || ui == `accept) { // no input errors
-		    ret = $[ "size" : sz_int, "sparse" : sparse_file, "type" : "loop-create", "ro" : new_ro ];
-
-		    if (VM::GetVMMtype() == "xen") {
-			ret = add(ret, "target", dev);
-			ret = add(ret, "prefix", new_dir);
-			ret = add(ret, "source", dev);
-		    }
+		    ret = $[ "prefix" : new_dir, "source" : dev, "target" : dev, "sparse" : sparse_file, "ro" : new_ro, "type" : "loop-create", "size" : sz_int ];
 		}
 	    }
 	}
@@ -315,11 +309,7 @@ so it will be exported to the VM as read-only.")))
 		}
 
 		if (ui == `next || ui == `accept) { // no input errors
-		    ret = $[ "source" : new_src, "type" : "loop-use", "ro" : new_ro ];
-
-		    if (VM::GetVMMtype() == "xen") {
-			ret = add(ret, "target", dev);
-		    }
+		    ret = $[ "source" : new_src, "target" : dev, "type" : "loop-use", "ro" : new_ro ];
 		}
 	    }
 	    else if (ui == `select_file) {
@@ -492,48 +482,46 @@ Please select a different Virtual Disk."));
 
 	foreach (map<string,any> m, disks, ``{
 
-	    string sz = "";
-
-	    if (haskey(m, "size"))
-	    {
-		sz = tostring(m["size"]:0);
-	    }
-
 	    y2milestone("disk: %1", m);
 
-	    if (m["type"]:"" == "phys")
-	    {
-		// get size of the device, it's in sectors (512B)   (x*0.5 = x*512/1024)
-		sz = tostring((device_sizes[m["source"]:""]:0) / 1024);
+	    integer sz = -1;
+	    string prefix = "";
+
+	    if (m["type"]:"" == "loop-create") {
+		prefix = m["prefix"]:VM::GetImgPrefix();
+		if (findlastof(prefix, "/") < size(prefix)-1) { // no ending /
+		    prefix = sformat("%1/%2/", m["prefix"]:VM::GetImgPrefix(), VM::GetConfigName());
+		}
+		else {
+		    prefix = sformat("%1%2/", m["prefix"]:VM::GetImgPrefix(), VM::GetConfigName());
+		}
+		sz = m["size"]:0; // size is already in MB
 	    }
+	    else if (m["type"]:"" == "loop-use") {
+		sz = (integer)SCR::Read(.target.size, m["source"]:"");
+		if (sz >= 0) {
+			// calculate size in MB
+			sz = (sz / 1024) / 1024;
+		}
+	    }
+	    else if (m["type"]:"" == "phys") {
+		prefix = "";
+		// get size of the device, it's in sectors (512B)   (x*0.5 = x*512/1024)
+		sz = (device_sizes[regexpsub(m["source"]:"", "/dev/(.*)", "\\1")]:0) / 1024;  // calculate size in MB
+	    }
+
+	    string sz_str = "";
+	    if (sz == nil || sz < 0)
+		sz_str = "";
+	    else
+		sz_str = tostring(sz);
+
 	    y2milestone("sz: %1", sz);
 
-	    if (VM::GetVMMtype() == "xen") {
-		string prefix = "";
-
-		if (m["type"]:"" == "loop-create")
-		{
-		    prefix = m["prefix"]:VM::GetImgPrefix();
-		    if (findlastof(prefix, "/") < size(prefix)-1) { // no ending /
-			prefix = sformat("%1/%2/", m["prefix"]:VM::GetImgPrefix(), VM::GetConfigName());
-		    }
-		    else {
-			prefix = sformat("%1%2/", m["prefix"]:VM::GetImgPrefix(), VM::GetConfigName());
-		    }
-		}
-		else if (m["type"]:"" == "phys")
-		{
-		    prefix = "";
-		}
-
-		d = add(d, `item (`id(id_cnt), m["target"]:"", prefix + m["source"]:"", sz, (m["ro"]:false) ? UI::Glyph(`CheckMark) : "", (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
-	    }
-	    else if (VM::GetVMMtype() == "uml") {
-		d = add(d, `item (`id(id_cnt), m["size"]:0, (m["ro"]:false) ? UI::Glyph(`CheckMark) : "", (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
-	    }
-
+	    d = add(d, `item (`id(id_cnt), m["target"]:"", prefix + m["source"]:"", sz_str, (m["ro"]:false) ? UI::Glyph(`CheckMark) : "", (m["sparse"]:false) ? UI::Glyph(`CheckMark) : ""));
 	    id_cnt = id_cnt + 1;
 	});
+
 	UI::ChangeWidget (`id(`disks), `Items, d);
     }
 
@@ -569,7 +557,9 @@ define symbol DiskOverview() {
     help_text = help_text + _("<p>A virtual machine can have one or more virtual disks. Each virtual disk points to a file or block device on the VM Server.</p>");
 
     Wizard::SetContents (caption, contents, help_text, true, true);
-    Wizard::SetNextButton(`next, Label::OKButton());
+    Wizard::SetNextButton(`next, Label::AcceptButton());
+    Wizard::SetAbortButton(`abort, Label::CancelButton());
+    Wizard::HideBackButton();
 
     refresh_table(disks);
 
@@ -628,7 +618,9 @@ define symbol DiskOverview() {
 	}
     }
 
-    Wizard::RestoreNextButton();
+	Wizard::SetNextButton(`next, Label::NextButton());
+	Wizard::SetAbortButton(`abort, Label::AbortButton());
+	Wizard::RestoreBackButton();
 
     return ret;
 }
@@ -726,12 +718,12 @@ symbol EditDisk() {
     Wizard::OpenNextBackDialog();
 
     map aliases = $[
-	    "DiskOverview"	: ``(DiskOverview()),
-	    "AddNewLoopBack"	: ``(AddNewLoopBack()),
+	    "DiskOverview"		: ``(DiskOverview()),
+	    "AddNewLoopBack"		: ``(AddNewLoopBack()),
 	    "AddExistingLoopBack"	: ``(AddExistingLoopBack()),
-	    "DiskType"		: ``(DiskTypeDialog()),
-	    "AddBlockDevice"	: ``(AddBlockDevice()),
-	    "EditDisk"		: ``(EditDisk()),
+	    "DiskType"			: ``(DiskTypeDialog()),
+	    "AddBlockDevice"		: ``(AddBlockDevice()),
+	    "EditDisk"			: ``(EditDisk()),
 	];
 
     map sequence = $[

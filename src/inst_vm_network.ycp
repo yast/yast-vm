@@ -278,6 +278,9 @@ define symbol NetworkOverview() {
 
 
     Wizard::SetContents (caption, contents, help_text, true, true);
+    Wizard::SetNextButton(`next, Label::AcceptButton());
+    Wizard::SetAbortButton(`abort, Label::CancelButton());
+    Wizard::HideBackButton();
 
     refresh_table(network_conf);
 
@@ -416,6 +419,10 @@ Please, specify a gateway."));
 		continue;
 	}
     }
+
+    Wizard::SetNextButton(`next, Label::NextButton());
+    Wizard::SetAbortButton(`abort, Label::AbortButton());
+    Wizard::RestoreBackButton();
 
     return ret;
 }

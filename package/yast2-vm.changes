@@ -1,4 +1,18 @@
 -------------------------------------------------------------------
+Wed Apr 26 12:02:46 MDT 2006 - mgfritch@novell.com
+
+- Specify the CD-ROM device name in the URL to be used for 
+  extracting the kernel/initrd from a SUSE CD/DVD media.
+- Always display the size of each disk in the disk overview table 
+  regardless of it's type (loop-create, loop-use, or phys).
+- Values on_reboot, on_crash, and on_poweroff must always be 
+  rewritten to the config file when virtualization type is 
+  full. (#168203)
+- Strip off any query string before writing the "install=" 
+  setting. (#169829)
+- 2.13.40 
+
+-------------------------------------------------------------------
 Tue Apr 25 12:18:21 MDT 2006 - mgfritch@novell.com
 
 - Must always create new disk images when they are added as a new 
