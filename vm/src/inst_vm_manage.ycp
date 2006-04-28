@@ -1,0 +1,545 @@
+/**
+ * Module:	inst_vm_manage.ycp
+ *
+ * Authors:	Michael G. Fritch <mgfritch@novell.com>
+ *
+ * Purpose:	Manage Virtual Machines (Add, Delete, Start, View, Shutdown, Terminate)
+ *
+ * $Id: inst_vm_manage.ycp 29389 2006-03-26 05:40:23Z mgfritch $
+ *
+ */
+
+{
+
+textdomain "vm";
+
+import "VM";
+import "VM_Common";
+import "VM_XEN";
+import "Wizard";
+import "Popup";
+import "Report";
+import "Label";
+import "Sequencer";
+import "String";
+
+
+list<map> SettingsList = [];
+
+
+boolean DeleteVirtualMachine(integer table_item) {
+	if (table_item != nil || table_item >= 0) {
+		boolean success = true;
+		map item = SettingsList[table_item]:$[];
+//		VM::TerminateVirtualMachine(item["name"]:""); // delete button should be disabled if the VM is running.
+
+		// create a list of all known disk sources, excluding this VM (loopback only!)
+		list<map> tmpSettings = remove(SettingsList, table_item);
+		list<string> all_other_sources = [];
+		foreach(map tmpItem, tmpSettings, {
+			list<map> disks = (list<map>) tmpItem["disks"]:[];
+			foreach(map d, disks, {
+				if (d["type"]:"phys" == "loop-use")
+					all_other_sources = add(all_other_sources, d["source"]:"");
+			});
+		});
+		all_other_sources = filter(string src, all_other_sources, { return (src != nil && src != ""); });
+		all_other_sources = toset(all_other_sources);
+
+		// create a list of known disk sources for this VM (loopback only!)
+		list<map> disks = (list<map>) item["disks"]:[];
+		list<string> sources = [];
+		foreach(map d, disks, {
+			if (d["type"]:"phys" == "loop-use")
+				sources = add(sources, d["source"]:"");
+		});
+		sources = filter(string src, sources, { return (src != nil && src != ""); });
+		sources = toset(sources);
+
+		// remove all disks not configured for use with another VM.
+		foreach(string src, sources, {
+			boolean remove_disk = true;
+			// don't remove files that have the .iso extension
+			if (regexpmatch(src, ".*\.iso$"))
+				remove_disk = false;
+			// look for another configured vm using this disk
+			if (contains(all_other_sources, src))
+				remove_disk = false;
+			// before deleting a disk source, make sure no other running VM is using it
+			string cmd = sformat("%1 list | grep %2", VM_XEN::xm, src);
+			integer retval = (integer) SCR::Execute(.target.bash, cmd);
+			if (retval == 0)
+				remove_disk = false;
+			// remove the disk source
+			if (remove_disk) {
+				y2milestone("removing virtual disk: %1", src);
+				boolean isremoved = (boolean) SCR::Execute(.target.remove, src);
+				if (! isremoved) success = false;
+			}
+		});
+
+		// remove any autoyast.img files from the vm image directory
+		string img_dir = VM::GetImgPrefix() + VM_Common::config_name;
+		SCR::Execute(.target.remove, img_dir + "/autoyast.img");
+
+		// try to remove the vm image directory (if it is not empty, it should not be deleted).
+		string cmd = sformat("rmdir %1", img_dir);
+		y2milestone("Executing: %1", img_dir);
+		SCR::Execute(.target.bash, cmd);
+
+		// remove the config file
+		boolean isremoved = (boolean) SCR::Execute(.target.remove, sformat("%1%2", VM::GetConfigFilePath(), item["cfg_file"]:""));
+		if ( ! isremoved ) success = false;
+		return success;
+	}
+	return false;
+}
+
+
+void ReadConfigFileSettings() {
+	y2milestone("Reading config file settings...");
+	list<string> file_list = (list<string>) SCR::Read(.target.dir, VM::GetConfigFilePath());
+	y2milestone("file_list=%1", file_list);
+	if (file_list != nil) {
+		foreach(string cfg_file, file_list, {
+			string first_char = substring(cfg_file, 0, 1);
+			string last_char = substring(cfg_file, size(cfg_file)-1, size(cfg_file));
+			if (first_char == "." || last_char == "~") {
+				// ignore all files that start with '.' or end with '~'
+				continue;
+			}
+			else {
+				map<string, any> new_settings = $[];
+				path configpath = .etc.xen.value + topath(VM::GetConfigFilePath() + cfg_file);
+				y2milestone("Reading config file: %1", configpath);
+				new_settings["name"] = regexpsub((string)SCR::Read(configpath + topath("name")), "'(.*)'", "\\1");
+				if (new_settings["name"]:"" == nil || new_settings["name"]:"" == "") continue; // ignore cfg files that do not contain a machine name.
+				new_settings["builder"] = regexpsub((string)SCR::Read(configpath + topath("builder")), "'(.*)'", "\\1");
+				new_settings["memory"] = (string)SCR::Read(configpath + topath("memory"));
+				new_settings["kernel"] = (string)SCR::Read(configpath + topath("kernel"));
+				if (new_settings["kernel"]:"" != nil && new_settings["kernel"]:"" != "") {
+					new_settings["kernel"] = regexpsub(new_settings["kernel"]:"", "'(.*)'", "\\1");
+				}
+				new_settings["bootentry"] = regexpsub((string)SCR::Read(configpath + topath("bootentry")), "'(.*)'", "\\1");
+				if (new_settings["kernel"]:"" == nil || new_settings["kernel"]:"" == "") {
+					list<string> tmplist = splitstring(new_settings["bootentry"]:"", ":,");
+					new_settings["kernel"] = tmplist[1]:"";
+				}
+				new_settings["disks"] = VM::ParseDiskConfig((string)SCR::Read(configpath + topath("disk")));
+				if (tolower(new_settings["builder"]:"linux") == "hvm") { // full virt.
+					new_settings["sdl"] = (string)SCR::Read(configpath + topath("sdl"));
+					new_settings["vnc"] = (string)SCR::Read(configpath + topath("vnc"));
+					new_settings["vncviewer"] = (string)SCR::Read(configpath + topath("vncviewer"));
+				}
+				new_settings["cfg_file"] = cfg_file;
+				SettingsList = add(SettingsList, new_settings);
+			}
+		});
+	}
+}
+
+
+void UpdateSettingsList(map<string, string> new_item) {
+	y2milestone("UpdateSettingsList(%1)", new_item);
+	if (new_item != nil && new_item["name"]:"" != nil && new_item["name"]:"" != "") {
+		boolean found = false;
+		integer pos = 0;
+		foreach(map item, SettingsList, { // look for an existing entry
+			if (item["name"]:"" == new_item["name"]:"") {
+				found = true;
+				// update the existing entry...
+				if (new_item["name"]:"" != nil && new_item["name"]:"" != "")
+					item["name"] = new_item["name"]:"";
+				if (new_item["id"]:"" != nil && new_item["id"]:"" != "")
+					item["id"] = new_item["id"]:"";
+				if (new_item["memory"]:"" != nil && new_item["memory"]:"" != "")
+					item["memory"] = new_item["memory"]:"";
+				if (new_item["vcpus"]:"" != nil && new_item["vcpus"]:"" != "")
+					item["vcpus"] = new_item["vcpus"]:"";
+				if (new_item["state"]:"" != nil && new_item["state"]:"" != "")
+					item["state"] = new_item["state"]:"";
+				if (new_item["time"]:"" != nil && new_item["time"]:"" != "")
+					item["time"] = new_item["time"]:"";
+				SettingsList = remove(SettingsList, pos);
+				SettingsList = add(SettingsList, item);
+			}
+			pos = pos + 1;
+		});
+		if (!found) {
+			// add a new entry for this item...
+			SettingsList = add(SettingsList, new_item);
+		}
+	}
+}
+
+
+void RemoveIDFromSettingsList(integer id) {
+	integer pos = 0;
+	foreach(map item, SettingsList, {
+		if (item["id"]:"" == tostring(id)) {
+			SettingsList = remove(SettingsList, pos);
+			break;
+		}
+		pos = pos + 1;
+	});
+}
+
+
+void Read_XM_List() {
+	string cmd = sformat("%1 list", VM_XEN::xm);
+	y2milestone("Executing: %1", cmd);
+	map retmap = (map) SCR::Execute(.target.bash_output, cmd);
+	string stdout = retmap["stdout"]:"";
+	if (stdout != nil && stdout != "") {
+		list<string> lines = splitstring(stdout, "\n");
+		lines = remove(lines, 0);// remove the xm list header...
+		string exp = sformat("[%1]*([^%1]*)[%1]*([^%1]*)[%1]*([^%1]*)[%1]*([^%1]*)[%1]*([^%1]*)[%1]*([^%1]*).*", String::CSpace()); // match items in xm list cmd.... \\1=name, \\2=id, \\3=mem, \\4=vcpus, \\5=state, \\6=time
+		y2milestone("lines=%1", lines);
+		foreach (string line, lines, {
+			if (line != nil && line != "") {
+				map<string, string> new_item = $[];
+				new_item["name"] = regexpsub(line, exp, "\\1");
+				new_item["id"] = regexpsub(line, exp, "\\2");
+				new_item["memory"] = regexpsub(line, exp, "\\3");
+				new_item["vcpus"] = regexpsub(line, exp, "\\4");
+				new_item["state"] = regexpsub(line, exp, "\\5");
+				new_item["time"] = regexpsub(line, exp, "\\6");
+				UpdateSettingsList(new_item);
+			}
+		});
+	}
+	RemoveIDFromSettingsList(0);  // remove domain0 from SettingsList
+}
+
+
+boolean isSDL(integer table_item) {
+	boolean ret = false;
+	if (table_item != nil && table_item >= 0) {
+		map item = SettingsList[table_item]:$[];
+		if (tolower(item["sdl"]:"") == "1")
+			ret = true;
+	}
+	return ret;
+}
+
+
+boolean isFullVirtualization(integer table_item) {
+	boolean ret = false;
+	if (table_item != nil && table_item >= 0) {
+		map item = SettingsList[table_item]:$[];
+		if (item["builder"]:"" == "hvm")
+			ret = true;
+	}
+	return ret;
+}
+
+
+define void refresh_table() {
+
+	SettingsList = [];
+
+	ReadConfigFileSettings();
+	y2milestone("SettingsList=%1", SettingsList);
+
+	Read_XM_List();
+	y2milestone("SettingsList=%1", SettingsList);
+
+	//sort SettingsList by name
+	SettingsList = sort(map x, map y, SettingsList, { return (x["name"]:"" < y["name"]:""); });
+
+	list<term> table_contents = [];
+	integer pos = 0;
+	foreach(map item, SettingsList, {
+		string type = _("Paravirtualization");
+		if (isFullVirtualization(pos))
+			type = _("Full Virtualization");
+
+		symbol vm_state = VM::GetVirtualMachineState(item["state"]:"");
+		string status = _("Unknown");
+		if (vm_state == `stopped)
+			status = _("Stopped");
+		else if (vm_state == `crashed)
+			status = _("Not Responding");
+		else if (vm_state == `running)
+			status = _("Running");
+
+		string console = _("Text");
+		if (isFullVirtualization(pos)) { // full virt
+			if (isSDL(pos))
+				console = _("SDL");
+			else
+				console = _("VNC");
+		}
+
+		table_contents = add(table_contents, `item(`id(pos), item["name"]:"", type, status, item["memory"]:"", console));
+		pos = pos + 1;
+	});
+	Popup::ClearFeedback(); // make sure feedback popup in not in the way of changing the table widget.
+	UI::ChangeWidget(`id(`vm_table), `Items, table_contents);
+}
+
+
+define symbol VirtualMachineOverview() {
+	// screen title for Virtual Machines Dialog
+	string caption = _("Manage Virtual Machines");
+	
+	term contents =
+		`VBox(
+			`MarginBox(1.5, 0.5,
+				`VBox(
+					`Table(`id(`vm_table), `opt(`notify, `immediate), `header(`Left(_("Name") + "          "), _("Virtualization Mode"), _("Status") + "       ", _("Memory (MB)"), _("Console")), []),
+					`VBox(
+						`HBox(
+							`PushButton (`id (`add), Label::AddButton()),
+							`PushButton (`id (`refresh), Label::RefreshButton()),
+							`PushButton (`id (`delete), Label::DeleteButton())
+						),
+						`HBox(
+							`PushButton (`id (`start), _("&Start")),
+							`PushButton (`id (`view), _("&View")),
+							`PushButton (`id (`shutdown), _("S&hutdown")),
+							`PushButton (`id (`terminate), _("&Terminate"))
+						)
+					)
+				)
+			)
+		);
+
+
+	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	help_text = help_text + _("<p>A virtual machine (VM) is a defined instance of virtual hardware, such as CPU, memory, network card, and block devices, and the operating system that runs on it.</p>");
+	help_text = help_text + _("<p>The number of VMs you can create depends on the requirements for each VM and the available hardware resources.</p>");
+	help_text = help_text + _("<p>For the most current information on Novell VM server technology, see www.novell.com/documentation/technology/vm_server.</p>");
+
+
+	Wizard::SetContents (caption, contents, help_text, false, true);
+	Wizard::SetNextButton(`close, _("&Close"));
+	Wizard::HideBackButton();
+	Wizard::HideAbortButton();
+	
+	Popup::ShowFeedback(_("Reading Virtual Machine Settings"), _("Please Wait..."));
+	refresh_table();
+	Popup::ClearFeedback();
+
+	integer selected_table_item = 0;
+	symbol ret = nil;
+	while (true) {
+
+		Popup::ClearFeedback(); // Always clear pop-up feedback ... just in case we forget to clear one in the loop below.
+
+		// depending on the selected table item, change the buttons to the correct state (disabled/enabled)
+		UI::ChangeWidget(`id(`delete), `Enabled, false);
+		UI::ChangeWidget(`id(`start), `Enabled, false);
+		UI::ChangeWidget(`id(`view), `Enabled, false);
+		UI::ChangeWidget(`id(`shutdown), `Enabled, false);
+		UI::ChangeWidget(`id(`terminate), `Enabled, false);
+		if (selected_table_item != nil && selected_table_item >= 0) {
+			UI::ChangeWidget(`id(`vm_table), `CurrentItem, selected_table_item);
+			map current_item = SettingsList[selected_table_item]:$[];
+			symbol current_state = VM::GetVirtualMachineState(current_item["state"]:"");
+			if (current_state != `stopped) {
+				UI::ChangeWidget(`id(`shutdown), `Enabled, true);
+				UI::ChangeWidget(`id(`terminate), `Enabled, true);
+//				if ( isFullVirtualization(selected_table_item) && ! isSDL(selected_table_item) ) {
+				if ( ! isSDL(selected_table_item) ) {
+					UI::ChangeWidget(`id(`view), `Enabled, true);
+				}
+			}
+			else if (size(SettingsList) > 0) { // vm state is not running (stopped) and at least on vm cfg file exists
+				UI::ChangeWidget(`id(`start), `Enabled, true);
+				UI::ChangeWidget(`id(`delete), `Enabled, true);
+			}
+		}
+
+		ret = (symbol) Wizard::UserInput ();
+		y2milestone("ret=%1", ret);
+
+		selected_table_item = (integer) UI::QueryWidget (`id(`vm_table), `CurrentItem);
+	
+		if (ret == `abort || ret == `cancel) {
+			if (Popup::ReallyAbort(VM_Common::GetModified()))
+				break;
+		}
+		else if (ret == `back) {
+			break;
+		}
+		else if (ret == `next || ret == `finish || ret == `close) {
+			break;
+		}
+		else if (ret == `vm_table) {
+			continue;
+		}
+		else if (ret == `refresh) {
+			Popup::ShowFeedback(_("Reading Virtual Machine Settings"), _("Please Wait..."));
+			refresh_table();
+			Popup::ClearFeedback();
+			continue;
+		}
+		else if (ret == `add) {
+			break;
+		}
+		else if (ret == `delete) {
+			if (selected_table_item != nil && selected_table_item >= 0) {
+				if (Popup::AnyQuestion( _("Delete Virtual Machine"), _("You are about to completely remove the selected VM.
+This action cannot be undone.
+
+Are you sure you want to delete the selected VM?
+
+"), Label::YesButton(), Label::NoButton(), `focus_no)) {
+					map item = SettingsList[selected_table_item]:$[];
+					if (item["name"]:nil != nil && item["name"]:"" != "") {
+						Popup::ShowFeedback(_("Deleting Virtual Machine"), _("Please Wait..."));
+						boolean success = DeleteVirtualMachine(selected_table_item);
+						refresh_table();
+						Popup::ClearFeedback();
+//						if (!success) Report::Error(_("Cannot delete the virtual machine."));
+					}
+					selected_table_item = 0;
+				}
+			}
+			else {
+				y2error("delete: invalid table item selected");
+				continue;
+			}
+		}
+		else if (ret == `start) {
+			if (selected_table_item != nil && selected_table_item >= 0) {
+				map item = SettingsList[selected_table_item]:$[];
+				// make sure there is enough free memory to start the VM.
+				integer maxmem = VM::GetMaxFreeMemory();
+				if (tointeger(item["memory"]:"0") > maxmem) {
+					Report::Error(sformat(_("There is not enough free memory to
+start the selected virtual machine.
+
+Required memory size %1, memory available %2
+
+"), item["memory"]:"", maxmem));
+					continue;
+ 				}
+				if (item["cfg_file"]:nil != nil && item["cfg_file"]:"" != "") {
+					Popup::ShowFeedback(_("Starting Virtual Machine"), _("Please Wait..."));
+					boolean success = VM::StartVirtualMachine(item["cfg_file"]:"", true);
+					refresh_table();
+					Popup::ClearFeedback();
+				}
+			}
+			else {
+				y2error("start: invalid table item selected");
+				continue;
+			}
+		}
+		else if (ret == `view) {
+			if (selected_table_item != nil && selected_table_item >= 0) {
+				map item = SettingsList[selected_table_item]:$[];
+				if (item["name"]:nil != nil && item["name"]:"" != "") {
+					if (isFullVirtualization(selected_table_item) && isSDL(selected_table_item)) continue; // nothing to display when using SDL 
+					Popup::ShowFeedback(_("Opening Virtual Machine Console"), _("Please Wait..."));
+					
+					boolean success = VM::ViewVirtualMachineConsole(
+						(isFullVirtualization(selected_table_item)) ? item["id"]:"" : item["name"]:"", // use VM id # to display VNC in full virtualizaion
+						isFullVirtualization(selected_table_item), // show XTerm in para virt.
+						VM_Common::IsNetWareKernel(item["kernel"]:""), // check for NetWare kernel
+						true // show any error messages
+					);
+					
+					refresh_table();
+					Popup::ClearFeedback();
+//					if (!success) Report::Error(_("Cannot open the virtual machine console."));
+				}
+			}
+			else {
+				y2error("view: invalid table item selected");
+				continue;
+			}
+		}
+		else if (ret == `shutdown) {
+			if (selected_table_item != nil && selected_table_item >= 0) {
+				if (Popup::AnyQuestion( _("Shutdown Virtual Machine"), _("Shutting down the VM stops its operating system
+and any running programs. 
+
+Are you sure you want to shutdown the selected VM?
+
+"), Label::YesButton(), Label::NoButton(), `focus_no)) {
+					map item = SettingsList[selected_table_item]:$[];
+					if (item["name"]:nil != nil && item["name"]:"" != "") {
+						Popup::ShowFeedback(_("Shutting Down Virtual Machine"), _("Please Wait..."));
+						boolean success = VM::ShutdownVirtualMachine(item["name"]:"", true);
+						refresh_table();
+						Popup::ClearFeedback();
+	//					if (!success) Report::Error(_("Cannot shutdown the virtual machine."));
+					}
+				}
+			}
+			else {
+				y2error("shutdown: invalid table item selected");
+				continue;
+			}
+		}
+		else if (ret == `terminate) {
+			if (selected_table_item != nil && selected_table_item >= 0) {
+				if (Popup::AnyQuestion( _("Terminate Virtual Machine"), _("Terminating a VM might result in loss of application
+and system data. 
+
+The VM will not have a chance to save its state or
+any data before it is terminated.
+
+Are you sure you want to terminate the selected VM?
+
+"), Label::YesButton(), Label::NoButton(), `focus_no)) {
+					map item = SettingsList[selected_table_item]:$[];
+					if (item["name"]:nil != nil && item["name"]:"" != "") {
+						Popup::ShowFeedback(_("Terminating Virtual Machine"), _("Please Wait..."));
+						boolean success = VM::TerminateVirtualMachine(item["name"]:"", true);
+						refresh_table();
+						Popup::ClearFeedback();
+//						if (!success) Report::Error(_("Cannot terminate the virtual machine."));
+					}
+				}
+			}
+			else {
+				y2error("terminate: invalid table item selected");
+				continue;
+			}
+		}
+		else {
+			y2error("unexpected retcode: %1", ret);
+			continue;
+		}
+	}
+
+	Popup::ClearFeedback(); // clear pop-up again...just in case ;-)
+
+	return ret;
+}
+
+
+
+Wizard::OpenNextBackDialog();
+
+map aliases = $[
+	    "VirtualMachineOverview"	: ``(VirtualMachineOverview()),
+	];
+
+map sequence = $[
+	    "ws_start"	: "VirtualMachineOverview",
+	    "VirtualMachineOverview"	:
+		$[
+		    `add	: `add,
+		    `close	: `close,
+		    `next	: `next,
+		    `finish	: `finish,
+		    `abort	: `abort,
+		],
+	];
+
+
+symbol ret = Sequencer::Run(aliases, sequence);
+
+Wizard::CloseDialog();
+
+return ret;
+
+
+
+/* EOF */
+}

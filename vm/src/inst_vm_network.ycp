@@ -1,0 +1,471 @@
+/**
+ * Module:	inst_vm_network.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *		Michael G. Fritch <mgfritch@novell.com>
+ *
+ * Purpose:	Ask user for network settings.
+ *
+ * $Id$
+ *
+ */
+
+{
+
+textdomain "vm";
+
+import "VM";
+import "VM_Common";
+import "Wizard";
+import "Popup";
+import "Report";
+import "Label";
+import "IP";
+import "Sequencer";
+
+
+list<map<string, string> > network_conf = VM::GetNetworkConfig();
+integer selected_interface = nil;
+
+
+define boolean Check_MAC(string mac) ``{
+	return regexpmatch(mac, "^[0-9a-fA-F][0-9a-fA-F](:[0-9a-fA-F][0-9a-fA-F]){5}$");
+}
+
+
+define list<term> CreateInterfaceList(list<map<string, string> > network) {
+	list<term> ret = [];
+
+	if (network != nil)
+	{
+	    integer num = 0;
+
+	    foreach(map interface, network, {
+		    string mac = interface["mac"]:"";
+		    string bridge = interface["bridge"]:"";
+
+		    if (mac == "")
+		    {
+			mac = _("Random Address");
+		    }
+
+		    if (bridge == "")
+		    {
+			bridge = _("Default Bridge");
+		    }
+
+		    ret = add(ret, `item(`id(num), num, mac, bridge));
+
+		    num = num + 1;
+		}
+	    );
+	}
+
+	return ret;
+}
+
+
+
+define map<string,string> InterfaceDialog(string mac, string bridge) ``{
+
+	string caption = _("Configure Virtual Network Card");
+
+	term contents =
+		`MarginBox(1.5, 0.2, 
+			`Frame( caption,
+				`MarginBox(1.5, 0.2,
+					`VBox(
+						`TextEntry(`id(`MAC_address), _("&MAC Address"), mac),
+						`VSpacing(1),
+						`TextEntry(`id(`bridge), _("&Bridge Name"), bridge)
+					)
+				)
+			)
+		);
+
+	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	help_text = help_text + _("<p>The virtual network card configuration describes how the network card appears to the virtual machine.</p>");
+	help_text = help_text + _("<p>By default, a <b>MAC address</b> has been randomly generated for use with this virtual machine when it boots.  A valid <b>MAC address</b> consists of six 2-digit hex numbers, separated by colons.</p>");
+	help_text = help_text + _("<p>A virtual network interface can be connected to a bridge configured in the VM Server. If the <b>Bridge Name</b> is left blank, the default bridge will be used.</p>");
+
+
+	Wizard::SetContents(caption, contents, help_text, true, true);
+
+	// allow only valid characters
+	UI::ChangeWidget (`id (`MAC_address), `ValidChars, "0123456789:abcdefABCDEF");
+
+	string new_mac = "";
+	string new_bridge = "";
+
+	symbol ret = nil;
+	while (true) {
+
+	    ret = (symbol)UI::UserInput();
+
+	    if (ret == `back) {
+		break;
+	    }
+	    if (ret == `cancel || ret == `abort) {
+		if (Popup::ReallyAbort(VM_Common::GetModified())) {
+			ret = `abort;
+			break;
+		}
+	    }
+	    else if (ret == `next || ret == `accept || ret == `ok) {
+		new_mac = (string) UI::QueryWidget (`id(`MAC_address), `Value);
+		new_bridge = (string) UI::QueryWidget (`id(`bridge), `Value);
+
+		if (!Check_MAC(new_mac)) {
+		    // error message
+		    Report::Error(_("The MAC address entered is not valid."));
+		    UI::SetFocus(`id(`MAC_address));
+		    ret = `again;
+		}
+		ret = `next;
+		break;
+	    }
+            else {
+		y2error("unexpected retcode: %1", ret);
+		continue;
+            }
+	}
+
+	map<string,string> result = $[ "mac" : new_mac, "bridge" : new_bridge, "ui" : tostring(ret) ];
+
+	y2debug("result: %1", result);
+	return result;
+}
+
+
+
+
+symbol AddInterface() {
+	// generate random MAC for the new interface
+	map<string,string> ifc = InterfaceDialog(VM_Common::Propose_MAC_address(sformat("%1", size(network_conf))), "");
+	y2milestone("InterfaceDialog: %1", ifc);
+	symbol ret = `back;
+
+	if (ifc != nil) {
+		string retstr = (string)ifc["ui"]:"`back";
+		ifc = remove(ifc, "ui");
+		if (retstr == "`next" || retstr == "`accept" || retstr == "`ok") {
+			network_conf = add(network_conf, ifc);
+			y2milestone("added virtual network card %1", ifc);
+			ret = `next;
+		}
+		else if (retstr == "`cancel" || retstr == "`abort") {
+			ret = `abort;
+		}
+	}
+
+	return ret;
+}
+
+
+
+symbol EditInterface() {
+
+	map<string,string> ifc = network_conf[selected_interface]:$[];
+	ifc = InterfaceDialog(ifc["mac"]:"", ifc["bridge"]:"");
+	y2milestone("InterfaceDialog: %1", ifc);
+	symbol ret = `back;
+
+	if (ifc != nil) {
+		string retstr = (string)ifc["ui"]:"`back";
+		ifc = remove(ifc, "ui");
+		if (retstr == "`next" || retstr == "`accept" || retstr == "`ok") {
+			network_conf[selected_interface] = ifc;
+			y2milestone("changed virtual network card %1: %2", selected_interface, ifc);
+			ret = `next;
+		}
+		else if (retstr == "`cancel" || retstr == "`abort") {
+			ret = `abort;
+		}
+	}
+
+	return ret;
+
+}
+
+
+
+define void refresh_table(list<map<string, string> > cont) {
+	list<term> content = CreateInterfaceList(cont);
+	UI::ChangeWidget (`id(`network), `Items, content);
+}
+
+
+
+define symbol NetworkOverview() {
+    // screen title for network options
+    string caption = _("Network");
+
+    term contents =
+	`VBox(
+		`VWeight(50, `MarginBox(1.5, 0.5,
+			`VBox(
+				`Table(`id(`network), `header(`Right(_("No.")), _("MAC Address"), _("Bridge")), []),
+				`HBox(
+					`PushButton (`id (`add), Label::AddButton()),
+					`PushButton (`id (`edit), Label::EditButton()),
+					`PushButton (`id (`delete), Label::DeleteButton())
+				)
+			)
+		))
+	);
+
+
+    if (VM::GetVirtualizationType() == "para" && VM_Common::proposal_type == "install") {
+	contents = add(contents,
+		`VWeight(60, `MarginBox(1.5, 0.5,
+			`Frame( _("OS Installation Network Settings"),
+				`MarginBox(0.5, 0.5, `VBox(
+					`RadioButtonGroup(`id(`rb_group),
+						`VBox(
+							`Left(`RadioButton(`id(`none), `opt(`notify), _("None"), (!VM_Common::use_dhcp && !VM_Common::use_static))),
+							`Left(`RadioButton(`id(`dhcp), `opt(`notify), _("DHCP"), (VM_Common::use_dhcp))),
+							`Left(`RadioButton(`id(`static), `opt(`notify), _("Static IP"), (!VM_Common::use_dhcp && VM_Common::use_static)))
+						)
+					),
+					`HBox(
+						`HSpacing(4),
+						`VBox(
+							`TextEntry(`id(`ip), `opt(`hstretch), _("IP"), VM_Common::ip),
+							`TextEntry(`id(`netmask), `opt(`hstretch), _("Netmask"), VM_Common::netmask),
+							`TextEntry(`id(`gateway), `opt(`hstretch), _("Gateway"), VM_Common::gateway)
+						)
+					)
+				))
+			)
+		))
+	);
+    }
+    else if (VM::GetVirtualizationType() == "full") {
+	contents = add(contents, 
+		`VWeight(20,`VBox(
+			`VStretch(),
+			`MarginBox(1.5, 0.2,
+				`Frame( _("Virtual Network Card"), `HBox(
+					`MarginBox(1.5, 0.2,
+						`ComboBox(`id(`ne2000), `opt(`hstretch),
+							// combobox label
+							"",/*_("Virtual Network Card"),*/
+							[
+								// combobox item
+								`item(`id(0), _("AMD PCnet")),
+								// combobox item
+								`item(`id(1), _("NE2000")),
+							]
+						)
+					)
+				))
+			),
+			`VStretch()
+		))
+	);
+    }
+
+	// help text for network settings (1/2)
+	string help_text = sformat(_("<p><b><big>%1</big></b><br></p>"), caption);
+	// help text for network settings (2/2)
+	help_text = help_text + _("<p>A virtual machine can have zero or more virtual ethernet network cards. The MAC address is a unique identification of the virtual ethernet network card.</p>");
+	if (VM::GetVirtualizationType() == "para" && VM_Common::proposal_type == "install") {
+		help_text = help_text + _("<p>The <b>network installation settings</b> are used only during the installation. They are useful when installing from a network installation source.</p>");
+	}
+	else if (VM::GetVirtualizationType() == "full") {
+		help_text = help_text + _("<p>By default, Xen will emulate an <b>AMD PCnet</b> network card for fully virtualized guests. If your operating system does not support that, select <b>NE2000.</b></p>");
+	}
+
+
+    Wizard::SetContents (caption, contents, help_text, true, true);
+    Wizard::SetNextButton(`next, Label::AcceptButton());
+    Wizard::SetAbortButton(`abort, Label::CancelButton());
+    Wizard::HideBackButton();
+
+    refresh_table(network_conf);
+
+    if (VM::GetVirtualizationType() == "para" && VM_Common::proposal_type == "install") {
+	any rb = UI::QueryWidget(`id(`rb_group), `CurrentButton);
+	if (rb == `static) {
+		UI::ChangeWidget(`id(`ip), `Enabled, true);
+		UI::ChangeWidget(`id(`netmask), `Enabled, true);
+		UI::ChangeWidget(`id(`gateway), `Enabled, true);
+	}
+	else if (rb == `none || rb == `dhcp) {
+		UI::ChangeWidget(`id(`ip), `Enabled, false);
+		UI::ChangeWidget(`id(`netmask), `Enabled, false);
+		UI::ChangeWidget(`id(`gateway), `Enabled, false);
+	}
+
+    }
+
+    if (VM::GetVirtualizationType() == "full") {
+	UI::ChangeWidget(`id(`ne2000), `Value, VM::GetNE2000());
+    }
+
+    symbol ret = nil;
+    while (true) {
+
+	ret = (symbol) Wizard::UserInput ();
+
+	y2milestone("ret=%1", ret);
+
+	if (ret == `abort || ret == `cancel) {
+		if (Popup::ReallyAbort(VM_Common::GetModified()))
+			break;
+	}
+	else if (ret == `back) {
+	    break;
+	}
+	else if (ret == `add) {
+		break;
+	}
+	else if (ret == `edit) {
+	    selected_interface = (integer) UI::QueryWidget (`id(`network), `CurrentItem);
+	    if (selected_interface != nil)
+		break;
+	    else {
+		y2error("edit: invalid interface selected");
+		continue;
+	    }
+	}
+	else if (ret == `delete) {
+	    integer id = (integer) UI::QueryWidget (`id(`network), `CurrentItem);
+	    if (id != nil) {
+		network_conf = remove(network_conf, id);
+		refresh_table(network_conf);
+		y2milestone("removed virtual network card %1", id);
+
+		if (size(network_conf) > id) {
+		    UI::ChangeWidget(`id(`network), `CurrentItem, id);
+		}
+	    }
+	    else {
+		y2error("delete: invalid interface selected");
+		continue;
+	    }
+	}
+	else if (ret == `next) {
+	    VM::SetNetworkConfig(network_conf);
+	    if (VM::GetVirtualizationType() == "para" && VM_Common::proposal_type == "install") {
+		any rb = UI::QueryWidget(`id(`rb_group), `CurrentButton);
+		if (rb == `dhcp) {
+			VM_Common::use_dhcp = true;
+			VM_Common::use_static = false;
+		}
+		else if (rb == `static) {
+			string ip = (string) UI::QueryWidget(`id(`ip), `Value);
+			string netmask = (string) UI::QueryWidget(`id(`netmask), `Value);
+			string gateway = (string) UI::QueryWidget(`id(`gateway), `Value);
+
+			if (ip == nil || ip == "") {
+				Report::Error(_("IP cannot be left empty.
+Please, specify an IP."));
+				continue;
+			}
+			if (netmask == nil || netmask == "") {
+				Report::Error(_("Netmask cannot be left empty.
+Please, specify a netmask."));
+				continue;
+			}
+			if (gateway == nil || gateway == "") {
+				Report::Error(_("Gateway cannot be left empty.
+Please, specify a gateway."));
+				continue;
+			}
+
+			// ensure values are in IPv4 format
+			if (!IP::Check(ip)) {
+				Report::Error(_("An invalid IP was specified.\n\n") + IP::Valid4());
+				continue;
+			}
+			if (!IP::Check(netmask)) {
+				Report::Error(_("An invalid Netmask was specified.\n\n") + IP::Valid4());
+				continue;
+			}
+			if (!IP::Check(gateway)) {
+				Report::Error(_("An invalid Gateway was specified.\n\n") + IP::Valid4());
+				continue;
+			}
+
+			VM_Common::ip = ip;
+			VM_Common::netmask = netmask;
+			VM_Common::gateway = gateway;
+			VM_Common::use_dhcp = false;
+			VM_Common::use_static = true;
+		}
+		else { // radio button `none selected
+			VM_Common::use_dhcp = false;
+			VM_Common::use_static = false;
+		}
+	    }
+	    else if (VM::GetVirtualizationType() == "full") {
+		VM::SetNE2000((integer) UI::QueryWidget (`id(`ne2000), `Value));
+	    }
+	    break;
+	}
+	else if (ret == `static) {
+		UI::ChangeWidget(`id(`ip), `Enabled, true);
+		UI::ChangeWidget(`id(`netmask), `Enabled, true);
+		UI::ChangeWidget(`id(`gateway), `Enabled, true);
+	}
+	else if (ret == `none || ret == `dhcp) {
+		UI::ChangeWidget(`id(`ip), `Enabled, false);
+		UI::ChangeWidget(`id(`netmask), `Enabled, false);
+		UI::ChangeWidget(`id(`gateway), `Enabled, false);
+	}
+	else {
+		y2error("unexpected retcode: %1", ret);
+		continue;
+	}
+    }
+
+    Wizard::SetNextButton(`next, Label::NextButton());
+    Wizard::SetAbortButton(`abort, Label::AbortButton());
+    Wizard::RestoreBackButton();
+
+    return ret;
+}
+
+
+
+
+Wizard::OpenNextBackDialog();
+
+map aliases = $[
+	    "NetworkOverview"	: ``(NetworkOverview()),
+	    "AddInterface"	: ``(AddInterface()),
+	    "EditInterface"	: ``(EditInterface()),
+	];
+
+map sequence = $[
+	    "ws_start"	: "NetworkOverview",
+	    "NetworkOverview"	:
+		$[
+		    `next	    :	`next,
+		    `add	    :	"AddInterface",
+		    `edit	    :	"EditInterface",
+		    `abort	    :	`abort
+		],
+	    "AddInterface"	:
+		$[
+		    `next	    :	"NetworkOverview",
+		    `abort	    :	`abort
+		],
+	    "EditInterface"	:
+		$[
+		    `next	    :	"NetworkOverview",
+		    `abort	    :	`abort
+		],
+	];
+
+
+symbol ret = Sequencer::Run(aliases, sequence);
+
+Wizard::CloseDialog();
+
+return ret;
+
+
+/* EOF */
+}

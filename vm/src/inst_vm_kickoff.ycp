@@ -1,0 +1,190 @@
+/**
+ * Module:	inst_vm_kickoff.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *		Michael G. Fritch <mgfritch@novell.com>
+ *
+ * Purpose:	Prepare and start installation in a virtual machine.
+ *
+ * $Id$
+ */
+{
+    import "VM";
+    import "VM_XEN";
+    import "VM_Common";
+    import "Directory";
+    import "Progress";
+    import "Report";
+    import "Service";
+    import "Popup";
+
+    textdomain "vm";
+
+
+    list <string> progress_stages = [];
+    list progress_descriptions = [];
+    string headline = "";
+    string help_text = "";
+    if (VM_Common::proposal_type == "install") { // install
+	progress_stages = [
+		     // progress stage
+		     _("Install packages"),
+		     // progress stage
+		     _("Prepare virtual machine environment"),
+		     // progress stage
+		     _("Write virtual machine configuration"),
+		    // progress stage
+		     _("Start the virtual machine"),
+	];
+
+	progress_descriptions = [
+		     // progress stage
+		     _("Installing packages"),
+		     // progress stage
+		     _("Preparing virtual machine environment"),
+		     // progress stage
+		     _("Writing virtual machine configuration"),
+		     // progress stage
+		     _("Starting the virtual machine"),
+	];
+
+	// Headline for virtual machine installation
+	headline = _("Preparing Installation of the Virtual Machine");
+
+	// help text
+	help_text = _("<p><b><big>Installation<big></b></p><p>Preparing the virtual machine for installation...</p>");
+    }
+    else { // existing or boot
+	progress_stages = [
+		     // progress stage
+		     _("Update virtual machine configuration"),
+		     // progress stage
+		     _("Start the virtual machine"),
+	];
+
+	progress_descriptions = [
+		     // progress stage
+		     _("Updating virtual machine configuration"),
+		     // progress stage
+		     _("Starting the virtual machine"),
+	];
+
+	// Headline for virtual machine installation
+	string headline = _("Virtual Machine Started");
+	
+	// help text 1/2
+	string help_text = _("<p><b><big>Virtual Machine Started<big></b></p><p>Your virtual machine should now be running in a separate window.</p>");
+	// help text 2/2
+	help_text = help_text + _("<p>If problems have occurred, you may need to edit the VM configuration file and manually re-start your VM. VM configuration files are stored in <tt>/etc/xen/vm/</tt>.</p>");
+    }
+
+    integer progress_length = size(progress_stages);
+
+    // enable progress
+    boolean progress_state = Progress::set(true);
+
+    // Headline for virtual machine installation
+    Progress::New (headline, "", progress_length,
+		   progress_stages, progress_descriptions, help_text);
+
+    boolean success = true;
+    // part of an error message
+    string abortmsg = _("The installation will be aborted.");
+
+    if (VM_Common::proposal_type == "install") {
+	Progress::NextStage ();
+
+	success = VM::InstallPackages();
+	
+	if (!success) {
+		Report::Error(_("Cannot install the required packages.") + "\n" + abortmsg);
+		return `forceback;
+	}
+
+	Progress::NextStage ();
+	
+	success = VM::Prepare();
+	
+	if (!success)
+	{
+		Report::Error(_("Cannot prepare the virtual machine environment.") + "\n" + abortmsg);
+		return `forceback;
+	}
+    }
+
+    Progress::NextStage ();
+
+    success = VM::Write();
+    if (!success) {
+	Report::Error(_("Cannot write the configuration of the virtual machine.") + "\n" + abortmsg);
+	return `forceback;
+    }
+
+    Progress::NextStage ();
+
+    if (VM_Common::proposal_type != "install") {
+	success = VM::Prepare2();
+	if (!success)
+	{
+		Report::Error(_("Cannot update the configuration of the virtual machine.") + "\n" + abortmsg);
+		return `forceback;
+	}
+    }
+
+    // Do not start in background when installing.
+    success = VM::Start( (VM_Common::proposal_type != "install") );
+    if (!success)
+    {
+	Report::Error(_("Cannot start the virtual machine.") + "\n" + abortmsg);
+	return `forceback;
+    }
+
+    Progress::Finish ();
+    Progress::set(progress_state);
+
+    if (VM_Common::proposal_type == "install") {
+        if (VM_Common::GetVirtualizationType() == "full") {
+	    boolean cont = Popup::AnyQuestionRichText(_("Installation Started"),
+		_("The virtual machine installation should now be running in a separate window. When the installation has completed, click 'Continue' to finalize the boot settings."),
+		50, 15,
+		_("Continue"),
+		_("Cancel"),
+		`yes);
+
+		if (cont)
+			return `next;
+		else
+			return `forceback;
+        }
+        else {
+            // If the user closed the "xm console", clean up the VM.
+            VM::TerminateVirtualMachine(VM_Common::config_name, false);
+
+	    boolean cont = Popup::AnyQuestionRichText(_("Installation Complete"),
+		_("The virtual machine settings now need to be finalized."),
+		50, 15,
+		_("Continue"),
+		_("Cancel"),
+		`yes);
+
+		if (cont)
+			return `next;
+		else 
+			return `forceback;
+	}
+        return `next;
+    }
+    else {
+	boolean more = Popup::AnyQuestionRichText(_("Virtual Machine Started"),
+		_("<p>Your virtual machine should now be running in a separate window.</p><p>If problems have occurred, you may need to edit the VM configuration file and manually re-start your VM. VM configuration files are stored in <tt>/etc/xen/vm/</tt>.</p>"),
+		50, 15,
+		_("Create More..."),
+		_("Finish"),
+		`yes);
+
+	if (more)
+	    return `again;
+	else
+	    return `finish;
+    }
+}
