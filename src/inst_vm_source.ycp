@@ -727,7 +727,10 @@ define symbol FullOptionsDialog()
 
     Wizard::SetContents (caption, contents, help_text, true, true);
 
-    UI::ChangeWidget(`id(`rb_group), `CurrentButton, `cdrom);
+    if (contains(cd_devs, cd))
+    	UI::ChangeWidget(`id(`rb_group), `CurrentButton, `cdrom);
+    else
+	UI::ChangeWidget(`id(`rb_group), `CurrentButton, `iso);
 
     symbol ret = nil;
 
@@ -745,7 +748,8 @@ define symbol FullOptionsDialog()
 	}
 	else if (ret == `next) {
 	    symbol bootdev_symbol = (symbol)(UI::QueryWidget(`id(`rb_group), `CurrentButton));
-	    string bootdev = (bootdev_symbol == `disk) ? "c" : "d";
+//	    string bootdev = (bootdev_symbol == `disk) ? "c" : "d";
+	    string bootdev = (VM_Common::proposal_type == "install") ? "d" : "c";
 
 	    y2milestone("bootdev_symbol: %1",  bootdev_symbol);
 	    y2milestone("bootdev: %1", bootdev);

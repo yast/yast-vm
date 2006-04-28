@@ -99,7 +99,10 @@
 
     global boolean resetNumberOfCpus()
     {
-	VM_Common::number_of_cpus = VM_Common::default_number_of_cpus;
+	if (VM_Common::GetVirtualizationType() == "full")
+		VM_Common::number_of_cpus = 1; // full virtualization requires this value to be set to 1
+	else
+		VM_Common::number_of_cpus = VM_Common::default_number_of_cpus;
 	return true;
     }
 
@@ -1115,6 +1118,12 @@
 
 	if (VM_Common::GetVirtualizationType() == "full")
 	{
+	    // If AMD Pacifica (svm) processor, architecture is x86_64 and full virtualization, always write out 'cpus=0'.
+	    list<string> cpuflags = VM_Common::CPUflags();
+	    if (contains(cpuflags, "svm") && Arch::x86_64()) {
+		ret = ret && WriteOption(configpath, "cpus", "0");
+	    }
+
 	    // use hvm builder for full virtualized hosts
 	    ret = ret && WriteStringOption(configpath, "builder", "hvm");
 
@@ -2179,7 +2188,7 @@ source is accessible."));
 
 	resetExtraArgs();
 	resetHiddenArgs();
-        
+
 	SetModified(false);
     }
 }

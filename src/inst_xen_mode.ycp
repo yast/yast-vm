@@ -83,7 +83,9 @@
 	    if (selected != VM::GetVirtualizationType()) {
 		VM_Common::SetModified(true);
 		VM::SetVirtualizationType(selected);
-		VM::ResetAllSettings();
+		//VM::ResetAllSettings();
+		VM::ResetNumberOfCpus();
+		VM::ResetSource();
 	    }
 
 	    break;

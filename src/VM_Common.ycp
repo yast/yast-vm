@@ -112,6 +112,24 @@
     string default_type = "para";
     string virtualization_type = default_type; // currently "para" or "full"
 
+    global define list<string> CPUflags()
+    {
+	// check only the first processor (assume the same processors)
+	string cpuinfo_flags = (string) SCR::Read(.proc.cpuinfo.value."0"."flags");
+	list<string> cpuflags = (size(cpuinfo_flags) > 0) ? splitstring(cpuinfo_flags, " ") : [];
+
+	y2milestone("Detected CPU flags: %1", cpuflags);
+	return cpuflags;
+    }
+
+    global define boolean VirtualizationCPU()
+    {
+	list<string> cpuflags = CPUflags();
+
+	// vmx = Intel VT-x, svm = AMD Pacifica
+	return contains(cpuflags, "vmx") || contains(cpuflags, "svm");
+    }
+
     global define string GetVirtualizationType()
     {
 	return virtualization_type;
@@ -132,7 +150,10 @@
 
     global boolean ResetVirtualizationType()
     {
-	return SetVirtualizationType(default_type);
+	string virt_type = default_type;
+	// FIXME: when full virt hardware is supported the following line should be uncommented.
+	// if (VirtualizationCPU()) virt_type = "full"; // full virt hardware detected, default all vm's to full virtualization
+	return SetVirtualizationType(virt_type);
     }
 
     global string GetVirtualizationProposal()
@@ -249,24 +270,6 @@
 
     global string GetAutoYastProfile() {
 	return autoyast_profile;
-    }
-
-    global define list<string> CPUflags()
-    {
-	// check only the first processor (assume the same processors)
-	string cpuinfo_flags = (string) SCR::Read(.proc.cpuinfo.value."0"."flags");
-	list<string> cpuflags = (size(cpuinfo_flags) > 0) ? splitstring(cpuinfo_flags, " ") : [];
-
-	y2milestone("Detected CPU flags: %1", cpuflags);
-	return cpuflags;
-    }
-
-    global define boolean VirtualizationCPU()
-    {
-	list<string> cpuflags = CPUflags();
-
-	// vmx = Intel VT-x, svm = AMD Pacifica
-	return contains(cpuflags, "vmx") || contains(cpuflags, "svm");
     }
 
     global map<string, string> restart_mapping = $[

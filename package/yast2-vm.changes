@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Thu Apr 27 16:15:37 MDT 2006 - mgfritch@novell.com
+
+- If AMD Pacifica (svm) processor, architecture is x86_64 and full 
+  virtualization, always write out 'cpus=0'.
+- Don't reset all of the proposal settings when the virtualization 
+  mode changes (#170028)
+- 2.13.41
+
+-------------------------------------------------------------------
 Wed Apr 26 12:02:46 MDT 2006 - mgfritch@novell.com
 
 - Specify the CD-ROM device name in the URL to be used for 
