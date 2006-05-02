@@ -381,20 +381,30 @@ define symbol VirtualMachineOverview() {
 		else if (ret == `delete) {
 			if (selected_table_item != nil && selected_table_item >= 0) {
 				if (Popup::AnyQuestion( _("Delete Virtual Machine"), _("You are about to completely remove the selected VM.
-This action cannot be undone.
 
 Are you sure you want to delete the selected VM?
 
 "), Label::YesButton(), Label::NoButton(), `focus_no)) {
-					map item = SettingsList[selected_table_item]:$[];
-					if (item["name"]:nil != nil && item["name"]:"" != "") {
-						Popup::ShowFeedback(_("Deleting Virtual Machine"), _("Please Wait..."));
-						boolean success = DeleteVirtualMachine(selected_table_item);
-						refresh_table();
-						Popup::ClearFeedback();
-//						if (!success) Report::Error(_("Cannot delete the virtual machine."));
+
+				if (Popup::AnyQuestion( _("Delete Virtual Machine"), _("The selected VM disk image and configuration file
+will be completely destroyed.
+
+This action cannot be undone.
+
+Do you wish to continue?
+
+"), Label::YesButton(), Label::NoButton(), `focus_no)) {
+
+						map item = SettingsList[selected_table_item]:$[];
+						if (item["name"]:nil != nil && item["name"]:"" != "") {
+							Popup::ShowFeedback(_("Deleting Virtual Machine"), _("Please Wait..."));
+							boolean success = DeleteVirtualMachine(selected_table_item);
+							refresh_table();
+							Popup::ClearFeedback();
+	//						if (!success) Report::Error(_("Cannot delete the virtual machine."));
+						}
+						selected_table_item = 0;
 					}
-					selected_table_item = 0;
 				}
 			}
 			else {

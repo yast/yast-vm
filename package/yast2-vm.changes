@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue May  2 10:21:36 MDT 2006 - mgfritch@novell.com
+
+- Add a second yes/no pop-up warning the user about deleting a VM.
+- 2.13.42
+
+-------------------------------------------------------------------
 Thu Apr 27 16:15:37 MDT 2006 - mgfritch@novell.com
 
 - If AMD Pacifica (svm) processor, architecture is x86_64 and full 
