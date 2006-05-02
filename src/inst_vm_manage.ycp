@@ -449,6 +449,7 @@ Required memory size %1, memory available %2
 						(isFullVirtualization(selected_table_item)) ? item["id"]:"" : item["name"]:"", // use VM id # to display VNC in full virtualizaion
 						isFullVirtualization(selected_table_item), // show XTerm in para virt.
 						VM_Common::IsNetWareKernel(item["kernel"]:""), // check for NetWare kernel
+						true, // always background this process.
 						true // show any error messages
 					);
 					

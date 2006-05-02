@@ -131,13 +131,22 @@
 	}
     }
 
-    // Do not start in background when installing.
-    success = VM::Start( (VM_Common::proposal_type != "install") );
-    if (!success)
-    {
-	Report::Error(_("Cannot start the virtual machine.") + "\n" + abortmsg);
-	return `forceback;
+    Pkg::SourceReleaseAll();
+
+    // start the VM
+    success = VM::StartVirtualMachine(VM_Common::config_name, true);
+    if (!success) return `forceback;
+
+    // open the XTerm console if para virtualized.
+    if (VM_Common::GetVirtualizationType() == "para") {
+	boolean isNetWare = false;
+	if (VM_Common::GetCustomKernel()) {
+		isNetWare = VM_Common::IsNetWareKernel(VM_Common::GetKernelImage());
+	}
+	boolean background = (VM_Common::proposal_type != "install"); // Do not start in background when installing.
+	success = VM::ViewVirtualMachineConsole(VM_Common::config_name, (VM_Common::GetVirtualizationType() == "full"), isNetWare, background, true);
     }
+    if (!success) return `forceback;
 
     Progress::Finish ();
     Progress::set(progress_state);

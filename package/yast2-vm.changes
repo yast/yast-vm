@@ -1,4 +1,17 @@
 -------------------------------------------------------------------
+Tue May  2 12:58:42 MDT 2006 - mgfritch@novell.com
+
+- Added patch for "srcid" not set in results from 
+  Pkg::PkgPropertiesAll (#163609)
+- Added a popup error message to VM_Common::CreateDiskImage() for 
+  when the 'dd' command fails to create a disk image (#172083) 
+- Added an additional popup error message when installing/finalizing 
+  a VM's settings. This new popup contains a details button with the
+  output (stdout/stderr) of a failed xm create command (#172084)
+- Final text review in preparation for text freeze.
+- 2.13.43
+
+-------------------------------------------------------------------
 Tue May  2 10:21:36 MDT 2006 - mgfritch@novell.com
 
 - Add a second yes/no pop-up warning the user about deleting a VM.

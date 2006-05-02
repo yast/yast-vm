@@ -239,6 +239,41 @@
 	virtualization_type =	input["virtualization_type"]:default_type;
     }
 
+    /**
+    * Displays a formatted popup error message, with a details button.
+    * @param errorMessage string - a simple message describing the error
+    * @param out map - output of the executed command
+    * @param cmd string - the executed command
+    * @return void
+    */
+    global void PopupErrorDetails(string errorMessage, map out, string cmd) ``{
+        string message = _("Undefined Error");
+        if (errorMessage != nil && errorMessage != "") message = errorMessage;
+        Popup::ClearFeedback(); // just in case there are leftovers.
+        if (!Popup::AnyQuestion( Label::ErrorMsg(), message, Label::OKButton(), _("Details"), `focus )) {
+                string description = sformat("<pre>command: %1 return \n %2 %3</pre>", cmd, out["stderr"]:"", out["stdout"]:"");
+                UI::OpenDialog (`opt(`decorated ),
+                        `HBox( `VSpacing(16),
+                                `VBox (
+                                        `HSpacing (100),
+                                        // popup window header
+                                        `Heading (message),
+                                        `VSpacing (0.5),
+                                        `RichText (description),
+                                        `VSpacing (1.0),
+                                        // push button label
+                                        `PushButton (`id(`ok), `opt(`default, `key_F10), Label::OKButton())
+                                )
+                        )
+                );
+
+                UI::SetFocus (`id(`ok));
+                UI::UserInput ();
+                UI::CloseDialog ();
+        }
+    }
+
+
     global string GetAutoYastProposal() {
 	// proposal items
 	return HTML::List([ sformat(_("AutoYaST Profile: %1"), (autoyast_profile != "") ?
@@ -489,11 +524,21 @@
 
 	y2milestone("Creating disk image %1 (%2MB)", file, image_mb);
 	y2debug("dd command: %1", cmd);
-	integer result = (integer) SCR::Execute (.target.bash, cmd);
+	map result = (map) SCR::Execute (.target.bash_output, cmd);
+	y2debug("result=%1", result);
 
-	if (result != 0)
+	if (result["exit"]:-1 != 0)
 	{
 	    y2error("Cannot create disk image %1", file);
+	    //PopupErrorDetails(sformat(_("Cannot create disk image %1"), file), result, cmd);  // FIXME: somehow the output from the dd command is not captured by .target.bash_output
+	    Report::Error(sformat(_("Cannot create the following disk image:
+%1
+
+Please, ensure there is enough free disk space
+to create the specified disk image.
+
+"), file));
+
 	    // try to remove part of the image if it exists
 	    SCR::Execute (.target.bash, "/bin/rm -- '" + file + "'");
 	    ret = false;
@@ -879,40 +924,6 @@
 	return ret;
     }
 
-
-/**
- * Displays a formatted popup error message, with a details button.
- * @param errorMessage string - a simple message describing the error
- * @param out map - output of the executed command
- * @param cmd string - the executed command
- * @return void
- */
-global void PopupErrorDetails(string errorMessage, map out, string cmd) ``{
-        string message = _("Undefined Error");
-        if (errorMessage != nil && errorMessage != "") message = errorMessage;
-        Popup::ClearFeedback(); // just in case there are leftovers.
-        if (!Popup::AnyQuestion( Label::ErrorMsg(), message, Label::OKButton(), _("Details"), `focus )) {
-                string description = sformat("<pre>command: %1 return \n %2 %3</pre>", cmd, out["stderr"]:"", out["stdout"]:"");
-                UI::OpenDialog (`opt(`decorated ),
-                        `HBox( `VSpacing(16),
-                                `VBox (
-                                        `HSpacing (100),
-                                        // popup window header
-                                        `Heading (message),
-                                        `VSpacing (0.5),
-                                        `RichText (description),
-                                        `VSpacing (1.0),
-                                        // push button label
-                                        `PushButton (`id(`ok), `opt(`default, `key_F10), Label::OKButton())
-                                )
-                        )
-                );
-
-                UI::SetFocus (`id(`ok));
-                UI::UserInput ();
-                UI::CloseDialog ();
-        }
-}
 
 
 /* EOF */

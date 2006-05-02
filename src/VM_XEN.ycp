@@ -1550,7 +1550,7 @@
     define boolean CreateDiskImages() {
 	boolean ret = true;
 	foreach(map<string,any> disk, disks, {
-		if (disk["type"]:"" == "loop-create")
+		if (disk["type"]:"" == "loop-create" && ret)
 		{
 		    integer imgsize = disk["size"]:4096;
 		    boolean sparse = disk["sparse"]:true;
@@ -1568,6 +1568,7 @@
 
 		    ret = ret && VM_Common::CreateDiskImage(target_dir + disk["source"]:"hda", imgsize, sparse);
 		}
+		if (ret == false) break;
 	    }
 	);
 
@@ -1625,12 +1626,11 @@
 	    }
 	}
 
-	ret = WriteOption(configpath, "disk", formatDiskConfig(disks, VM_Common::GetVirtualizationType() == "full"));
+	ret = ret && WriteOption(configpath, "disk", formatDiskConfig(disks, VM_Common::GetVirtualizationType() == "full"));
 
 	// create disk image file(s)
 	y2milestone("Creating disk images...");
-	CreateDiskImages();
-
+	ret = ret && CreateDiskImages();
 
 	// all following action are needed only in paravirtualization mode
 	if (VM_Common::GetVirtualizationType() == "full")
@@ -1709,7 +1709,7 @@
 			url = sformat("iso:///?iso=%1", VM_Common::custom_source);
 		}
 
-		integer src_defined = VM_Common::IsInstSourceDefined(url);
+		integer src_defined = -1; // always call Pkg::SourceCreate
 
 		if (src_defined < 0)
 		{
@@ -1831,7 +1831,9 @@ source is accessible."));
 
 	// create disk image file(s)
 	y2milestone("Creating disk images...");
-	CreateDiskImages();
+	if (CreateDiskImages() == false) {
+		return false;
+	}
 
 	if (new_src >= 0)
 	{
@@ -1902,26 +1904,31 @@ source is accessible."));
     }
 
 
-    global define boolean ViewVirtualMachineConsole(string DomName, boolean isFullVirtualization, boolean isNetWare, boolean displayError) {
-	y2milestone("ViewVirtualMachineConsole(%1, %2, %3, %4)", DomName, isFullVirtualization, isNetWare, displayError);
+    global define boolean ViewVirtualMachineConsole(string DomName, boolean isFullVirtualization, boolean isNetWare, boolean background, boolean displayError) {
+	y2milestone("ViewVirtualMachineConsole(%1, %2, %3, %4, %5)", DomName, isFullVirtualization, isNetWare, background, displayError);
 	if (DomName != nil && DomName != "") {
 		string cmd = sformat("/usr/bin/xterm -geometry 80x%3 -T \"Xen - %2\" -e %1 console %2",
 					xm, DomName, isNetWare ? 25 : 24);
 		if ( isFullVirtualization ) { // start VNC viewer
 			cmd = sformat("vncviewer localhost:%1", DomName);
 		}
-		y2milestone("Executing: %1", cmd);
-/*		map ret = (map)SCR::Execute(.target.bash_output, cmd);
-		if (ret["exit"]:-1 != 0 && displayError) {
-			VM_Common::PopupErrorDetails(_("Cannot open the virtual machine console."), ret, cmd);
-		}
-		return (ret["exit"]:-1 == 0);*/
 
-		integer ret = (integer) SCR::Execute(.target.bash_background, cmd);
-		if (displayError && ret != 0) {
-			Report::Error(_("Cannot open the virtual machine console."));
+		y2milestone("Executing: %1", cmd);
+
+		if (background) {
+			integer ret = (integer) SCR::Execute(.target.bash_background, cmd);
+			if (displayError && ret != 0) {
+				Report::Error(_("Cannot open the virtual machine console."));
+			}
+			return (ret == 0);
 		}
-		return (ret == 0);
+		else {
+			map ret = (map)SCR::Execute(.target.bash_output, cmd);
+			if (displayError && ret["exit"]:-1 != 0) {
+				VM_Common::PopupErrorDetails(_("Cannot open the virtual machine console."), ret, cmd);
+			}
+			return (ret["exit"]:-1 == 0);
+		}
 	}
 	return false;
     }
@@ -1961,7 +1968,11 @@ source is accessible."));
 		boolean success = false;
 		map ret = (map)SCR::Execute(.target.bash_output, cmd);
 		if (ret["exit"]:-1 != 0 && displayError) {
-			VM_Common::PopupErrorDetails(_("Cannot start the virtual machine."), ret, cmd);
+			string abortmsg = _("Cannot start the virtual machine.");
+			if (VM_Common::proposal_type == "install") {
+				abortmsg = abortmsg + "\n" + _("The installation will be aborted.");
+			}
+			VM_Common::PopupErrorDetails(abortmsg, ret, cmd);
 		}
 		success = (ret["exit"]:-1 == 0);
 
@@ -1976,7 +1987,7 @@ source is accessible."));
     }
 
 
-
+/*
     global define boolean Start(boolean background) {
 	// FIXME: maybe this method should be merged into StartVirtualMachine()
 	integer start_time = time();
@@ -2008,6 +2019,7 @@ source is accessible."));
 
 	return success;
     }
+*/
 
     global define boolean InstallPackages() {
 	return VM_Common::InstallPackages(["xterm", "xorg-x11", "xen-tools"]);
@@ -2169,7 +2181,6 @@ source is accessible."));
 	    "ShutdownVirtualMachine" : VM_XEN::ShutdownVirtualMachine,
 	    "TerminateVirtualMachine" : VM_XEN::TerminateVirtualMachine,
 	    "StartVirtualMachine" : VM_XEN::StartVirtualMachine,
-	    "Start" : VM_XEN::Start,
 	    "InstallPackages" : VM_XEN::InstallPackages
 	];
     }

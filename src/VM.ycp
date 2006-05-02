@@ -728,12 +728,12 @@
 	}
     }
 
-    global boolean ViewVirtualMachineConsole(string DomName, boolean isFullVirtualization, boolean isNetWare, boolean displayError) {
-	boolean(string, boolean, boolean, boolean) toEval = (boolean(string, boolean, boolean, boolean))functions["ViewVirtualMachineConsole"]:nil;
+    global boolean ViewVirtualMachineConsole(string DomName, boolean isFullVirtualization, boolean isNetWare, boolean background, boolean displayError) {
+	boolean(string, boolean, boolean, boolean, boolean) toEval = (boolean(string, boolean, boolean, boolean, boolean))functions["ViewVirtualMachineConsole"]:nil;
 
 	if (toEval != nil)
 	{
-	    return toEval(DomName, isFullVirtualization, isNetWare, displayError);
+	    return toEval(DomName, isFullVirtualization, isNetWare, background, displayError);
 	}
 	else
 	{
@@ -782,10 +782,6 @@
 	    y2error("StartVirtualMachine() function is missing!");
 	    return nil;
 	}
-    }
-
-    global boolean Start(boolean background) {
-	return CallBooleanBooleanFunction("Start", background);
     }
 
     global boolean InstallPackages() {
