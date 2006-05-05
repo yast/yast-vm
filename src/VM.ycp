@@ -413,6 +413,10 @@
 	return CallBooleanFunction("resetConfigName");
     }
 
+    global boolean ValidateConfigName(string name) {
+	return CallBooleanStringFunction("ValidateConfigName", name);
+    }
+
     global string GetMAC() {
 	return CallStringFunction("getMAC");
     }
@@ -936,6 +940,8 @@
 	ResetLocaltime();
 	ResetNetworkProposal();
 	ResetStartMode();
+
+	VM_Common::SetModified(false);
 
 	return true;
     }

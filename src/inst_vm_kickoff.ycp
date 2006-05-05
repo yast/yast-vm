@@ -17,6 +17,7 @@
     import "Report";
     import "Service";
     import "Popup";
+    import "Label";
 
     textdomain "vm";
 
@@ -27,45 +28,45 @@
     string help_text = "";
     if (VM_Common::proposal_type == "install") { // install
 	progress_stages = [
-		     // progress stage
+		     // progress stage 1/4
 		     _("Install packages"),
-		     // progress stage
+		     // progress stage 2/4
 		     _("Prepare virtual machine environment"),
-		     // progress stage
+		     // progress stage 3/4
 		     _("Write virtual machine configuration"),
-		    // progress stage
+		    // progress stage 4/4
 		     _("Start the virtual machine"),
 	];
 
 	progress_descriptions = [
-		     // progress stage
+		     // progress stage description 1/4
 		     _("Installing packages"),
-		     // progress stage
+		     // progress stage description 2/4
 		     _("Preparing virtual machine environment"),
-		     // progress stage
+		     // progress stage description 3/4
 		     _("Writing virtual machine configuration"),
-		     // progress stage
+		     // progress stage description 4/4
 		     _("Starting the virtual machine"),
 	];
 
 	// Headline for virtual machine installation
 	headline = _("Preparing Installation of the Virtual Machine");
 
-	// help text
+	// help text 1/1
 	help_text = _("<p><b><big>Installation<big></b></p><p>Preparing the virtual machine for installation...</p>");
     }
     else { // existing or boot
 	progress_stages = [
-		     // progress stage
+		     // progress stage 1/2
 		     _("Update virtual machine configuration"),
-		     // progress stage
+		     // progress stage 1/2
 		     _("Start the virtual machine"),
 	];
 
 	progress_descriptions = [
-		     // progress stage
+		     // progress stage description 1/2
 		     _("Updating virtual machine configuration"),
-		     // progress stage
+		     // progress stage description 2/2
 		     _("Starting the virtual machine"),
 	];
 
@@ -97,6 +98,7 @@
 	success = VM::InstallPackages();
 	
 	if (!success) {
+		// popup error message
 		Report::Error(_("Cannot install the required packages.") + "\n" + abortmsg);
 		return `forceback;
 	}
@@ -107,6 +109,7 @@
 	
 	if (!success)
 	{
+		// popup error message
 		Report::Error(_("Cannot prepare the virtual machine environment.") + "\n" + abortmsg);
 		return `forceback;
 	}
@@ -116,6 +119,7 @@
 
     success = VM::Write();
     if (!success) {
+	// popup error message
 	Report::Error(_("Cannot write the configuration of the virtual machine.") + "\n" + abortmsg);
 	return `forceback;
     }
@@ -126,6 +130,7 @@
 	success = VM::Prepare2();
 	if (!success)
 	{
+		// popup error message
 		Report::Error(_("Cannot update the configuration of the virtual machine.") + "\n" + abortmsg);
 		return `forceback;
 	}
@@ -153,11 +158,13 @@
 
     if (VM_Common::proposal_type == "install") {
         if (VM_Common::GetVirtualizationType() == "full") {
+	    // popup message heading 
 	    boolean cont = Popup::AnyQuestionRichText(_("Installation Started"),
+		// rich text message
 		_("The virtual machine installation should now be running in a separate window. When the installation has completed, click 'Continue' to finalize the boot settings."),
 		50, 15,
-		_("Continue"),
-		_("Cancel"),
+		Label::ContinueButton(),
+		Label::CancelButton(),
 		`yes);
 
 		if (cont)
@@ -168,12 +175,13 @@
         else {
             // If the user closed the "xm console", clean up the VM.
             VM::TerminateVirtualMachine(VM_Common::config_name, false);
-
+	    // popup message heading
 	    boolean cont = Popup::AnyQuestionRichText(_("Installation Complete"),
+		// rich text message
 		_("The virtual machine settings now need to be finalized."),
 		50, 15,
-		_("Continue"),
-		_("Cancel"),
+		Label::ContinueButton(),
+		Label::CancelButton(),
 		`yes);
 
 		if (cont)
@@ -184,11 +192,14 @@
         return `next;
     }
     else {
+	// popup message heading
 	boolean more = Popup::AnyQuestionRichText(_("Virtual Machine Started"),
+		// rich text message
 		_("<p>Your virtual machine should now be running in a separate window.</p><p>If problems have occurred, you may need to edit the VM configuration file and manually re-start your VM. VM configuration files are stored in <tt>/etc/xen/vm/</tt>.</p>"),
 		50, 15,
+		// popup message button
 		_("Create More..."),
-		_("Finish"),
+		Label::FinishButton(),
 		`yes);
 
 	if (more)

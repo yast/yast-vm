@@ -31,6 +31,7 @@
     */
     define symbol DiskTypeDialog() {
 
+	// dialog title
 	string caption = _("Add Virtual Disk");
 
 	term contents = 
@@ -50,8 +51,9 @@
 			)
 		);
 
-	// help text
+	// Add virtual disk - help text 1/2
 	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption)
+		// Add virtual disk - help text 2/2
 		+ _("<p>A virtual disk can be added by creating a new disk image, selecting an existing disk image, or specifying a block device.</p>");
 
 	Wizard::SetContents(caption, contents, help_text, true, true);
@@ -87,6 +89,7 @@
 
 	list<string> valid_virtual_devices = VM::GetValidVirtualDevices(VM::GetConfiguredDiskTargets(disks));
 
+	// dialog title
 	string caption = _("Create New Disk Image");
 
 	term contents =
@@ -113,10 +116,13 @@
 			)
 		);
 
-
+	// Create New Disk Image - help text 1/4
 	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	// Create New Disk Image - help text 2/4
 	help_text = help_text + _("<p>The <b>virtual disk</b> configuration describes how the virtual disk appears to the virtual machine. This controls the ordering of virtual disks within the VM, and is specified using the Linux naming convention.</p>");
+	// Create New Disk Image - help text 3/4
 	help_text = help_text + _("<p>The disk image file will be created in the <b>disk image directory</b> with the specified <b>maximum size</b>. A <b>sparse image file</b> only allocates disk space as it is needed.</p>");
+	// Create New Disk Image - help text 4/4
 	help_text = help_text + _("<p>Virtual disks can be safely shared among multiple VMs only if every use of the disk is marked <b>read-only</b>. If it is read-only, it cannot be modified by the VM.</p>");
 
 	Wizard::SetContents(caption, contents, help_text, true, true);
@@ -155,12 +161,39 @@
 		// make sure the dev has not already been defined for another virtual disk...
 		list<string> used_devices = VM::GetConfiguredDiskTargets(disks);
 		if (contains(used_devices, dev) && ui != `again) {
+			// popup error message
 			Report::Error(_("The Virtual Disk has already been used
 with another configured virtual disk image.
 
 Please select a different Virtual Disk."));
 			ui = `again;
+			continue;
 		}
+
+		// make sure the new disk image does not already exist
+		string fullpath = new_dir;
+		if (findlastof(fullpath, "/") < size(fullpath)-1) { // no ending /
+			fullpath = sformat("%1/%2/", new_dir, VM::GetConfigName());
+		}
+		else {
+			fullpath = sformat("%1%2/", new_dir, VM::GetConfigName());
+		}
+		list<string> existing_disks = (list<string>)SCR::Read(.target.dir, fullpath); // list of image dir names
+		if (contains(existing_disks, dev) && ui != `again) {
+			// popup error message
+			Report::Error(_("The Virtual Disk has already been used
+with another configured virtual disk image.
+
+Please select a different Virtual Disk."));
+			ui = `again;
+			continue;
+		}
+
+
+
+
+
+
 
 		if ((new_dir == nil || substring(new_dir, 0, 1) != "/") && ui != `again) {
 		    // error message
@@ -175,6 +208,7 @@ Please select a different Virtual Disk."));
 		}
 
 		if (!contains(valid_virtual_devices, dev) && ui != `again) {
+		    // popup error message with continue/cancel buttons
 		    if (!Popup::ContinueCancelHeadline(_("Warning"), _("The Virtual Disk might not be a supported virtual device.")))
 			ui = `again;
 		}
@@ -201,6 +235,7 @@ Please select a different Virtual Disk."));
 
 	list<string> valid_virtual_devices = VM::GetValidVirtualDevices(VM::GetConfiguredDiskTargets(disks));
 
+	// dialog title
 	string caption = _("Use Existing Disk Image");
 
 	term contents = 
@@ -229,9 +264,13 @@ Please select a different Virtual Disk."));
 			)
 		);
 
+	// Use Existing Disk Image- help text 1/4
 	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	// Use Existing Disk Image - help text 2/4
 	help_text = help_text + _("<p>The <b>virtual disk</b> configuration describes how the virtual disk appears to the virtual machine. This controls the ordering of virtual disks within the VM, and is specified using the Linux naming convention.</p>");
+	// Use Existing Disk Image - help text 1/4
 	help_text = help_text + _("<p>The <b>disk image file</b> is an existing image file to be used by the VM.</p>");
+	// Use Existing Disk Image - help text 1/4
 	help_text = help_text + _("<p>Virtual disks can be safely shared among multiple VMs only if every use of the disk is marked read-only. If it is <b>read-only</b>, it cannot be modified by the VM.</p>");
 
 	Wizard::SetContents(caption, contents, help_text, true, true);
@@ -264,6 +303,7 @@ Please select a different Virtual Disk."));
 		// make sure the dev has not already been defined for another virtual disk...
 		list<string> used_devices = VM::GetConfiguredDiskTargets(disks);
 		if (contains(used_devices, dev) && ui != `again) {
+			// popup error message
 			Report::Error(_("The Virtual Disk has already been used
 with another configured virtual disk image.
 
@@ -286,6 +326,7 @@ Please, select a different Virtual Disk."));
 		if (ui != `again) {
 		    // check whether the file exists
 		    if ((integer)SCR::Read(.target.size, new_src) < 0) {
+			// popup error message
 			Report::Error(_("The specified Disk Image File does not exist."));
 			ui = `again;
 		    }
@@ -294,6 +335,7 @@ Please, select a different Virtual Disk."));
 			integer i = (integer)SCR::Execute(.target.bash, sformat("stat --format=%%A %1| grep -q w", new_src));
 			if (i != 0) {
 			    // File is read-only; UI specified read-write.
+			    // popup error message with continue/cancel buttons
 			    if (!Popup::ContinueCancelHeadline(_("Warning"), _("The Disk Image File is read-only in the filesystem,
 so it will be exported to the VM as read-only.")))
 				ui = `again;
@@ -304,6 +346,7 @@ so it will be exported to the VM as read-only.")))
 		}
 
 		if (!contains(valid_virtual_devices, dev) && ui != `again) {
+		    // popup error message with continue/cancel buttons
 		    if (!Popup::ContinueCancelHeadline(_("Warning"), _("The Virtual Disk might not be a supported virtual device.")))
 			ui = `again;
 		}
@@ -354,6 +397,7 @@ so it will be exported to the VM as read-only.")))
 
 	list<string> valid_virtual_devices = VM::GetValidVirtualDevices(VM::GetConfiguredDiskTargets(disks));
 
+	// dialog title
 	string caption = _("Use Block Device");
 
 	term contents =
@@ -377,10 +421,13 @@ so it will be exported to the VM as read-only.")))
 				)
 			)
 		);
-
+	// Use Block Device - help text 1/4
 	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	// Use Block Device - help text 2/4
 	help_text = help_text + _("<p>The <b>virtual disk</b> configuration describes how the virtual disk appears to the virtual machine. This controls the ordering of virtual disks within the VM, and is specified using the Linux naming convention.</p>");
+	// Use Block Device - help text 3/4
 	help_text = help_text + _("<p>The <b>block device</b> is a block device on the VM Server.</p>");
+	// Use Block Device - help text 4/4
 	help_text = help_text + _("<p>Virtual disks can be safely shared among multiple VMs only if every use of the disk is marked read-only. If it is <b>read-only</b>, it cannot be modified by the VM.</p>");
 
 	Wizard::SetContents(caption, contents, help_text, true, true);
@@ -415,6 +462,7 @@ so it will be exported to the VM as read-only.")))
 		// make sure the dev has not already been defined for another virtual disk...
 		list<string> used_devices = VM::GetConfiguredDiskTargets(disks);
 		if (contains(used_devices, new_dev) && ui != `again) {
+			// popup error message
 			Report::Error(_("The Virtual Disk has already been used
 with another configured virtual disk image.
 
@@ -429,11 +477,13 @@ Please select a different Virtual Disk."));
 		}
 
 		if (!contains(valid_virtual_devices, new_dev) && ui != `again) {
+		    // popup error message with continue/cancel buttons
 		    if (!Popup::ContinueCancelHeadline(_("Warning"), _("The Virtual Disk might not be a supported virtual device.")))
 			ui = `again;
 		}
 
 		if (!contains(valid_phys_devices, new_phys) && ui != `again) {
+			// popup error message with continue/cancel buttons
 			if (!Popup::ContinueCancelHeadline(_("Warning"), _("The Block Device might not be a valid block device in domain 0.")))
 				ui = `again;
 		}
@@ -552,8 +602,9 @@ define symbol DiskOverview() {
 		);
 
 
-    // help text for disk setup
+    // Virtual Disks - help text 1/2
     string help_text = sformat(_("<p><b><big>%1</big><b></p>"), caption);
+    // Virtual Disks - help text 2/2
     help_text = help_text + _("<p>A virtual machine can have one or more virtual disks. Each virtual disk points to a file or block device on the VM Server.</p>");
 
     Wizard::SetContents (caption, contents, help_text, true, true);

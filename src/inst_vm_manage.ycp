@@ -59,7 +59,7 @@ boolean DeleteVirtualMachine(integer table_item) {
 		// remove all disks not configured for use with another VM.
 		foreach(string src, sources, {
 			boolean remove_disk = true;
-			// don't remove files that have the .iso extension
+			// do not remove files that have the .iso extension
 			if (regexpmatch(src, ".*\.iso$"))
 				remove_disk = false;
 			// look for another configured vm using this disk
@@ -84,8 +84,9 @@ boolean DeleteVirtualMachine(integer table_item) {
 
 		// try to remove the vm image directory (if it is not empty, it should not be deleted).
 		string cmd = sformat("rmdir %1", img_dir);
-		y2milestone("Executing: %1", img_dir);
-		SCR::Execute(.target.bash, cmd);
+		y2milestone("Executing: %1", cmd);
+		map retmap = (map)SCR::Execute(.target.bash_output, cmd);
+		y2milestone("retmap=%1", retmap);
 
 		// remove the config file
 		boolean isremoved = (boolean) SCR::Execute(.target.remove, sformat("%1%2", VM::GetConfigFilePath(), item["cfg_file"]:""));
@@ -250,24 +251,33 @@ define void refresh_table() {
 	list<term> table_contents = [];
 	integer pos = 0;
 	foreach(map item, SettingsList, {
+		// table item
 		string type = _("Paravirtualization");
 		if (isFullVirtualization(pos))
+			// table item
 			type = _("Full Virtualization");
 
 		symbol vm_state = VM::GetVirtualMachineState(item["state"]:"");
+		// table item
 		string status = _("Unknown");
 		if (vm_state == `stopped)
+			// table item
 			status = _("Stopped");
 		else if (vm_state == `crashed)
+			// table item
 			status = _("Not Responding");
 		else if (vm_state == `running)
+			// table item
 			status = _("Running");
 
+		// table item
 		string console = _("Text");
 		if (isFullVirtualization(pos)) { // full virt
 			if (isSDL(pos))
+				// table item
 				console = _("SDL");
 			else
+				// table item
 				console = _("VNC");
 		}
 
@@ -287,7 +297,18 @@ define symbol VirtualMachineOverview() {
 		`VBox(
 			`MarginBox(1.5, 0.5,
 				`VBox(
-					`Table(`id(`vm_table), `opt(`notify, `immediate), `header(`Left(_("Name") + "          "), _("Virtualization Mode"), _("Status") + "       ", _("Memory (MB)"), _("Console")), []),
+					`Table(`id(`vm_table), `opt(`notify, `immediate), `header(
+							// table heading
+							`Left(_("Name") + "          "), 
+							// table heading
+							_("Virtualization Mode"), 
+							// table heading
+							_("Status") + "       ", 
+							// table heading
+							_("Memory (MB)"), 
+							// table heading
+							_("Console")),
+							[]),
 					`VBox(
 						`HBox(
 							`PushButton (`id (`add), Label::AddButton()),
@@ -295,9 +316,13 @@ define symbol VirtualMachineOverview() {
 							`PushButton (`id (`delete), Label::DeleteButton())
 						),
 						`HBox(
+							// button label
 							`PushButton (`id (`start), _("&Start")),
+							// button label
 							`PushButton (`id (`view), _("&View")),
+							// button label
 							`PushButton (`id (`shutdown), _("S&hutdown")),
+							// button label
 							`PushButton (`id (`terminate), _("&Terminate"))
 						)
 					)
@@ -305,18 +330,23 @@ define symbol VirtualMachineOverview() {
 			)
 		);
 
-
+	// manage virtual machines - help text 1/4
 	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	// manage virtual machines - help text 2/4
 	help_text = help_text + _("<p>A virtual machine (VM) is a defined instance of virtual hardware, such as CPU, memory, network card, and block devices, and the operating system that runs on it.</p>");
+	// manage virtual machines - help text 3/4
 	help_text = help_text + _("<p>The number of VMs you can create depends on the requirements for each VM and the available hardware resources.</p>");
-	help_text = help_text + _("<p>For the most current information on Novell VM server technology, see www.novell.com/documentation/technology/vm_server.</p>");
+	// manage virtual machines - help text 4/4
+	help_text = help_text + _("<p>For the most current information on Novell VM server technology, see <tt>www.novell.com/documentation/technology/vm_server</tt>.</p>");
 
 
 	Wizard::SetContents (caption, contents, help_text, false, true);
+	// button label
 	Wizard::SetNextButton(`close, _("&Close"));
 	Wizard::HideBackButton();
 	Wizard::HideAbortButton();
 	
+	// popup feedback message
 	Popup::ShowFeedback(_("Reading Virtual Machine Settings"), _("Please Wait..."));
 	refresh_table();
 	Popup::ClearFeedback();
@@ -370,6 +400,7 @@ define symbol VirtualMachineOverview() {
 			continue;
 		}
 		else if (ret == `refresh) {
+			// popup feedback message
 			Popup::ShowFeedback(_("Reading Virtual Machine Settings"), _("Please Wait..."));
 			refresh_table();
 			Popup::ClearFeedback();
@@ -380,12 +411,13 @@ define symbol VirtualMachineOverview() {
 		}
 		else if (ret == `delete) {
 			if (selected_table_item != nil && selected_table_item >= 0) {
+				// popup yes/no dialog
 				if (Popup::AnyQuestion( _("Delete Virtual Machine"), _("You are about to completely remove the selected VM.
 
 Are you sure you want to delete the selected VM?
 
 "), Label::YesButton(), Label::NoButton(), `focus_no)) {
-
+				// popup yes/no dialog
 				if (Popup::AnyQuestion( _("Delete Virtual Machine"), _("The selected VM disk image and configuration file
 will be completely destroyed.
 
@@ -397,10 +429,12 @@ Do you wish to continue?
 
 						map item = SettingsList[selected_table_item]:$[];
 						if (item["name"]:nil != nil && item["name"]:"" != "") {
+							// popup feedback message
 							Popup::ShowFeedback(_("Deleting Virtual Machine"), _("Please Wait..."));
 							boolean success = DeleteVirtualMachine(selected_table_item);
 							refresh_table();
 							Popup::ClearFeedback();
+							// popup error message
 	//						if (!success) Report::Error(_("Cannot delete the virtual machine."));
 						}
 						selected_table_item = 0;
@@ -418,6 +452,9 @@ Do you wish to continue?
 				// make sure there is enough free memory to start the VM.
 				integer maxmem = VM::GetMaxFreeMemory();
 				if (tointeger(item["memory"]:"0") > maxmem) {
+					// popup error message
+					// %1 = integer size in MB
+					// %2 = integer size in MB
 					Report::Error(sformat(_("There is not enough free memory to
 start the selected virtual machine.
 
@@ -427,6 +464,7 @@ Required memory size %1, memory available %2
 					continue;
  				}
 				if (item["cfg_file"]:nil != nil && item["cfg_file"]:"" != "") {
+					// popup feedback message
 					Popup::ShowFeedback(_("Starting Virtual Machine"), _("Please Wait..."));
 					boolean success = VM::StartVirtualMachine(item["cfg_file"]:"", true);
 					refresh_table();
@@ -443,6 +481,7 @@ Required memory size %1, memory available %2
 				map item = SettingsList[selected_table_item]:$[];
 				if (item["name"]:nil != nil && item["name"]:"" != "") {
 					if (isFullVirtualization(selected_table_item) && isSDL(selected_table_item)) continue; // nothing to display when using SDL 
+					// popup feedback message
 					Popup::ShowFeedback(_("Opening Virtual Machine Console"), _("Please Wait..."));
 					
 					boolean success = VM::ViewVirtualMachineConsole(
@@ -455,6 +494,7 @@ Required memory size %1, memory available %2
 					
 					refresh_table();
 					Popup::ClearFeedback();
+					// popup error message
 //					if (!success) Report::Error(_("Cannot open the virtual machine console."));
 				}
 			}
@@ -465,6 +505,7 @@ Required memory size %1, memory available %2
 		}
 		else if (ret == `shutdown) {
 			if (selected_table_item != nil && selected_table_item >= 0) {
+				// popup yes/no dialog
 				if (Popup::AnyQuestion( _("Shutdown Virtual Machine"), _("Shutting down the VM stops its operating system
 and any running programs. 
 
@@ -473,10 +514,12 @@ Are you sure you want to shutdown the selected VM?
 "), Label::YesButton(), Label::NoButton(), `focus_no)) {
 					map item = SettingsList[selected_table_item]:$[];
 					if (item["name"]:nil != nil && item["name"]:"" != "") {
+						// popup feedback message
 						Popup::ShowFeedback(_("Shutting Down Virtual Machine"), _("Please Wait..."));
 						boolean success = VM::ShutdownVirtualMachine(item["name"]:"", true);
 						refresh_table();
 						Popup::ClearFeedback();
+						// popup error message
 	//					if (!success) Report::Error(_("Cannot shutdown the virtual machine."));
 					}
 				}
@@ -488,6 +531,7 @@ Are you sure you want to shutdown the selected VM?
 		}
 		else if (ret == `terminate) {
 			if (selected_table_item != nil && selected_table_item >= 0) {
+				// popup yes/no dialog
 				if (Popup::AnyQuestion( _("Terminate Virtual Machine"), _("Terminating a VM might result in loss of application
 and system data. 
 
@@ -499,10 +543,12 @@ Are you sure you want to terminate the selected VM?
 "), Label::YesButton(), Label::NoButton(), `focus_no)) {
 					map item = SettingsList[selected_table_item]:$[];
 					if (item["name"]:nil != nil && item["name"]:"" != "") {
+						// popup feedback message
 						Popup::ShowFeedback(_("Terminating Virtual Machine"), _("Please Wait..."));
 						boolean success = VM::TerminateVirtualMachine(item["name"]:"", true);
 						refresh_table();
 						Popup::ClearFeedback();
+						// popup error message
 //						if (!success) Report::Error(_("Cannot terminate the virtual machine."));
 					}
 				}

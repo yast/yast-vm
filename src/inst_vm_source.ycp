@@ -90,31 +90,40 @@
     */
     define symbol SourceTypeDialog() {
 
+	// screen title
 	string caption = _("Operating System Installation");
 
 	term contents =
 	`MarginBox(1.5, 0.2, `VBox(
 		`RadioButtonGroup(`id(`rbg),
-			// heading in a popup dialog
+			// frame label
 			`Frame(_("Install Using"),
 				`MarginBox(1.5, 0.2, `VBox(
+					// radio button
 					`Left(`RadioButton(`id(`network_configured), `opt(`notify), _("Network Installation &Source"))),
 					`VSpacing(0.5),
+					// radio button
 					`Left(`RadioButton(`id(`cdrom), `opt(`notify), _("&CD / DVD Device"))),
 					`VSpacing(0.5),
+					// radio button
 					`Left(`RadioButton(`id(`iso), `opt(`notify), _("&ISO Image File")))
 				))
 			)
 		),
 		`VSpacing(2),
+		// frame label
 		`Frame(_("Installation Options"),
 			`MarginBox(1.5, 0.2,
 				`TextEntry(`id(`bootopts), `opt(`hstretch), "", VM::GetExtraArgs())))
 	));
 
+	// Operating System Installation - help text 1/4
 	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	// Operating System Installation - help text 2/4
 	help_text = help_text + _("<p>The VM's operating system can be installed from a YaST Network Installation Source, a CD / DVD device, or an ISO image file.</p>");
+	// Operating System Installation - help text 3/4
 	help_text = help_text + _("<p>Any of these methods can be used to install SUSE operating systems.  Non-SUSE operating systems must be installed from a CD / DVD device or an ISO image file.</p>");
+	// Operating System Installation - help text 4/4
 	help_text = help_text + _("<p><b>Installation Options</b> are optional arguments passed to the kernel during installation.</p>");
 
 
@@ -168,6 +177,7 @@
 
     define symbol CD_SourceDialog() {
 
+	// dialog title
 	string caption = _("Install Using a CD / DVD Device");
 
         list<term> cd_items = [];
@@ -181,10 +191,8 @@
 	        y2milestone("CD-ROM model: %1, device: %2", model, device);
 
 	        if (device != nil && device != "") {
-		    string device_id = regexpsub(device, "/dev/(.*)", "\\1");
-		    if (device_id == nil || device_id == "") device_id = device;
 		    // format CD device name: %1 is model name (e.g. "TOSHIBA DVD-ROM SD-M1402"), %2 is device name (e.g. /dev/hdc)
-		    cd_items = add(cd_items, `item(`id(device_id), sformat(_("%1 (%2)"), model, device)/*, device == cd*/));
+		    cd_items = add(cd_items, `item(`id(device), sformat(_("%1 (%2)"), model, device)/*, device == cd*/));
 	        }
 	    });
         }
@@ -193,31 +201,39 @@
 		`MarginBox(1.5, 0.2, `VBox(
 			`HBox(
 //				`HSpacing(3),
+				// combobox label
 				`ComboBox(`id(`cddev), _("&CD / DVD Device"), cd_items),
 				`HStretch()
 			),
 			`VSpacing(2),
 			`RadioButtonGroup(`id(`rbg),
+				// frame label
 				`Frame(_("CD / DVD Media Type"),
 					`MarginBox(1.5, 1, `VBox(
+						// radio button
 						`Left(`RadioButton(`id(`extract), `opt(`notify), _("&SUSE Installation Source"))),
 						`VSpacing(0.5),
+						// radio button
 						`Left(`RadioButton(`id(`specify), `opt(`notify), _("&Other Installation Source"))),
 						`HBox(
 							`HSpacing(3),
+							// textbox label
 							`TextEntry(`id(`kernel), `opt(`hstretch), _("&Xen-Enabled Kernel"), VM::GetKernelImage()),
 							`HSpacing(1),
 							`VBox(
 								`Label(""),
+								// button label
 								`PushButton(`id(`select_kernel), _("Browse..."))
 							)
 						),
 						`HBox(
 							`HSpacing(3),
+							// textbox label
 							`TextEntry(`id(`initrd), `opt(`hstretch), _("&Installation File (initrd)"), VM::GetInitrdImage()),
 							`HSpacing(1),
 							`VBox(
 								`Label(""),
+								// button label
 								`PushButton(`id(`select_initrd), _("Browse..."))
 							)
 						)
@@ -226,8 +242,11 @@
 			)
 		));
 
+	// Install Using a CD / DVD Device help text 1/3
 	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	// Install Using a CD / DVD Device help text 2/3
 	help_text = help_text + _("<p>The VM's operating system will be installed from the selected <b>CD / DVD device</b>.</p>");
+	// Install Using a CD / DVD Device help text 3/3
 	help_text = help_text + _("<p>Specify whether the <b>CD / DVD media type</b> is a SUSE installation source, or some other type.  Using installation media other than SUSE requires you to designate the locations of the Xen-enabled kernel and, optionally, the initial installation program (initrd).  These files must be accessible on the VM Server's file system.</p>");
 
 	Wizard::SetContents(caption, contents, help_text, true, true);
@@ -263,12 +282,14 @@
 		string initrd = "";
 
 		if (cddev == nil || cddev == "") {
+			// popup error message
 			Report::Error(_("A CD / DVD device name must be selected."));
 			s = `again;
 			continue;
 		}
 		// FIXME: check whether the file exists
 /*		if ((integer)SCR::Read(.target.size, cddev) < 0) {
+			// popup error message
 			// %1 is file name
 			Report::Error(_("The specified CD / DVD device does not exist, or
 there is no media in the CD / DVD device.
@@ -285,6 +306,7 @@ Please ensure that the desired media is in the selected CD / DVD device.
 			initrd = (string) UI::QueryWidget (`id(`initrd), `Value);
 
 		    if (kernel == nil || kernel == "") {
+			// popup error message
 			Report::Error(_("The kernel file name cannot be empty."));
 			s = `again;
 			continue;
@@ -314,6 +336,7 @@ Please ensure that the desired media is in the selected CD / DVD device.
 	    }
 	    else if (s == `select_kernel) {
 		string new_kernel = (string)UI::QueryWidget(`id(`kernel), `Value);
+		// popup title
 		new_kernel = UI::AskForExistingFile(new_kernel, "*", _("Select Xen-Enabled Kernel"));
 
 		if (new_kernel != nil)
@@ -323,6 +346,7 @@ Please ensure that the desired media is in the selected CD / DVD device.
 	    }
 	    else if (s == `select_initrd) {
 		string new_initrd = (string)UI::QueryWidget(`id(`initrd), `Value);
+		// popup title
 		new_initrd = UI::AskForExistingFile(new_initrd, "*", _("Select Initial RAM Disk"));
 
 		if (new_initrd != nil)
@@ -339,16 +363,19 @@ Please ensure that the desired media is in the selected CD / DVD device.
 
     define symbol ISO_SourceDialog() {
 
+	// dialog title
 	string caption = _("Install Using an ISO Image");
 
 	term contents =
 	`MarginBox(1.5, 0.2, `VBox(
 		`HBox(
 //			`HSpacing(3),
+			// textbox label
 			`TextEntry(`id(`cdromimage), `opt(`hstretch), _("&ISO Image File")),
 			`HSpacing(1),
 			`VBox(
 				`Label(""),
+				// button label
 				`PushButton(`id(`select_cdromimage), _("Browse..."))
 			)
 		),
@@ -357,24 +384,30 @@ Please ensure that the desired media is in the selected CD / DVD device.
 			// heading in a popup dialog
 			`Frame(_("ISO Type"),
 				`MarginBox(1.5, 1, `VBox(
+					// radio button label
 					`Left(`RadioButton(`id(`extract), `opt(`notify), _("&SUSE Installation Source"))),
 					`VSpacing(0.5),
+					// radio button label
 					`Left(`RadioButton(`id(`specify), `opt(`notify), _("&Other Installation Source"))),
 					`HBox(
 						`HSpacing(3),
+						// textbox label
 						`TextEntry(`id(`kernel), `opt(`hstretch), _("&Xen-Enabled Kernel"), VM::GetKernelImage()),
 						`HSpacing(1),
 						`VBox(
 							`Label(""),
+							// button label
 							`PushButton(`id(`select_kernel), _("Browse..."))
 						)
 					),
 					`HBox(
 						`HSpacing(3),
+						// textbox label
 						`TextEntry(`id(`initrd), `opt(`hstretch), _("&Installation File (initrd)"), VM::GetInitrdImage()),
 						`HSpacing(1),
 						`VBox(
 							`Label(""),
+							// button label
 							`PushButton(`id(`select_initrd), _("Browse..."))
 						)
 					)
@@ -383,8 +416,11 @@ Please ensure that the desired media is in the selected CD / DVD device.
 		)
 	));
 
+	// Install Using an ISO Image - help text 1/3
 	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	// Install Using an ISO Image - help text 2/3
 	help_text = help_text + _("If the installation source files are stored in an .ISO image file, you can specify its location on the VM Server's file system.</p>");
+	// Install Using an ISO Image - help text 3/3
 	help_text = help_text + _("<p>Specify whether the <b>ISO image file</b> is a SUSE installation source, or some other type. Using installation media other than SUSE requires you to designate the locations of the Xen-enabled kernel and, optionally, the initial installation program (initrd). These files must be accessible on the VM Server's file system.</p>");
 
 	Wizard::SetContents(caption, contents, help_text, true, true);
@@ -420,6 +456,7 @@ Please ensure that the desired media is in the selected CD / DVD device.
 
 		cdromimage = (string) UI::QueryWidget (`id(`cdromimage), `Value);
 		if (cdromimage == nil || cdromimage == "") {
+			// popup error message
 			Report::Error(_("ISO file name cannot be empty."));
 			s = `again;
 			continue;
@@ -430,6 +467,7 @@ Please ensure that the desired media is in the selected CD / DVD device.
 			initrd = (string) UI::QueryWidget (`id(`initrd), `Value);
 
 			if (kernel == nil || kernel == "") {
+				// popup error message
 				Report::Error(_("The kernel file name cannot be empty."));
 				s = `again;
 				continue;
@@ -460,6 +498,7 @@ Please ensure that the desired media is in the selected CD / DVD device.
 	    }
 	    else if (s == `select_kernel) {
 		string new_kernel = (string)UI::QueryWidget(`id(`kernel), `Value);
+		// popup title
 		new_kernel = UI::AskForExistingFile(new_kernel, "*", _("Select Xen-Enabled Kernel"));
 
 		if (new_kernel != nil)
@@ -469,6 +508,7 @@ Please ensure that the desired media is in the selected CD / DVD device.
 	    }
 	    else if (s == `select_initrd) {
 		string new_initrd = (string)UI::QueryWidget(`id(`initrd), `Value);
+		// popup title
 		new_initrd = UI::AskForExistingFile(new_initrd, "*", _("Select Initial RAM Disk"));
 
 		if (new_initrd != nil)
@@ -478,6 +518,7 @@ Please ensure that the desired media is in the selected CD / DVD device.
 	    }
 	    else if (s == `select_cdromimage) {
 		string cdimg = (string)(UI::QueryWidget(`id(`cdromimage), `Value));
+		// popup title
 		string new_img = UI::AskForExistingFile(cdimg, "*.iso", _("Select ISO Image"));
 	
 		if (new_img != nil)
@@ -496,6 +537,7 @@ Please ensure that the desired media is in the selected CD / DVD device.
 define symbol Network_SourceDialog() {
     // build and show dialog
     integer indent = 3;
+    // dialog title
     string caption = _("Install Using a Network Installation Source");
 
     string old_custom_source = sconfig["custom_source"]:""; // remember the old source, just in case it needs to be removed from the disks config
@@ -526,25 +568,30 @@ define symbol Network_SourceDialog() {
 				// is started when it's pressed
 				`PushButton(`id(`inst_src), _("C&onfigure...")),
 				`VSpacing(1),
-
+				// radio button label
 				`Left(`RadioButton(`id(`network_custom),  `opt(`notify), _("Custom &Installation Source"), inst_type_configured == false)),
 				`HBox(
 				    `HSpacing(indent),
+				    // textbox label
 				    `TextEntry(`id(`custom_source), _("&URL of Installation Source"), default_custom_src)
 				),
 				`VSpacing(1)
 
 // TODO: disabled, we need kernel package before starting VM, we MUST know the URL
+//				// textbox label
 //				`Left(`RadioButton(`id(`slp),  `opt(`notify), _("&SLP Installation Source"), sconfig["inst_type"]:`unknown == `slp)),
 //				`VSpacing(1)
 			    )
 			)
 		    );
 
-    // help text for backup dialog during update 1/7
+    // Install Using a Network Installation Source - help text 1/4
     string help_text = sformat(_("<P><B><big>%1</big></B></P>"), caption);
+	// Install Using a Network Installation Source - help text 2/4
 	help_text = help_text + _("<p>YaST provides a library for storing <b>SUSE installation source</b> files with their associated kernel and initial install programs (initrd).</p>");
+	// Install Using a Network Installation Source - help text 3/4
 	help_text = help_text + _("<p>Make sure to select an installation source that includes a Xen-enabled kernel.</p>");
+	// Install Using a Network Installation Source - help text 4/4
 	help_text = help_text + _("<P>Only network installation sources, such as FTP or NFS, are supported.</P>");
 
     Wizard::SetContents(caption, contents, help_text, true, true);
@@ -602,6 +649,7 @@ define symbol Network_SourceDialog() {
 
 	    if (!URL::Check(srcurl) || parsed_url["host"]:"" == "")
 	    {
+		// popup error message
 		Report::Error(_("Entered URL value is not valid."));
 	    }
 	    else
@@ -629,6 +677,7 @@ define symbol Network_SourceDialog() {
 	    }
 /*	    else
 	    {
+		// popup error message
 		Report::Error(_("Only network installation sources
 are supported in the installation."));
 	    }*/
@@ -657,7 +706,7 @@ define void RefreshFullOptionsDialog()
 
 define symbol FullOptionsDialog()
 {
-    // screen title for the Xen mode selection
+    // dialog title
     string caption = _("Operating System Installation");
 
     map<string,string> fulloption = VM_XEN::GetFullOptions();
@@ -691,24 +740,30 @@ define symbol FullOptionsDialog()
 
     term contents =
 	`MarginBox(1.5, 0.2,
+		// frame label
 		`Frame(_("Install Using"),
 			`MarginBox(0.5, 0.5,
 				`RadioButtonGroup(`id(`rb_group),
 					`VBox(
+						// radio button label
 						`Left(`RadioButton(`id(`cdrom), `opt(`notify), _("&CD / DVD Device"), boot == "d" && contains(cd_devs, cd))),
 						`HBox(
 							`HSpacing(3),
+							// combo box label
 							`ComboBox(`id(`cddev), _("&Device Name"), cd_items),
 							`HStretch()
 						),
 						`VSpacing(1),
+						// radio button label
 						`Left(`RadioButton(`id(`iso), `opt(`notify), _("&ISO Image File"), boot == "d" && !contains(cd_devs, cd))),
 						`HBox(
 							`HSpacing(3),
+							// textbox label
 							`TextEntry(`id(`cdromimage), `opt(`hstretch), _("&File Name"), boot == "d" && !contains(cd_devs, cd) ? cd : ""),
 							`HSpacing(1),
 							`VBox(
 								`Label(""),
+								// button label
 								`PushButton(`id(`select_file), _("Br&owse..."))
 							),
 							`HSpacing(1)
@@ -821,28 +876,37 @@ define symbol BootOptionsDialog() {
 	});
 	valid_partitions = toset(valid_partitions); //sort list and remove duplicates
 
+	// dialog title
 	string caption = _("Operating System Boot Files");
 	
 	term contents =
 		`MarginBox(1.5, 0.2, `VBox(
+			// frame label
 			`Frame(_("Boot Using"),
 				`MarginBox(1.5, 0.2, `VBox(
+					// combobox label
 					`ComboBox(`id(`device), `opt(`editable,`hstretch), _("&Partition Containing Boot Files"), valid_partitions),
 					`VSpacing(0.5),
+					// textbox label
 					`TextEntry(`id(`kernel), `opt(`hstretch), _("&Xen-Enabled Kernel"), VM::GetKernelImage()),
 					`VSpacing(0.5),
+					// textbox label
 					`TextEntry(`id(`initrd), `opt(`hstretch), _("Boot &File (initrd)"), VM::GetInitrdImage())
 				))
 			),
 			`VSpacing(2),
+			// frame label
 			`Frame(_("Boot Options"),
 				`MarginBox(1.5, 0.2,
 				`TextEntry(`id(`bootopts), `opt(`hstretch), "", VM::GetExtraArgs()))
 			)
 		));
 
+	// boot options - help text 1/3
 	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	// boot options - help text 2/3
 	help_text = help_text + _("<p>The VM boots its operating system using the <b>kernel</b> and <b>boot file</b> stored on a virtual disk. Specify the partition that holds these files and the location of each. For example, partition: <tt>hda1</tt>; location of <b>kernel</b>: <tt>/boot/vmlinuz-xen</tt>; and location of <b>boot file</b>: <tt>/boot/initrd-xen.</tt></p>");
+	// boot options - help text 3/3
 	help_text = help_text + _("<p><b>Boot options</b> are optional arguments passed to the kernel each time it boots.</p>");
 
 	Wizard::SetContents(caption, contents, help_text, true, true);
@@ -867,6 +931,7 @@ define symbol BootOptionsDialog() {
 			string bootopts = (string) UI::QueryWidget (`id(`bootopts), `Value);
 	
 			if (device == nil || device == "") {
+				// popup error message
 				Report::Error(_("Partition Containing Kernel and RAM Disk cannot be empty."));
 				ui = `again;
 				continue;
@@ -877,6 +942,7 @@ define symbol BootOptionsDialog() {
 			if (issubstring(device, target)) success = true;
 		});
 		if (!success) {
+			// popup error message with continue/cancel buttons
 			if (!Popup::ContinueCancelHeadline(_("Warning"), _("The Partition Containing Kernel and RAM Disk,
 does not match any configued disks."))) {
 				ui = `again;
@@ -885,12 +951,14 @@ does not match any configued disks."))) {
 		}
 
 			if (kernel == nil || kernel == "") {
+				// popup error message
 				Report::Error(_("Xen-Enabled Kernel cannot be empty."));
 				ui = `again;
 				continue;
 			}
 
 /*			if (initrd == nil || initrd == "") {
+				// popup error message
 				Report::Error(_("RAM Disk cannot be empty."));
 				s = `again;
 				continue;

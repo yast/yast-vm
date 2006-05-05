@@ -80,7 +80,7 @@ else if (func == "Write")
 
 	// domU has only one console
 	SCR::Execute(.target.bash, "/bin/sed -e 's/.*mingetty tty[2-9]$//' /etc/inittab > /etc/inittab~ && mv /etc/inittab~ /etc/inittab");
-	// Although console appears to be a tty, don't do character translations
+	// Although console appears to be a tty, do not do character translations
 	SCR::Execute(.target.bash, "/bin/sed -e 's/^CONSOLE_MAGIC=.*$/CONSOLE_MAGIC=\"\"/' /etc/sysconfig/console > /etc/sysconfig/console~ && mv /etc/sysconfig/console~ /etc/sysconfig/console");
     }
 }

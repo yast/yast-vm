@@ -1,4 +1,21 @@
 -------------------------------------------------------------------
+Thu May  4 11:43:35 MDT 2006 - mgfritch@novell.com
+
+- resetSourceConfig() must always be called after resetDiskConfig()
+  to ensure the disk config settings are not overrun by the source
+  config settings. (#172714)
+- Final settings proposal should default to the PAE kernel 
+  (vmlinuz-xenpae) when the PAE kernel was used to install the 
+  VM. (#172977)
+- Remove workaround for AMD Pacifica (svm) processor on arch x86_64 
+  with full virtualization. (#169855)
+- Display an error message if a new disk image (loopback-create) 
+  already exists. (#173267)
+- Updated text strings and comments to comply with the Style Guide 
+  for SUSE Program Texts located on forge.
+- 2.13.44
+
+-------------------------------------------------------------------
 Tue May  2 12:58:42 MDT 2006 - mgfritch@novell.com
 
 - Added patch for "srcid" not set in results from 

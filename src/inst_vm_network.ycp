@@ -266,7 +266,7 @@ define symbol NetworkOverview() {
     }
 
 	// help text for network settings (1/2)
-	string help_text = sformat(_("<p><b><big>%1</big></b><br></p>"), caption);
+	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
 	// help text for network settings (2/2)
 	help_text = help_text + _("<p>A virtual machine can have zero or more virtual ethernet network cards. The MAC address is a unique identification of the virtual ethernet network card.</p>");
 	if (VM::GetVirtualizationType() == "para" && VM_Common::proposal_type == "install") {

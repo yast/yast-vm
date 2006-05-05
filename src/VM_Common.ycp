@@ -249,8 +249,9 @@
     global void PopupErrorDetails(string errorMessage, map out, string cmd) ``{
         string message = _("Undefined Error");
         if (errorMessage != nil && errorMessage != "") message = errorMessage;
-        Popup::ClearFeedback(); // just in case there are leftovers.
-        if (!Popup::AnyQuestion( Label::ErrorMsg(), message, Label::OKButton(), _("Details"), `focus )) {
+        Popup::ClearFeedback();
+	// Details button on a popup error message
+        if (!Popup::AnyQuestion( Label::ErrorMsg(), message, Label::OKButton(), _("&Details..."), `focus )) {
                 string description = sformat("<pre>command: %1 return \n %2 %3</pre>", cmd, out["stderr"]:"", out["stdout"]:"");
                 UI::OpenDialog (`opt(`decorated ),
                         `HBox( `VSpacing(16),
@@ -276,6 +277,7 @@
 
     global string GetAutoYastProposal() {
 	// proposal items
+	// %1 = an absolute filename path to the AutoYaST profile.
 	return HTML::List([ sformat(_("AutoYaST Profile: %1"), (autoyast_profile != "") ?
 	    // none AutoYast profile has been selected
 	    autoyast_profile : _("<I>none</I>"))]);
@@ -286,7 +288,7 @@
 
 	if (GetVirtualizationType() == "full" && autoyast_profile != "")
 	{
-	    // error in the installation proposal - don't allow to continue
+	    // error in the installation proposal - do not allow to continue
 	    ret = $[
 		// warning text in proposal dialog
 		"warning" : _("The AutoYaST profile for VM cannot be configured here in full virtualization mode.<BR>Configure it inside the VM after boot."),
@@ -308,22 +310,29 @@
     }
 
     global map<string, string> restart_mapping = $[
+	 // combobox item
 	 // restart mode - when the virtual machine is restarted
 	 "always" : _("Always"),
+	 // combobox item
 	 // restart mode - when the virtual machine is restarted
 	 "never" : _("Never"),
+	 // combobox item
 	 // restart mode - when the virtual machine is restarted
 	 "onreboot" : _("On Reboot")
     ];
 
     // used for values on_poweroff, on_reboot, on_crash
     global map<string, string> lifecycle_event_mapping = $[
+	 // combobox item
 	 // lifecycle_event mode (on_poweroff, on_reboot, on_crash) - destroy virtual machine
 	 "destroy" : _("Destroy"),
+	 // combobox item
 	 // lifecycle_event mode (on_poweroff, on_reboot, on_crash) - restart virtual machine
 	 "restart" : _("Restart"),
+	 // combobox item
 	 // lifecycle_event mode (on_poweroff, on_reboot, on_crash) - preserve virtual machine
 	 "preserve" : _("Preserve"),
+	 // combobox item
 	 // lifecycle_event mode (on_poweroff, on_reboot, on_crash) - rename and restart virtual machine
 	 "rename-restart" : _("Rename and restart"),
     ];
@@ -440,15 +449,21 @@
 	if (inst_type == `cdrom || inst_type == `iso)
 	{
 	    if (inst_type == `iso) {
+		// installation proposal item
 		ret = add(ret, sformat("%1 (%2)", _("Installation Device: ISO Image File"), custom));
 	    }
 	    else if (inst_type == `cdrom) {
+		// installation proposal item
 		ret = add(ret, sformat("%1 (%2)", _("Installation Device: CD/DVD Device"), custom));
 	    }
 	    if (use_custom_kernel) {
+		// installation proposal item
+		// %1 = absolute pathname the to a Xen-Enabled kernel
 		ret = add(ret, sformat(_("Kernel: %1"), custom_kernel));
 	
 		if (custom_initrd != "")
+			// installation proposal item
+			// %1 = absolute pathname to a Xen-Enabled initrd (ramdisk)
 			ret = add(ret, sformat(_("RAM Disk Image: %1"), custom_initrd));
 	
 		SetHiddenArgs(custom_kernel);
@@ -529,8 +544,10 @@
 
 	if (result["exit"]:-1 != 0)
 	{
-	    y2error("Cannot create disk image %1", file);
 	    //PopupErrorDetails(sformat(_("Cannot create disk image %1"), file), result, cmd);  // FIXME: somehow the output from the dd command is not captured by .target.bash_output
+	    y2error("Cannot create disk image %1", file);
+	    // Popup error message
+	    // %1 = absolute pathname to a loopback disk image (i.e '/var/lib/xen/images/vm1/hda')
 	    Report::Error(sformat(_("Cannot create the following disk image:
 %1
 
@@ -846,6 +863,8 @@ to create the specified disk image.
 
 	if (!ProductControl::Init())
 	{
+	    // popup error message
+	    // %1 = absolute pathname to a product control file (i.e. '/usr/share/YaST2/control/vm_install.xml')
 	    Report::Error(sformat(_("Control file %1 was not found."), ProductControl::custom_control_file));
 	}
     }
