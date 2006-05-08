@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Mon May  8 09:37:14 MDT 2006 - mgfritch@novell.com
+
+- Enable the Write portion of vm_finish.ycp if Arch::is_xenU()
+  and when `installation, `update, or `autoinst. 
+  (#167204, #171476, #161721)
+- 2.13.45
+
+-------------------------------------------------------------------
 Thu May  4 11:43:35 MDT 2006 - mgfritch@novell.com
 
 - resetSourceConfig() must always be called after resetDiskConfig()

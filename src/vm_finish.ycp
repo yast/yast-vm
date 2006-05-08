@@ -45,7 +45,7 @@ if (func == "Info")
 	    "steps" : 1,
 	    // progress step title
 	    "title" : _("Configuring the virtual machine..."),
-	    "when" : false ? [ `installation, `update, `autoinst ] : [],
+	    "when" : [ `installation, `update, `autoinst ],
 	];
     }
     else
