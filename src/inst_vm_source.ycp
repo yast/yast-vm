@@ -319,6 +319,7 @@ Please ensure that the desired media is in the selected CD / DVD device.
 		    // if NetWare always set localtime=1 in para virtualization
 		    if (VM_Common::GetVirtualizationType() == "para" && VM_Common::IsNetWareKernel(kernel)) {
 			VM::SetLocaltime(1);
+			VM::SetMemorySize(512); // if NetWare increase the memory_size=512
 		    }
 		}
 		else {
@@ -480,6 +481,7 @@ Please ensure that the desired media is in the selected CD / DVD device.
 			// if NetWare always set localtime=1 in para virtualization
 			if (VM_Common::GetVirtualizationType() == "para" && VM_Common::IsNetWareKernel(kernel)) {
 				VM::SetLocaltime(1);
+				VM::SetMemorySize(512); // if NetWare increase the memory_size=512
 			}
 
 		}

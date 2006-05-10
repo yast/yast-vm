@@ -390,6 +390,30 @@
 	return sid;
     }
 
+
+    global string GetDefaultRouteInterface() {
+	// grab the default route from the route table
+	string cmd = "/sbin/route | /usr/bin/grep -E '^default'";
+	y2milestone("Executing: %1", cmd);
+	map out = (map)SCR::Execute(.target.bash_output, cmd);
+	y2milestone("route output: %1", out);
+	
+	// get the interface assigned to the default route
+	list<string> output = splitstring(out["stdout"]:"", " \t\n");
+	output = filter(string tmpstr, output, ``(tmpstr != nil && tmpstr != ""));
+	y2milestone("output=%1", output);
+	string default_interface = output[size(output)-1]:"";
+	default_interface = String::CutBlanks(default_interface);
+	y2milestone("default_interface=%1", default_interface);
+
+	// default to eth0 if an error occurs
+	if (default_interface == nil || default_interface == "")
+		default_interface = "eth0";
+
+	y2milestone("GetDefaultRouteInterface returned '%1'", default_interface);
+	return default_interface;
+    }
+
     global boolean IsNetWareKernel(string kernel)
     {
         list<string> names = splitstring(kernel, "/");
@@ -412,12 +436,23 @@
 	y2milestone("display_list=%1", display_list);
 	// Add display=
 	if (display_list[1]:"" == nil || display_list[1]:"" == "" || display_list[1]:"" == "localhost" || display_list[1]:"" == "127.0.0.1") {
-		// get the IP address of the 1st interface
+
+		// get the inferface assigned to the default route
+		string default_interface = GetDefaultRouteInterface();
+
+		// get the IP address of the interface used in the default route
 		import "IP";
 		list<map> ifconfig =(list<map>)SCR::Read(.run.ifconfig);
-		ifconfig = filter(map iface, ifconfig, ``( iface["name"]:"" == "eth0"));
+		ifconfig = filter(map iface, ifconfig, ``( iface["name"]:"" == default_interface));
 		integer ipint = ifconfig[0,"value", "inet", "addr"]:0;
-		args = args + sformat(" DISPLAY=%1:%2", IP::ToString(ipint), display_list[2]:"0");
+		if (ipint != nil && ipint > 0) {
+			args = args + sformat(" DISPLAY=%1:%2", IP::ToString(ipint), display_list[2]:"0");
+		}
+		else {
+			// use the display value as is...
+			args = args + display_value;
+		}
+
 	}
 	else {
 		// use the display value as is...

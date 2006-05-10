@@ -82,6 +82,14 @@
     global boolean resetMemorySize()
     {
 	VM_Common::memory_size = VM_Common::default_memory_size;
+
+	boolean isNetWare = false;
+	if (VM_Common::GetCustomKernel()) {
+		isNetWare = VM_Common::IsNetWareKernel(VM_Common::GetKernelImage());
+        }
+	if (isNetWare && VM_Common::proposal_type != "install")
+		VM_Common::memory_size = 512; // if NetWare, increase the memory_size=512
+
 	return true;
     }
 
@@ -762,10 +770,202 @@
 	return $["cdrom_image":cdrom_image, "boot_device":boot_device];
     }
 
+
+    define list<string> PartitionsInfo(string image) {
+	string cmd = sformat("sfdisk -d -uS -- '%1'", image);
+	map outputmap = (map)SCR::Execute(.target.bash_output, cmd);
+
+	string outputstring = outputmap["stdout"]:"";
+
+	list<string> ret = [];
+
+	if (outputstring != nil && outputstring != "")
+	{
+	    ret = splitstring(outputstring, "\n");
+	    // remove empty lines
+	    ret = filter(string f, ret, {return f != nil && f != "";});
+	}
+
+	y2milestone("PartitionsInfo (%1): %2", image, ret);
+
+	return ret;
+    }
+
+    define list<map<string,string> > ParsePartitionInfo(list<string> info) {
+	list<map<string,string> > ret = [];
+	y2milestone("Parse partition: %1", info);
+
+	if (info != nil)
+	{
+	    foreach(string line, info, {
+		    if (regexpmatch(line, " : start=.*, size=.*, Id="))
+		    {
+			// line contains partition description
+
+			string expr = "(.*)[ \\t]*:[ \\t]*start=[ \\t]*([1234567890]*)[ \\t]*, size=[ \\t]*([1234567890]*)[ \\t]*, Id=[ \\t]*([1234567890abcdefABCDEF]*)";
+
+			string pname = regexpsub(line, expr, "\\1");
+			string pstart = regexpsub(line, expr, "\\2");
+			string psize = regexpsub(line, expr, "\\3");
+			string pid = regexpsub(line, expr, "\\4");
+
+			if (pstart != nil && psize != nil && pid != nil)
+			{
+			    ret = add(ret, $["name" : pname, "start" : pstart, "size" : psize, "id" : pid]);
+			}
+		    }
+		}
+	    );
+	}
+
+	y2milestone("Parsed output: %1", ret);
+
+	return ret;
+    }
+
+    define map<string,list<string> > SearchFiles(map<string,list<string> > search_map, string prefix) {
+	map<string,list<string> >result = $[];
+
+	// check files
+	foreach(string file, list<string> dirs, search_map, {
+		boolean found = false;
+
+		foreach(string dir, dirs, {
+			if (!found)
+			{
+			    list<string> foundfiles = VM_Common::SearchFile(prefix + "/" + dir, file);
+
+			    if (size(foundfiles) > 0)
+			    {
+				// directory prefix
+				foundfiles = maplist(string f, foundfiles, {return dir + f;});
+				result[file] = foundfiles;
+				found = true;
+			    }
+			}
+		    }
+		);
+
+
+	    }
+	);
+
+	y2milestone("result: %1", result);
+
+	return result;
+    }
+
+    define void ProcessFoundFile(map<string,list<string> > found, string dir) {
+	if (found != nil && size(found) > 0)
+	{
+	    foreach(string file, list<string> location, found, {
+
+		    if (size(location) > 1)
+		    {
+			y2warning("Using the first location from list: %1", location);
+		    }
+
+		    string filename = dir + "/" + location[0]:"";
+		    string target_dir = img_prefix + VM_Common::config_name;
+
+		    if (file == "fstab")
+		    {
+			// parse fstab file and set root device name
+			VM_Common::root_device = VM_Common::ParseFstab(filename);
+		    }
+		    else if (file == "vmlinuz-*-xen")
+		    {
+			// copy kernel
+			VM_Common::CopyFile(filename, target_dir);
+			// set kernel name
+			kernel_path = target_dir + "/" + VM_Common::GetFileNameFromPath(filename);
+		    }
+		    else if (file == "initrd-*-xen")
+		    {
+			// copy initrd image
+			VM_Common::CopyFile(filename, target_dir);
+			// set initrd name
+			initrd_path = target_dir + "/" + VM_Common::GetFileNameFromPath(filename);
+		    }
+		    else
+		    {
+			y2warning("Unknown file: %1", file);
+		    }
+		}
+	    );
+	}
+    }
+
+    define void ReadDiskImage(string diskimage)
+    {
+	list<string> pinfo = PartitionsInfo(diskimage);
+	list<map<string,string> > partitions = ParsePartitionInfo(pinfo);
+
+	// leave only Linux partitions
+	partitions = filter(map<string,string> partition, partitions, {return partition["id"]:"" == "83";});
+	y2milestone("Linux partitions: %1", partitions);
+
+
+	// create mountpoint directory
+	string tmp = VM_Common::GetTmpDir();
+
+	string mountpoint = tmp + "/mountpoint";
+
+	// create mount point directory
+	boolean mcreated = (boolean)SCR::Execute(.target.mkdir, mountpoint);
+	y2milestone("mountpoint created: %1", mcreated);
+
+	foreach(map<string,string> partition, partitions, {
+
+	    integer offset = tointeger(partition["start"]:"") * 512;
+
+	    if (offset != nil)
+	    {
+		boolean mounted = VM_Common::TryMount(diskimage, offset, mountpoint);
+
+		if (mounted)
+		{
+		    // search for files
+		    map<string,list<string> > srch = $[
+			"vmlinuz-*-xen" : [ "/boot/", "/" ],
+			"initrd-*-xen" : [ "/boot/", "/" ],
+			"fstab" : [ "/etc/", "/" ]
+		    ];
+
+		    map<string,list<string> > found = SearchFiles(srch, mountpoint);
+
+		    y2milestone("Search result: %1", found);
+
+		    ProcessFoundFile(found, mountpoint);
+
+		    // unmount the image
+		    SCR::Execute(.target.umount, mountpoint);
+		}
+	    }
+
+	});
+    }
+
+
+    define boolean ReadDiskImages(string prefix) {
+	boolean ret = true;
+
+	foreach(map<string,any> disk, disks, {
+		string target = disk["target"]:"hda";
+		// TODO use prefix only for created images
+		ret = ret && ReadDiskImage(prefix + "/" + target);
+	    }
+	);
+
+	return ret;
+    }
+
+
     global define string GetBootDevice()
     {
 	return boot_device;
     }
+
 
     list<map<string,any> > parseDiskConfig(string diskstr) {
 	y2milestone("parseDiskConfig(%1)", diskstr);
@@ -961,6 +1161,10 @@
 				}
 				VM_Common::SetKernelImage("/boot/vmlinuz-" + kernel_ext);
 				VM_Common::SetInitrdImage("/boot/initrd-" + kernel_ext);
+
+				// Search each disk for the existance of the Xen Linux kernel, initrd, or inittab.
+				// If one is found then set VM_Common::root_device to that disk partition. 
+				ReadDiskImages(img_prefix + VM_Common::config_name);
 			}
 			y2milestone("KernelImage: %1", VM_Common::GetKernelImage);
 			y2milestone("InitrdImage: %1", VM_Common::GetInitrdImage);
@@ -1396,195 +1600,6 @@
 	return ret;
     }
 
-
-    define list<string> PartitionsInfo(string image) {
-	string cmd = sformat("sfdisk -d -uS -- '%1'", image);
-	map outputmap = (map)SCR::Execute(.target.bash_output, cmd);
-
-	string outputstring = outputmap["stdout"]:"";
-
-	list<string> ret = [];
-
-	if (outputstring != nil && outputstring != "")
-	{
-	    ret = splitstring(outputstring, "\n");
-	    // remove empty lines
-	    ret = filter(string f, ret, {return f != nil && f != "";});
-	}
-
-	y2milestone("PartitionsInfo (%1): %2", image, ret);
-
-	return ret;
-    }
-
-    define list<map<string,string> > ParsePartitionInfo(list<string> info) {
-	list<map<string,string> > ret = [];
-	y2milestone("Parse partition: %1", info);
-
-	if (info != nil)
-	{
-	    foreach(string line, info, {
-		    if (regexpmatch(line, " : start=.*, size=.*, Id="))
-		    {
-			// line contains partition description
-
-			string expr = "(.*)[ \\t]*:[ \\t]*start=[ \\t]*([1234567890]*)[ \\t]*, size=[ \\t]*([1234567890]*)[ \\t]*, Id=[ \\t]*([1234567890abcdefABCDEF]*)";
-
-			string pname = regexpsub(line, expr, "\\1");
-			string pstart = regexpsub(line, expr, "\\2");
-			string psize = regexpsub(line, expr, "\\3");
-			string pid = regexpsub(line, expr, "\\4");
-
-			if (pstart != nil && psize != nil && pid != nil)
-			{
-			    ret = add(ret, $["name" : pname, "start" : pstart, "size" : psize, "id" : pid]);
-			}
-		    }
-		}
-	    );
-	}
-
-	y2milestone("Parsed output: %1", ret);
-
-	return ret;
-    }
-
-    define map<string,list<string> > SearchFiles(map<string,list<string> > search_map, string prefix) {
-	map<string,list<string> >result = $[];
-
-	// check files
-	foreach(string file, list<string> dirs, search_map, {
-		boolean found = false;
-
-		foreach(string dir, dirs, {
-			if (!found)
-			{
-			    list<string> foundfiles = VM_Common::SearchFile(prefix + "/" + dir, file);
-
-			    if (size(foundfiles) > 0)
-			    {
-				// directory prefix
-				foundfiles = maplist(string f, foundfiles, {return dir + f;});
-				result[file] = foundfiles;
-				found = true;
-			    }
-			}
-		    }
-		);
-
-
-	    }
-	);
-
-	y2milestone("result: %1", result);
-
-	return result;
-    }
-
-    define void ProcessFoundFile(map<string,list<string> > found, string dir) {
-	if (found != nil && size(found) > 0)
-	{
-	    foreach(string file, list<string> location, found, {
-
-		    if (size(location) > 1)
-		    {
-			y2warning("Using the first location from list: %1", location);
-		    }
-
-		    string filename = dir + "/" + location[0]:"";
-		    string target_dir = img_prefix + VM_Common::config_name;
-
-		    if (file == "fstab")
-		    {
-			// parse fstab file and set root device name
-			VM_Common::root_device = VM_Common::ParseFstab(filename);
-		    }
-		    else if (file == "vmlinuz-*-xen")
-		    {
-			// copy kernel
-			VM_Common::CopyFile(filename, target_dir);
-			// set kernel name
-			kernel_path = target_dir + "/" + VM_Common::GetFileNameFromPath(filename);
-		    }
-		    else if (file == "initrd-*-xen")
-		    {
-			// copy initrd image
-			VM_Common::CopyFile(filename, target_dir);
-			// set initrd name
-			initrd_path = target_dir + "/" + VM_Common::GetFileNameFromPath(filename);
-		    }
-		    else
-		    {
-			y2warning("Unknown file: %1", file);
-		    }
-		}
-	    );
-	}
-    }
-
-    define void ReadDiskImage(string diskimage)
-    {
-	list<string> pinfo = PartitionsInfo(diskimage);
-	list<map<string,string> > partitions = ParsePartitionInfo(pinfo);
-
-	// leave only Linux partitions
-	partitions = filter(map<string,string> partition, partitions, {return partition["id"]:"" == "83";});
-	y2milestone("Linux partitions: %1", partitions);
-
-
-	// create mountpoint directory
-	string tmp = VM_Common::GetTmpDir();
-
-	string mountpoint = tmp + "/mountpoint";
-
-	// create mount point directory
-	boolean mcreated = (boolean)SCR::Execute(.target.mkdir, mountpoint);
-	y2milestone("mountpoint created: %1", mcreated);
-
-	foreach(map<string,string> partition, partitions, {
-
-	    integer offset = tointeger(partition["start"]:"") * 512;
-
-	    if (offset != nil)
-	    {
-		boolean mounted = VM_Common::TryMount(diskimage, offset, mountpoint);
-
-		if (mounted)
-		{
-		    // search for files
-		    map<string,list<string> > srch = $[
-			"vmlinuz-*-xen" : [ "/boot/", "/" ],
-			"initrd-*-xen" : [ "/boot/", "/" ],
-			"fstab" : [ "/etc/", "/" ]
-		    ];
-
-		    map<string,list<string> > found = SearchFiles(srch, mountpoint);
-
-		    y2milestone("Search result: %1", found);
-
-		    ProcessFoundFile(found, mountpoint);
-
-		    // unmount the image
-		    SCR::Execute(.target.umount, mountpoint);
-		}
-	    }
-
-	});
-    }
-
-
-    define boolean ReadDiskImages(string prefix) {
-	boolean ret = true;
-
-	foreach(map<string,any> disk, disks, {
-		string target = disk["target"]:"hda";
-		// TODO use prefix only for created images
-		ret = ret && ReadDiskImage(prefix + "/" + target);
-	    }
-	);
-
-	return ret;
-    }
 
     global define string getExtraArgs() {
 	return VM_Common::extra_args;
@@ -2037,10 +2052,10 @@ source is accessible."));
 		if (ret["exit"]:-1 != 0 && displayError) {
 			// popup error message
 			string abortmsg = _("Cannot start the virtual machine.");
-			if (VM_Common::proposal_type == "install") {
-				// popup error message
-				abortmsg = abortmsg + "\n" + _("The installation will be aborted.");
-			}
+//			if (VM_Common::proposal_type == "install") {
+//				// popup error message
+//				abortmsg = abortmsg + "\n" + _("The installation will be aborted.");
+//			}
 			VM_Common::PopupErrorDetails(abortmsg, ret, cmd);
 		}
 		success = (ret["exit"]:-1 == 0);

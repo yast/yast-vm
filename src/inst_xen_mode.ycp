@@ -85,6 +85,7 @@
 		VM::SetVirtualizationType(selected);
 		//VM::ResetAllSettings();
 		VM::ResetNumberOfCpus();
+		VM::UpdateDiskConfig(VM_Common::custom_source, "", ""); // remove any old custom sources that were added as disks. See bugzilla #171696
 		VM::ResetSource();
 	    }
 
