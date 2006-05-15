@@ -1,4 +1,18 @@
 -------------------------------------------------------------------
+Thu May 11 16:18:15 MDT 2006 - mgfritch@novell.com
+
+- Always write out the 'cdrom=' entry to the vm config file if 
+  full virtualization and proposal_mode != 'existing'.
+  (#174616) 
+- Ask for the initrd package first and the kernel package last 
+  when extracting a kernel/initrd from a SUSE installation source.
+  This should ensure CD1 is in the CD-ROM drive when the VM 
+  installation starts. (#175111)
+- Install kernel-xenpae by default for dom0 when running on 
+  kernel-bigsmp. (#175117)
+- 2.13.47
+
+-------------------------------------------------------------------
 Tue May  9 16:14:30 MDT 2006 - mgfritch@novell.com
 
 - Default the root device if a disk partition contains the

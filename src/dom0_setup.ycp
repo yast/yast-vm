@@ -14,6 +14,7 @@
     import "Report";
     import "Popup";
     import "Wizard";
+    import "VM_XEN";
 
     textdomain "vm";
 
@@ -67,7 +68,13 @@ _("<p>When the configuration is successfully finished, it is possible to boot th
     // package stage
     Progress::NextStage();
 
+    // Decide if dom0 should use the pae kernel (#175117)
+    string kernel_pkg = "kernel-xen";
+    if (VM_XEN::isPAEKernel())
+	kernel_pkg = "kernel-xenpae";
+
     list<string> packages = ["xen", "kernel-xen", "xen-libs", "xen-tools", "xen-tools-ioemu"];
+    packages = add(packages, kernel_pkg);
     boolean success = true;
     boolean bootloader_modified = false;
 

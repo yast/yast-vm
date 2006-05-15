@@ -1111,8 +1111,12 @@
 	retmap["stdout"] = deletechars(retmap["stdout"]:"", "\n\t "); // remove whitespace
 	y2milestone("retmap=%1", retmap);
 	if (retmap["stdout"]:"" != nil && retmap["stdout"]:"" != "") {
-		if (regexpmatch(retmap["stdout"]:"", ".*xenpae$"))
+		if (regexpmatch(retmap["stdout"]:"", ".*xenpae$")) // check for kernel-xenpae
 			isPAE = true;
+		else if (regexpmatch(retmap["stdout"]:"", ".*bigsmp$")) // check for kernel-bigsmp
+			isPAE = true;
+		else
+			isPAE = false;
 	}
 	y2milestone("isPAE=%1", isPAE);
 	return isPAE;
@@ -1162,8 +1166,8 @@
 				VM_Common::SetKernelImage("/boot/vmlinuz-" + kernel_ext);
 				VM_Common::SetInitrdImage("/boot/initrd-" + kernel_ext);
 
-				// Search each disk for the existance of the Xen Linux kernel, initrd, or inittab.
-				// If one is found then set VM_Common::root_device to that disk partition. 
+				// Search each disk for the existance of the Xen Linux kernel and initrd.
+				// If one is found then set VM_Common::root_device to that disk partition.
 				ReadDiskImages(img_prefix + VM_Common::config_name);
 			}
 			y2milestone("KernelImage: %1", VM_Common::GetKernelImage);
@@ -1474,8 +1478,8 @@
 	    ret = ret && WriteStringOption(configpath, "boot", boot_device);
 
 	    // write CD-ROM configuration if booting from a CD
-	    if (boot_device == "d")
-	    {
+//	    if (boot_device == "d") {
+	    if (VM_Common::proposal_type != "existing") {
 		ret = ret && WriteStringOption(configpath, "cdrom", cdrom_image);
 	    }
 	}
@@ -1865,10 +1869,13 @@ source is accessible."));
 		return false;
 	    }
 
+
 	    y2milestone("Extracting %1%2 from the installation source...", "kernel-", kernel_ext);
 
 	    string kpkg = VM_Common::GetPackage("kernel-" + kernel_ext);
 	    string tmpdir = VM_Common::GetTmpDir();
+
+
 	    kernel_path = VM_Common::ExtractKernelImage(kpkg, tmpdir, "./boot/vmlinuz-*-" + kernel_ext, "vmlinuz-*-" + kernel_ext);
 
 	    if (kernel_path != "")
@@ -1886,6 +1893,7 @@ source is accessible."));
 		return false;
 	    }
 
+
 	    y2milestone("Creating installation ramdisk (initrd)...");
 	    if (VM_Common::CreateInstallationImage(kpkg, tmpdir + "/inst-initrd") == false)
 	    {
@@ -1894,7 +1902,11 @@ source is accessible."));
 		return false;
 	    }
 	    initrd_path = tmpdir + "/inst-initrd";
+
 	    y2milestone("kernel: %1, initrd: %2", kernel_path, initrd_path);
+
+	    VM_Common::GetPackage("kernel-" + kernel_ext); // ask for the kernel pkg again.  This ensures CD1 is in the drive when the VM starts. See bugzilla #175111
+
 	}
 	else
 	{

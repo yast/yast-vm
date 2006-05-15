@@ -73,8 +73,11 @@ boolean DeleteVirtualMachine(integer table_item) {
 			// remove the disk source
 			if (remove_disk) {
 				y2milestone("removing virtual disk: %1", src);
-				boolean isremoved = (boolean) SCR::Execute(.target.remove, src);
-				if (! isremoved) success = false;
+				string cmd = sformat("rm -f %1", src);
+				y2milestone("Executing: %1", cmd);
+				map retmap = (map)SCR::Execute(.target.bash_output, cmd);
+				y2milestone("retmap=%1", retmap);
+				if (retmap["exit"]:-1 != 0) success = false;
 			}
 		});
 
