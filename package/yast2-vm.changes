@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed May 17 09:59:07 CEST 2006 - lslezak@suse.cz
+
+- check whether the package management is available at start
+  of the yast module (#175148)
+- 2.13.49
+
+-------------------------------------------------------------------
 Tue May 16 11:23:17 MDT 2006 - mgfritch@novell.com
 
 - Re-generate the proposed MAC address for the default network

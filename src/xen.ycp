@@ -16,6 +16,7 @@
     import "Popup";
     import "Label";
     import "Package";
+    import "PackageLock";
     import "Mode";
 
     include "vm/cmdline.ycp";
@@ -70,6 +71,14 @@ Configure the VM Server now?")))
 	// error - the installation runs in xterm, we need access to a X server
 	Report::Error(_("Virtual machine installation requires access to a graphical environment."));
 
+	return `abort;
+    }
+
+    // abort if the package manager is not available
+    // note: Check() displays an error popup
+    boolean manager_available = PackageLock::Check();
+    if (!manager_available)
+    {
 	return `abort;
     }
 
