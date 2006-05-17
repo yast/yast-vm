@@ -379,6 +379,43 @@ so it will be exported to the VM as read-only.")))
 
 	list<map> devmap = (list<map>)SCR::Read(.proc.partitions);
 	y2milestone("current partitions (/proc/partitions): %1", devmap);
+	list<map> mounted = (list<map>) SCR::Read(.proc.mounts);
+	y2milestone("mounted partitions (/proc/mounts): %1", mounted);
+	list<map> swaps = (list<map>) SCR::Read(.proc.swaps);
+	y2milestone("swap partitions (/proc/swaps): %1", swaps);
+
+
+	// Remove currently mounted partitions from the list of available physical devices.  See bugzilla #173433.
+	foreach(map m, mounted, {
+		// remove the partition from the list of devices (i.e. hda1, hda2, hdb1, etc.)
+		devmap = filter(map d, devmap, {
+			return (m["spec"]:"" != sformat("/dev/%1", d["name"]:""));
+		});
+		// remove the entire device from the list of devices (i.e. hda, hdb, etc.)
+		devmap = filter(map d, devmap, {
+			return (regexpsub(m["spec"]:"", "(.*)[[0123456789]]*$", "\\1") != sformat("/dev/%1", d["name"]:""));
+		});
+	});
+
+	// Remove any dom0 swap partitions from the list of available physical devices.
+	foreach(map m, swaps, {
+		// remove the partition from the list of devices (i.e. hda1, hda2, hdb1, etc.)
+		devmap = filter(map d, devmap, {
+			return (m["file"]:"" != sformat("/dev/%1", d["name"]:""));
+		});
+		// remove the entire device from the list of devices (i.e. hda, hdb, etc.)
+		devmap = filter(map d, devmap, {
+			return (regexpsub(m["file"]:"", "(.*)[[0123456789]]*$", "\\1") != sformat("/dev/%1", d["name"]:""));
+		});
+	});
+
+	// Remove all loopback devices from the list of avaliable physical devices.
+	devmap = filter(map d, devmap, {
+		return (regexpmatch(d["name"]:"", ".*loop.*") != true); // don't include device names that contain the string 'loop'
+	});
+
+
+	y2milestone("list of available partitions: %1", devmap);
 
 	list<string> valid_phys_devices = [];
 	list<term> valid_phys_devices_term = [];
@@ -389,8 +426,19 @@ so it will be exported to the VM as read-only.")))
 			string name = d["name"]:"";
 			if (name != nil && name != "") {
 				name = "/dev/" + name;
-				valid_phys_devices_term = add(valid_phys_devices_term, `item(`id(name), name));
-				valid_phys_devices = add(valid_phys_devices, name);
+				// Don't add currently mounted partitions to the list of available physical devices.  See bugzilla #173433.
+				boolean isMounted = false;
+				foreach(map m, mounted, {
+					if (m["spec"]:"" == name) {
+						isMounted = true;
+						break;
+					}
+				});
+				
+				if (isMounted == false) {
+					valid_phys_devices_term = add(valid_phys_devices_term, `item(`id(name), name));
+					valid_phys_devices = add(valid_phys_devices, name);
+				}
 			}
 		});
 	}
@@ -819,6 +867,12 @@ symbol EditDisk() {
     symbol ret = Sequencer::Run(aliases, sequence);
 
     Wizard::CloseDialog();
+
+    if (ret == `next || ret == `finish) {
+	if (VM_Common::proposal_type != "install") {
+	    VM::ResetSource();
+	}
+    }
 
     return ret;
 }

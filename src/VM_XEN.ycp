@@ -462,6 +462,53 @@
 	return used_devices;
     }
 
+    global define string getDiskTarget(list<map<string,any> > disks_list, string source)  {
+	y2milestone("getDiskTarget(%1, %2)", disks_list, source);
+	string target = nil;
+	foreach(map<string,any> m, disks_list, ``{
+		string s = m["source"]:"";
+		if (m["prefix"]:nil != nil && m["prefix"]:"" != "") {
+			string prefix = m["prefix"]:img_prefix;
+			if (findlastof(prefix, "/") < size(prefix)-1) { // no ending /
+				prefix = sformat("%1/%2/", m["prefix"]:img_prefix, VM_Common::config_name);
+			}
+			else {
+				prefix = sformat("%1%2/", m["prefix"]:img_prefix, VM_Common::config_name);
+			}
+			s = prefix + m["source"]:"";
+		}
+		if (s == source) {
+			target = m["target"]:"";
+			break;
+		}
+	});
+	y2milestone("getDiskTarget returned: %1", target);
+	return target;
+    }
+
+    global define string getDiskSource(list<map<string,any> > disks_list, string target)  {
+	y2milestone("getDiskSource(%1, %2)", disks_list, target);
+	string source = nil;
+	foreach(map<string,any> m, disks_list, ``{
+		if (m["target"]:"" == target) {
+			string s = m["source"]:"";
+			if (m["prefix"]:nil != nil && m["prefix"]:"" != "") {
+				string prefix = m["prefix"]:img_prefix;
+				if (findlastof(prefix, "/") < size(prefix)-1) { // no ending /
+					prefix = sformat("%1/%2/", m["prefix"]:img_prefix, VM_Common::config_name);
+				}
+				else {
+					prefix = sformat("%1%2/", m["prefix"]:img_prefix, VM_Common::config_name);
+				}
+				s = prefix + m["source"]:"";
+			}
+			source = s;
+		}
+	});
+	y2milestone("getDiskSource returned: %1", source);
+	return source;
+    }
+
     /**
     * Returns a list of disk sources that are already defined in the disk overview table
     * @param list<map<string,any> > disk configuartion
@@ -498,6 +545,12 @@
     }
 
 
+    define list <map <string,string> > create_default_network_config()
+    {
+	return [ $[ "mac" : VM_Common::Propose_MAC_address(""), "bridge": ""] ];
+    }
+ 
+
     global define boolean setNetworkConfig(list<map<string,string> > net)
     {
 	VM_Common::SetModified(net != network);
@@ -510,9 +563,15 @@
     }
 
     global define boolean resetNetworkConfig() {
+
+	// create default network config (requires proposed config name)
+	default_network = create_default_network_config(); // re-create the mac addresses. See bugzilla (#175955)
+
 	network = default_network;
+
 	VM_Common::use_dhcp = VM_Common::default_use_dhcp;
 	VM_Common::use_static = VM_Common::default_use_static;
+
 	return true;
     }
 
@@ -770,6 +829,27 @@
 	return $["cdrom_image":cdrom_image, "boot_device":boot_device];
     }
 
+    global define boolean isPAEKernel() {
+	// check is we're running on 32 bit pae.
+	y2milestone("Checking for PAE kernel...");
+	boolean isPAE = false;
+	string cmd = "uname -r";
+	y2milestone("Executing: %1", cmd);
+	map retmap = (map) SCR::Execute(.target.bash_output, cmd);
+	retmap["stdout"] = deletechars(retmap["stdout"]:"", "\n\t "); // remove whitespace
+	y2milestone("retmap=%1", retmap);
+	if (retmap["stdout"]:"" != nil && retmap["stdout"]:"" != "") {
+		if (regexpmatch(retmap["stdout"]:"", ".*xenpae$")) // check for kernel-xenpae
+			isPAE = true;
+		else if (regexpmatch(retmap["stdout"]:"", ".*bigsmp$")) // check for kernel-bigsmp
+			isPAE = true;
+		else
+			isPAE = false;
+	}
+	y2milestone("isPAE=%1", isPAE);
+	return isPAE;
+    }
+
 
     define list<string> PartitionsInfo(string image) {
 	string cmd = sformat("sfdisk -d -uS -- '%1'", image);
@@ -779,7 +859,7 @@
 
 	list<string> ret = [];
 
-	if (outputstring != nil && outputstring != "")
+	if (outputmap["exit"]:-1 == 0 && outputstring != nil && outputstring != "")
 	{
 	    ret = splitstring(outputstring, "\n");
 	    // remove empty lines
@@ -868,12 +948,12 @@
 		    string filename = dir + "/" + location[0]:"";
 		    string target_dir = img_prefix + VM_Common::config_name;
 
-		    if (file == "fstab")
+/*		    if (file == "fstab")
 		    {
 			// parse fstab file and set root device name
 			VM_Common::root_device = VM_Common::ParseFstab(filename);
 		    }
-		    else if (file == "vmlinuz-*-xen")
+		    else */if (file == "vmlinuz-*-xen")
 		    {
 			// copy kernel
 			VM_Common::CopyFile(filename, target_dir);
@@ -896,14 +976,17 @@
 	}
     }
 
-    define void ReadDiskImage(string diskimage)
+    define boolean ReadDiskImage(string diskimage)
     {
+	boolean ret = false;
+	y2milestone("ReadDiskImage(%1)", diskimage);
+
 	list<string> pinfo = PartitionsInfo(diskimage);
 	list<map<string,string> > partitions = ParsePartitionInfo(pinfo);
 
-	// leave only Linux partitions
-	partitions = filter(map<string,string> partition, partitions, {return partition["id"]:"" == "83";});
-	y2milestone("Linux partitions: %1", partitions);
+	// leave only Linux native partitions or FAT16 (NetWare) partitions
+	partitions = filter(map<string,string> partition, partitions, { return ( (partition["id"]:"" == "83") || (partition["id"]:"" == "6") ); });
+	y2milestone("Partitions: %1", partitions);
 
 
 	// create mountpoint directory
@@ -925,18 +1008,64 @@
 
 		if (mounted)
 		{
+		    // search for the kernel/initrd contained in the proposal.
+
 		    // search for files
 		    map<string,list<string> > srch = $[
-			"vmlinuz-*-xen" : [ "/boot/", "/" ],
-			"initrd-*-xen" : [ "/boot/", "/" ],
-			"fstab" : [ "/etc/", "/" ]
+			"initrd-xen"		: [ "/boot/", "/" ],
+			"initrd-xenpae"		: [ "/boot/", "/" ],
+			"vmlinuz-xen"		: [ "/boot/", "/" ],
+			"vmlinuz-xenpae"	: [ "/boot/", "/" ],
+			"xnloader.sys"		: [ "/nwserver/" ],
 		    ];
 
 		    map<string,list<string> > found = SearchFiles(srch, mountpoint);
-
 		    y2milestone("Search result: %1", found);
 
-		    ProcessFoundFile(found, mountpoint);
+		    //ProcessFoundFile(found, mountpoint); // FIXME: is this needed anymore?
+
+
+		    if (found != nil && size(found) > 0) {
+
+			// see if we are running on a PAE kernel or if the user seleceted a PAE kernel
+			string kernel_str = deletechars(VM_Common::GetKernelImage(), "\n\t "); // remove whitespace
+			string kernel_ext = "xen";
+			if (isPAEKernel() || regexpmatch(kernel_str, ".*xenpae$")) {
+				y2milestone("Found PAE kernel");
+				kernel_ext = "xenpae";
+			}
+
+			foreach(string file, list<string> locations, found, {
+				if (regexpmatch(file, "initrd-.*")) {
+					// set the default initrd
+					initrd_path = locations[0]:sformat("/boot/initrd-%1", kernel_ext);
+					VM_Common::SetInitrdImage(initrd_path);
+				}
+				else { // assume we found a kernel
+					// set the default kernel
+					kernel_path = locations[0]:sformat("/boot/vmlinuz-%1", kernel_ext);
+					VM_Common::SetKernelImage(kernel_path);
+					ret = true;
+				}
+			});
+
+			y2milestone("kernel='%1'", VM_Common::GetKernelImage());
+			y2milestone("initrd='%1'", VM_Common::GetInitrdImage());
+
+
+			string partition_name = String::CutBlanks(partition["name"]:"");
+			string source = regexpsub(partition_name, "(.*)[[0123456789]]*$", "\\1");  // remove the partition number
+			string partition_num = regexpsub(partition_name, ".*([[0123456789]]*$)", "\\1"); // save the partition number
+			y2milestone("partition_name='%1'", partition_name);
+			y2milestone("source='%1'", source);
+			y2milestone("partition_num='%1'", partition_num);
+			string new_target = getDiskTarget(disks, source);
+			if (new_target != nil && new_target != "") {
+				// set the root device to the partition that contains the sepecified kernel (i.e. /dev/hda2)
+				VM_Common::root_device = new_target + partition_num;
+				y2milestone("root_device='%1'", VM_Common::root_device);
+			}
+		    }
 
 		    // unmount the image
 		    SCR::Execute(.target.umount, mountpoint);
@@ -944,18 +1073,33 @@
 	    }
 
 	});
+	return ret;
     }
 
 
-    define boolean ReadDiskImages(string prefix) {
-	boolean ret = true;
+    define boolean ReadDiskImages() {
+	boolean ret = false;
 
 	foreach(map<string,any> disk, disks, {
-		string target = disk["target"]:"hda";
-		// TODO use prefix only for created images
-		ret = ret && ReadDiskImage(prefix + "/" + target);
+		if ((disk["type"]:"" == "loop-create") || (disk["type"]:"" == "loop-use")) { // FIXME: should support for phys devices be added?
+			string source = getDiskSource(disks, disk["target"]:"");
+			if (source != nil && source != "") {
+				ret = ret || ReadDiskImage(source);
+			}
+		}
 	    }
 	);
+
+	// don't default VM_Common::root_device if the disk search doesn't find a kernel
+	if (ret == false) {
+		VM_Common::root_device = "";
+	}
+
+	// remove the initrd default if we defaulted to the NetWare kernel
+	if (VM_Common::IsNetWareKernel(VM_Common::GetKernelImage())) {
+		initrd_path = "";
+		VM_Common::SetInitrdImage(initrd_path);
+	}
 
 	return ret;
     }
@@ -1101,27 +1245,6 @@
 	return ret;
     }
 
-    global define boolean isPAEKernel() {
-	// check is we're running on 32 bit pae.
-	y2milestone("Checking for PAE kernel...");
-	boolean isPAE = false;
-	string cmd = "uname -r";
-	y2milestone("Executing: %1", cmd);
-	map retmap = (map) SCR::Execute(.target.bash_output, cmd);
-	retmap["stdout"] = deletechars(retmap["stdout"]:"", "\n\t "); // remove whitespace
-	y2milestone("retmap=%1", retmap);
-	if (retmap["stdout"]:"" != nil && retmap["stdout"]:"" != "") {
-		if (regexpmatch(retmap["stdout"]:"", ".*xenpae$")) // check for kernel-xenpae
-			isPAE = true;
-		else if (regexpmatch(retmap["stdout"]:"", ".*bigsmp$")) // check for kernel-bigsmp
-			isPAE = true;
-		else
-			isPAE = false;
-	}
-	y2milestone("isPAE=%1", isPAE);
-	return isPAE;
-    }
-
     global define boolean resetSourceConfig() {
 	if (VM_Common::GetVirtualizationType() == "full") {
 		return ResetFullOptions();
@@ -1165,13 +1288,14 @@
 				}
 				VM_Common::SetKernelImage("/boot/vmlinuz-" + kernel_ext);
 				VM_Common::SetInitrdImage("/boot/initrd-" + kernel_ext);
-
-				// Search each disk for the existance of the Xen Linux kernel and initrd.
-				// If one is found then set VM_Common::root_device to that disk partition.
-				ReadDiskImages(img_prefix + VM_Common::config_name);
 			}
-			y2milestone("KernelImage: %1", VM_Common::GetKernelImage);
-			y2milestone("InitrdImage: %1", VM_Common::GetInitrdImage);
+
+			// Search each disk for the existance of the Xen kernel (Linux or NetWare)
+			// If one is found then set VM_Common::root_device to that disk partition.
+			ReadDiskImages();
+
+			y2milestone("KernelImage: %1", VM_Common::GetKernelImage());
+			y2milestone("InitrdImage: %1", VM_Common::GetInitrdImage());
 			VM_Common::SetCustomKernel(true);
 		}
 	}
@@ -1718,6 +1842,11 @@
 	    }
 	}
 
+	if (VM_Common::IsNetWareKernel(kernel_path) && VM_Common::proposal_type == "boot") {
+		// remove the NetWare installation source
+		updateDiskConfig(VM_Common::custom_source, "", "");
+	}
+
 	ret = ret && WriteOption(configpath, "disk", formatDiskConfig(disks, VM_Common::GetVirtualizationType() == "full"));
 
 	// create disk image file(s)
@@ -1736,15 +1865,13 @@
 		// flush the changes
 		ret = ret && SCR::Write(.etc.xen, nil);
 	    }
-
-//	    return ret;
 	}
 	else { // para virtualized
 
 		ret = ret && WriteStringOption(configpath, "bootloader", "/usr/lib/xen/boot/domUloader.py");
 
 		if (VM_Common::root_device == nil || VM_Common::root_device == "") {
-			ReadDiskImages(img_prefix + VM_Common::config_name);
+			ReadDiskImages();
 		}
 
 		// upadate config - root device, set default runlevel, remove install= option
@@ -1793,7 +1920,6 @@
 	    {
 		string url = VM_Common::custom_source;
 		if (VM_Common::inst_type == `cdrom) {
-			//url = sformat("hd://?device=/dev/%1 & filesystem=iso9660", VM_Common::custom_source); // FIXME: this is not correct! What is the correct URL for specifiing a specific device (cdrom or dvd)
 			url = sformat("cd:///?devices=%1", VM_Common::custom_source);
 		}
 		else if (VM_Common::inst_type == `iso) {
@@ -1807,9 +1933,9 @@
 		    // Add a new installation source
 		    new_src = Pkg::SourceCreate(url, "");
 
-		    // FIXME: this if statement and following code must be removed when the correct URL for `cdrom inst_types is fixed.
+		    // FIXME: this 'if' statement and the containing code must be removed when the correct URL for `cdrom inst_types is fixed.
 		    if ((new_src == nil || new_src < 0) && VM_Common::inst_type == `cdrom) {
-			url = sformat("dvd:///?devices=%1", VM_Common::custom_source);
+			url = sformat("dvd:///?devices=%1", VM_Common::custom_source); // try dvd:/// if cd:/// fails...
 			new_src = Pkg::SourceCreate(url, "");
 		    }
 
@@ -2083,40 +2209,6 @@ source is accessible."));
     }
 
 
-/*
-    global define boolean Start(boolean background) {
-	// FIXME: maybe this method should be merged into StartVirtualMachine()
-	integer start_time = time();
-
-	string cmd = "";
-	Pkg::SourceReleaseAll();
-	if (VM_Common::GetVirtualizationType() == "full")
-	    cmd = sformat("%1 create %2%3", xm, conf_path, VM_Common::config_name);
-	else {
-	    boolean isNetWare = false;
-	    if (VM_Common::GetCustomKernel()) {
-	        isNetWare = VM_Common::IsNetWareKernel(VM_Common::GetKernelImage());
-            }
-
-	    cmd = sformat("%1 create %2%3 && /usr/bin/xterm -geometry 80x%4 -T \"Xen - %3\" -e %1 console %3",
-	       xm, conf_path, VM_Common::config_name, isNetWare ? 25 : 24);
-	}
-	y2milestone("xm create command: %1", cmd);
-
-	path bash_path = (background) ? .target.bash_background : .target.bash;
-	integer out = (integer)SCR::Execute(bash_path, cmd);
-	boolean success = (out == 0);
-
-	if (! success)
-	{
-	    // It is possible for "xm create" to claim failure, yet leave a zombie VM.
-	    TerminateVirtualMachine(VM_Common::config_name, false);
-	}
-
-	return success;
-    }
-*/
-
     global define boolean InstallPackages() {
 	return VM_Common::InstallPackages(["xterm", "xorg-x11", "xen-tools"]);
     }
@@ -2129,11 +2221,6 @@ source is accessible."));
 	VM_Common::SetModified(modif);
     }
 
-    define list <map <string,string> > create_default_network_config()
-    {
-	return [ $[ "mac" : VM_Common::Propose_MAC_address(""), "bridge": ""] ];
-    }
- 
     global define string GetImgPrefix()
     {
 	return img_prefix;

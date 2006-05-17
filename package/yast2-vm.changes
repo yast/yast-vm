@@ -1,4 +1,15 @@
 -------------------------------------------------------------------
+Tue May 16 11:23:17 MDT 2006 - mgfritch@novell.com
+
+- Re-generate the proposed MAC address for the default network
+  settings when VM_XEN::resetNetworkConfig() is called. (#175955)
+- Don't display mounted disk partitions in dom0 as physical disk 
+  partitions available for use in domU. (#173433)
+- Select the correct disk partition containing the xenpae kernel
+  or the NetWare viX kernel. (#175426, #175729) 
+- 2.13.48
+
+-------------------------------------------------------------------
 Thu May 11 16:18:15 MDT 2006 - mgfritch@novell.com
 
 - Always write out the 'cdrom=' entry to the vm config file if 
