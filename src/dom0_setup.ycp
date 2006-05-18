@@ -73,7 +73,7 @@ _("<p>When the configuration is successfully finished, it is possible to boot th
     if (VM_XEN::isPAEKernel())
 	kernel_pkg = "kernel-xenpae";
 
-    list<string> packages = ["xen", "kernel-xen", "xen-libs", "xen-tools", "xen-tools-ioemu"];
+    list<string> packages = ["xen", "xen-libs", "xen-tools", "xen-tools-ioemu"];
     packages = add(packages, kernel_pkg);
     boolean success = true;
     boolean bootloader_modified = false;

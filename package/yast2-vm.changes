@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu May 18 15:57:32 MDT 2006 - mgfritch@novell.com
+
+- Do not install kernel-xen when installing kernel-xenpae. 
+  (#175117)
+- 2.13.50
+
+-------------------------------------------------------------------
 Wed May 17 09:59:07 CEST 2006 - lslezak@suse.cz
 
 - check whether the package management is available at start

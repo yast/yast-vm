@@ -87,8 +87,11 @@
 	if (VM_Common::GetCustomKernel()) {
 		isNetWare = VM_Common::IsNetWareKernel(VM_Common::GetKernelImage());
         }
-	if (isNetWare && VM_Common::proposal_type != "install")
-		VM_Common::memory_size = 512; // if NetWare, increase the memory_size=512
+	if (isNetWare && VM_Common::proposal_type != "install") {
+		if (VM_Common::memory_size < 512) {
+			VM_Common::memory_size = 512; // if NetWare, increase the memory_size=512
+		}
+	}
 
 	return true;
     }
