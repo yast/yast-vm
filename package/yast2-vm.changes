@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri May 19 11:12:34 CEST 2006 - lslezak@suse.cz
+
+- allow the VM management in ncurses UI (#149045)
+- 2.13.51
+
+-------------------------------------------------------------------
 Thu May 18 15:57:32 MDT 2006 - mgfritch@novell.com
 
 - Do not install kernel-xen when installing kernel-xenpae. 

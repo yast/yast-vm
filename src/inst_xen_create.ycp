@@ -20,6 +20,18 @@ import "Report";
 import "Label";
 import "Mode";
 
+// check whether X window system is accessible
+integer exit_status = (integer) SCR::Execute(.target.bash, "/usr/X11R6/bin/xdpyinfo");
+y2milestone("X check exit status: %1", exit_status);
+
+if (exit_status != 0)
+{
+    // error - the installation runs in xterm, we need access to a X server
+    Report::Error(_("Virtual machine installation requires access to a graphical environment."));
+
+    return `abort;
+}
+
 
 // screen title for the Xen create selection
 string title = _("Create a Virtual Machine");
