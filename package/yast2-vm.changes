@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon May 22 15:30:40 MDT 2006 - mgfritch@novell.com
+
+- Allow the cdrom_image setting to persist when moving from 
+  proposal_type 'install' to proposal_type 'boot'. (#174616)
+- 2.13.52
+
+-------------------------------------------------------------------
 Fri May 19 11:12:34 CEST 2006 - lslezak@suse.cz
 
 - allow the VM management in ncurses UI (#149045)

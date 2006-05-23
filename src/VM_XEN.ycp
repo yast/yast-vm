@@ -793,7 +793,9 @@
 	}
 	else {
 		boot_device = "c";
-		cdrom_image = default_cdrom_image;
+		if (VM_Common::proposal_type != "boot") {// allow the cdrom_image setting to persist when moving from proposal_type 'install' to proposal_type 'boot'. See bugzilla #174616.
+			cdrom_image = default_cdrom_image;
+		}
 	}
 
 	VM_Common::SetKernelImage("/usr/lib/xen/boot/hvmloader");
