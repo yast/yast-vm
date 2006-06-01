@@ -857,7 +857,7 @@
 
 
     define list<string> PartitionsInfo(string image) {
-	string cmd = sformat("sfdisk -d -uS -- '%1'", image);
+	string cmd = sformat("sfdisk --force -d -uS -- '%1'", image);
 	map outputmap = (map)SCR::Execute(.target.bash_output, cmd);
 
 	string outputstring = outputmap["stdout"]:"";
@@ -1059,12 +1059,11 @@
 
 
 			string partition_name = String::CutBlanks(partition["name"]:"");
-			string source = regexpsub(partition_name, "(.*)[[0123456789]]*$", "\\1");  // remove the partition number
-			string partition_num = regexpsub(partition_name, ".*([[0123456789]]*$)", "\\1"); // save the partition number
 			y2milestone("partition_name='%1'", partition_name);
-			y2milestone("source='%1'", source);
+			y2milestone("diskimage='%1'", diskimage);
+			string partition_num = regexpsub(partition_name, ".*([[0123456789]]*$)", "\\1"); // save the partition number
 			y2milestone("partition_num='%1'", partition_num);
-			string new_target = getDiskTarget(disks, source);
+			string new_target = getDiskTarget(disks, diskimage);
 			if (new_target != nil && new_target != "") {
 				// set the root device to the partition that contains the sepecified kernel (i.e. /dev/hda2)
 				VM_Common::root_device = new_target + partition_num;
@@ -1086,11 +1085,14 @@
 	boolean ret = false;
 
 	foreach(map<string,any> disk, disks, {
-		if ((disk["type"]:"" == "loop-create") || (disk["type"]:"" == "loop-use")) { // FIXME: should support for phys devices be added?
-			string source = getDiskSource(disks, disk["target"]:"");
-			if (source != nil && source != "") {
-				ret = ret || ReadDiskImage(source);
+		string source = getDiskSource(disks, disk["target"]:"");
+		if (source != nil && source != "") {
+			// if a physical device, make sure string source contains the full pathname to the device.
+			if (disk["type"]:"" == "phys" && regexpmatch(source, "^/dev.*") == false) {
+				source = "/dev/" + source;
 			}
+			// read the disk image
+			ret = ret || ReadDiskImage(source);
 		}
 	    }
 	);
@@ -1377,38 +1379,6 @@
 	return ret;
     }
 
-    global define boolean ValidateConfigName(string name) {
-	list<string> configs = (list<string>)SCR::Read(.target.dir, conf_path); // list of config file names
-	list<string> images = (list<string>)SCR::Read(.target.dir, img_prefix); // list of image dir names
-	if (contains(configs, name) || contains(images, name)) {
-		// either a config file name or a image directory name conflicts
-		return false;
-	}
-	return true;
-    }
-
-
-    global define string ProposeConfigName()
-    {
-	integer domain = 1;
-
-	while ( ValidateConfigName(conf_prefix + tostring(domain)) == false )
-	{
-	    domain = domain + 1;
-	}
-
-	string conf_name = conf_prefix + tostring(domain);
-	y2milestone("Proposed name: %1", conf_name);
-	//SCR::Execute (.target.bash, sformat("/usr/bin/touch %1%2", conf_path, conf_name));
-
-	return conf_name;
-    }
-
-    global define boolean resetConfigName()
-    {
-	VM_Common::config_name = ProposeConfigName();
-	return true;
-    }
 
     global define boolean setSourceConfig(integer sid, symbol type, string custom) {
 
@@ -1448,6 +1418,180 @@
 	optvalue = mergestring(optvalueList, "\\'");
 	y2debug("new optvalue: %1", optvalue);
 	return WriteOption(configpath, optname, "\'" + optvalue + "\'");
+    }
+
+
+    string ReadOption(path configpath, string optname) {
+	
+	string optvalue = (string)SCR::Read(configpath + topath(optname));
+
+	if (regexpmatch(optvalue, "'.*'")) {
+		// remove the single quotes
+		string tmpoptvalue = regexpsub(optvalue, "'(.*)'", "\\1");
+		if (optvalue != nil || optvalue != "")
+			optvalue = tmpoptvalue;
+	}
+	else if (regexpmatch(optvalue, "\".*\"")) {
+                // remove the double quotes
+                string tmpoptvalue = regexpsub(optvalue, "\"(.*)\"", "\\1");
+                if (optvalue != nil || optvalue != "")
+                        optvalue = tmpoptvalue;
+        }
+
+	return optvalue;
+    }
+
+
+    global map ReadConfigFileSettings(string cfg_file) {
+
+	y2milestone("ReadConfigFileSettings(%1)", cfg_file);
+	if (cfg_file == nil || cfg_file == "") {
+		y2error("cfg_file paramater empty!");
+		return nil;
+	}
+
+	// FIXME: must remove from code below any duplicate ReadSettings() for a specified key!
+	map new_settings = $[];
+	path configpath = .etc.xen.value + topath(getConfigFilePath() + cfg_file);
+	y2debug("configpath=%1", configpath);
+	new_settings["name"] = ReadOption(configpath, "name");
+	if (new_settings["name"]:"" == nil || new_settings["name"]:"" == "") {
+		y2error("cfg_file value 'name' is empty!");
+		return nil; // ignore cfg files that do not contain a machine name.
+	}
+	new_settings["builder"] = ReadOption(configpath, "builder");
+	new_settings["memory"] = ReadOption(configpath, "memory");
+	new_settings["kernel"] = ReadOption(configpath, "kernel");
+	new_settings["bootentry"] = ReadOption(configpath, "bootentry");
+	if (new_settings["kernel"]:"" == nil || new_settings["kernel"]:"" == "") {
+		list<string> tmplist = splitstring(new_settings["bootentry"]:"", ":,");
+		new_settings["kernel"] = tmplist[1]:"";
+	}
+	new_settings["disks"] = parseDiskConfig(ReadOption(configpath, "disk"));
+	new_settings["on_poweroff"] = ReadOption(configpath, "on_poweroff");
+	new_settings["on_reboot"] = ReadOption(configpath, "on_reboot");
+	new_settings["on_crash"] = ReadOption(configpath, "on_crash");
+	new_settings["vcpus"] = ReadOption(configpath, "vcpus");
+	// new_settings["vif"] = parseVifConfig(ReadOption(configpath, "vif")); // FIXME: must write a method for parsing the vif list<string>
+	new_settings["stdvga"] = ReadOption(configpath, "stdvga");
+	new_settings["sdl"] = ReadOption(configpath, "sdl");
+	new_settings["vnc"] = ReadOption(configpath, "vnc");
+	new_settings["vncviewer"] = ReadOption(configpath, "vncviewer");
+	new_settings["ne2000"] = ReadOption(configpath, "ne2000");
+	new_settings["dhcp"] = ReadOption(configpath, "dhcp");
+	new_settings["ip"] = ReadOption(configpath, "ip");
+	new_settings["netmask"] = ReadOption(configpath, "netmask");
+	new_settings["interface"] = ReadOption(configpath, "interface");
+	new_settings["gateway"] = ReadOption(configpath, "gateway");
+	new_settings["extra"] = ReadOption(configpath, "extra");
+	new_settings["bootloader"] = ReadOption(configpath, "bootloader");
+	new_settings["cdrom"] = ReadOption(configpath, "cdrom");
+	new_settings["boot"] = ReadOption(configpath, "boot");
+	new_settings["localtime"] = ReadOption(configpath, "localtime");
+
+	new_settings["cfg_file"] = cfg_file;
+	
+	y2milestone("ReadConfigFileSettings returned: %1", new_settings);
+	return new_settings;
+    }
+
+
+    global list<map> ReadAllConfigFileSettings() {
+
+	y2milestone("ReadAllConfigFileSettings()");
+	
+	list<map> new_settings_list = [];
+
+	list<string> file_list = (list<string>) SCR::Read(.target.dir, getConfigFilePath());
+	y2milestone("file_list=%1", file_list);
+	if (file_list != nil && size(file_list) > 0) {
+		foreach(string cfg_file, file_list, {
+			string first_char = substring(cfg_file, 0, 1);
+			string last_char = substring(cfg_file, size(cfg_file)-1, size(cfg_file));
+			if (first_char == "." || last_char == "~") {
+				// ignore all files that start with '.' or end with '~'
+				continue;
+			}
+			else {
+				map new_settings = ReadConfigFileSettings(cfg_file);
+				if (new_settings != nil && size(new_settings) > 0) {
+					new_settings_list = add(new_settings_list, new_settings);
+				}
+			}
+		});
+	}
+	y2milestone("ReadAllConfigFileSettings returned: %1", new_settings_list);
+	return new_settings_list;
+    }
+
+    global define boolean ValidateConfigName(string name) {
+
+	// check for a conflicting config file name (/etc/xen/vm/*)
+	list<string> configs = (list<string>)SCR::Read(.target.dir, conf_path); // list of config file names
+	if (contains(configs, name)) {
+		// a config file name conflicts
+		return false;
+	}
+
+	// check for a conflicting vm name settings inside each config file (/etc/xen/vm/*)
+	list<map> config_settings = ReadAllConfigFileSettings(); // list<map> of settings inside of the config files
+	boolean conflict = false;
+	foreach (map tmpmap, config_settings, {
+		if (tmpmap != nil) {
+			if (tmpmap["name"]:"" == name) {
+				conflict = true;
+				break;
+			}
+		}
+	});
+	// a vm name inside a config file conflicts
+	if (conflict) {
+		return false;
+	}
+
+	// check for conflicting image directory name (/var/lib/xen/images/*)
+	list<string> images = (list<string>)SCR::Read(.target.dir, img_prefix); // list of image dir names
+	if (contains(images, name)) {
+		// try to remove the vm image directory (if it is not empty, it should not be deleted).
+		string img_dir = img_prefix + name;
+		string cmd = sformat("rmdir %1", img_dir);
+		y2milestone("Executing: %1", cmd);
+		map retmap = (map)SCR::Execute(.target.bash_output, cmd);
+		y2milestone("retmap=%1", retmap);
+		images = (list<string>)SCR::Read(.target.dir, img_prefix); // re-create list of image dir names
+
+		if (contains(images, name)) {
+			// vm image directory is not empty.
+			// An image directory name conflicts
+			return false;
+		}
+	}
+
+	// no conflicts (a valid config name)
+	return true;
+    }
+
+
+    global define string ProposeConfigName()
+    {
+	integer domain = 1;
+
+	while ( ValidateConfigName(conf_prefix + tostring(domain)) == false )
+	{
+	    domain = domain + 1;
+	}
+
+	string conf_name = conf_prefix + tostring(domain);
+	y2milestone("Proposed name: %1", conf_name);
+	//SCR::Execute (.target.bash, sformat("/usr/bin/touch %1%2", conf_path, conf_name));
+
+	return conf_name;
+    }
+
+    global define boolean resetConfigName()
+    {
+	VM_Common::config_name = ProposeConfigName();
+	return true;
     }
 
     string GetVIF(list<map<string,string> > conf)
@@ -1539,6 +1683,12 @@
 
 	    // library dir (32/64bit)
 	    string arch_libdir = Arch::i386() ? "lib" : "lib64";
+
+	    // set pae=1, if dom0 is 64bit, domU is full virtualization, and domU mem >= 3.5 GB (#180361)
+	    if (Arch::x86_64() && VM_Common::memory_size >= 3584) { // (3.5 GB * 1024) = 3584 MB
+		ret = ret && WriteOption(configpath, "pae", "1");
+	    }
+
 	    // set device model
 	    ret = ret && WriteStringOption(configpath, "device_model", "/usr/" + arch_libdir + "/xen/bin/qemu-dm");
 	    ret = ret && WriteStringOption(configpath, "kernel", "/usr/lib/xen/boot/hvmloader");
@@ -2361,6 +2511,8 @@ source is accessible."));
 
 	    "parseDiskConfig" : VM_XEN::parseDiskConfig,
 	    "updateDiskConfig" : VM_XEN::updateDiskConfig,
+	    "ReadConfigFileSettings" : VM_XEN::ReadConfigFileSettings,
+	    "ReadAllConfigFileSettings" : VM_XEN::ReadAllConfigFileSettings,
 
 	    "Write" : VM_XEN::Write,
 	    "Prepare" : VM_XEN::Prepare,

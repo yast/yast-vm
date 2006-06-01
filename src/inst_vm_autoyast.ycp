@@ -60,7 +60,11 @@
 	else if (ret == `select_profile)
 	{
 	    string new_profile = (string) UI::QueryWidget (`id(`profile), `Value);
-	    new_profile = UI::AskForExistingFile(new_profile, "*.xml", _("Select an AutoYaST Profile"));
+	    if (new_profile == nil || new_profile == "")
+	    {
+		new_profile = "/var/lib/autoinstall/repository/";
+	    }
+	    new_profile = UI::AskForExistingFile(new_profile, "*", _("Select an AutoYaST Profile"));
 
 	    if (new_profile != nil)
 	    {
@@ -70,7 +74,7 @@
 	else if (ret == `next)
 	{
 	    string profile = (string) UI::QueryWidget (`id(`profile), `Value);
-	    
+
 	    if (profile != "" && (integer)SCR::Read(.target.size, profile) < 0) {
 		Report::Error(_("The specified AutoYaST Profile does not exist."));
 		continue;

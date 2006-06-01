@@ -100,50 +100,7 @@ boolean DeleteVirtualMachine(integer table_item) {
 }
 
 
-void ReadConfigFileSettings() {
-	y2milestone("Reading config file settings...");
-	list<string> file_list = (list<string>) SCR::Read(.target.dir, VM::GetConfigFilePath());
-	y2milestone("file_list=%1", file_list);
-	if (file_list != nil) {
-		foreach(string cfg_file, file_list, {
-			string first_char = substring(cfg_file, 0, 1);
-			string last_char = substring(cfg_file, size(cfg_file)-1, size(cfg_file));
-			if (first_char == "." || last_char == "~") {
-				// ignore all files that start with '.' or end with '~'
-				continue;
-			}
-			else {
-				map<string, any> new_settings = $[];
-				path configpath = .etc.xen.value + topath(VM::GetConfigFilePath() + cfg_file);
-				y2milestone("Reading config file: %1", configpath);
-				new_settings["name"] = regexpsub((string)SCR::Read(configpath + topath("name")), "'(.*)'", "\\1");
-				if (new_settings["name"]:"" == nil || new_settings["name"]:"" == "") continue; // ignore cfg files that do not contain a machine name.
-				new_settings["builder"] = regexpsub((string)SCR::Read(configpath + topath("builder")), "'(.*)'", "\\1");
-				new_settings["memory"] = (string)SCR::Read(configpath + topath("memory"));
-				new_settings["kernel"] = (string)SCR::Read(configpath + topath("kernel"));
-				if (new_settings["kernel"]:"" != nil && new_settings["kernel"]:"" != "") {
-					new_settings["kernel"] = regexpsub(new_settings["kernel"]:"", "'(.*)'", "\\1");
-				}
-				new_settings["bootentry"] = regexpsub((string)SCR::Read(configpath + topath("bootentry")), "'(.*)'", "\\1");
-				if (new_settings["kernel"]:"" == nil || new_settings["kernel"]:"" == "") {
-					list<string> tmplist = splitstring(new_settings["bootentry"]:"", ":,");
-					new_settings["kernel"] = tmplist[1]:"";
-				}
-				new_settings["disks"] = VM::ParseDiskConfig((string)SCR::Read(configpath + topath("disk")));
-				if (tolower(new_settings["builder"]:"linux") == "hvm") { // full virt.
-					new_settings["sdl"] = (string)SCR::Read(configpath + topath("sdl"));
-					new_settings["vnc"] = (string)SCR::Read(configpath + topath("vnc"));
-					new_settings["vncviewer"] = (string)SCR::Read(configpath + topath("vncviewer"));
-				}
-				new_settings["cfg_file"] = cfg_file;
-				SettingsList = add(SettingsList, new_settings);
-			}
-		});
-	}
-}
-
-
-void UpdateSettingsList(map<string, string> new_item) {
+void UpdateSettingsList(map new_item) {
 	y2milestone("UpdateSettingsList(%1)", new_item);
 	if (new_item != nil && new_item["name"]:"" != nil && new_item["name"]:"" != "") {
 		boolean found = false;
@@ -201,7 +158,7 @@ void Read_XM_List() {
 		y2milestone("lines=%1", lines);
 		foreach (string line, lines, {
 			if (line != nil && line != "") {
-				map<string, string> new_item = $[];
+				map new_item = $[];
 				new_item["name"] = regexpsub(line, exp, "\\1");
 				new_item["id"] = regexpsub(line, exp, "\\2");
 				new_item["memory"] = regexpsub(line, exp, "\\3");
@@ -240,9 +197,7 @@ boolean isFullVirtualization(integer table_item) {
 
 define void refresh_table() {
 
-	SettingsList = [];
-
-	ReadConfigFileSettings();
+	SettingsList = VM::ReadAllConfigFileSettings();
 	y2milestone("SettingsList=%1", SettingsList);
 
 	Read_XM_List();
@@ -302,13 +257,13 @@ define symbol VirtualMachineOverview() {
 				`VBox(
 					`Table(`id(`vm_table), `opt(`notify, `immediate), `header(
 							// table heading
-							`Left(_("Name") + "          "), 
+							`Left(_("Name") + "          "),
 							// table heading
-							_("Virtualization Mode"), 
+							_("Virtualization Mode"),
 							// table heading
-							_("Status") + "       ", 
+							_("Status") + "       ",
 							// table heading
-							_("Memory (MB)"), 
+							_("Memory (MB)"),
 							// table heading
 							_("Console")),
 							[]),
@@ -445,7 +400,7 @@ Do you wish to continue?
 				}
 			}
 			else {
-				y2error("delete: invalid table item selected");
+				y2error("delete_button: invalid table item selected");
 				continue;
 			}
 		}
@@ -475,7 +430,7 @@ Required memory size %1, memory available %2
 				}
 			}
 			else {
-				y2error("start: invalid table item selected");
+				y2error("start_button: invalid table item selected");
 				continue;
 			}
 		}
@@ -502,7 +457,7 @@ Required memory size %1, memory available %2
 				}
 			}
 			else {
-				y2error("view: invalid table item selected");
+				y2error("view_button: invalid table item selected");
 				continue;
 			}
 		}
@@ -528,7 +483,7 @@ Are you sure you want to shutdown the selected VM?
 				}
 			}
 			else {
-				y2error("shutdown: invalid table item selected");
+				y2error("shutdown_button: invalid table item selected");
 				continue;
 			}
 		}
@@ -557,7 +512,7 @@ Are you sure you want to terminate the selected VM?
 				}
 			}
 			else {
-				y2error("terminate: invalid table item selected");
+				y2error("terminate_button: invalid table item selected");
 				continue;
 			}
 		}

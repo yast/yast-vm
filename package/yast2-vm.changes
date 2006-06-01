@@ -1,4 +1,18 @@
 -------------------------------------------------------------------
+Mon May 29 01:10:44 MDT 2006 - mgfritch@novell.com
+
+- VM_XEN::ValidateConfigName() should return false if a vm name
+  setting inside of a config file conflicts with the proposed
+  vm name (#181001)
+- Search physical disk partitions specified in the VM disk settings
+  for a valid Xen kernel. (#180130)
+- Remove any single or double quotes surrounding values read from a
+  VM config file. (#179324)
+- If dom0 is 64 bit OS, domU is full virtualization, and domU
+  memory is >= 3.5 GB, set 'pae=1' in the VM config file. (#180361)
+- 2.13.53
+
+-------------------------------------------------------------------
 Mon May 22 15:30:40 MDT 2006 - mgfritch@novell.com
 
 - Allow the cdrom_image setting to persist when moving from 

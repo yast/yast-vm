@@ -718,6 +718,37 @@
 	}
     }
 
+
+    global map ReadConfigFileSettings(string cfg_file) {
+	map(string) toEval = (map(string))functions["ReadConfigFileSettings"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(cfg_file);
+	}
+	else
+	{
+	    y2error("ReadConfigFileSettings() function is missing!");
+	    return nil;
+	}
+    }
+
+
+    global list<map> ReadAllConfigFileSettings() {
+	list<map>() toEval = (list<map>())functions["ReadAllConfigFileSettings"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("ReadAllConfigFileSettings() function is missing!");
+	    return nil;
+	}
+    }
+
+
     global symbol GetVirtualMachineState(string state) {
 	symbol(string) toEval = (symbol(string))functions["GetVirtualMachineState"]:nil;
 
