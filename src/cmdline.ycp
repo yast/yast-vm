@@ -25,6 +25,7 @@
     import "Sequencer";
     import "CommandLine";
 
+
     textdomain "vm";
 
 
@@ -94,8 +95,13 @@
 		"existing_start"	: ``(start()), // boot vm and display feedback dialog
 	    ];
 
+	boolean isAutoinstallation = false;
+	if (Mode::config()) { // running inside of autoinstallation wizard (AutoYaST)
+		isAutoinstallation = true;
+	}
+
 	map sequence = $[
-		"ws_start"		: "manage",
+		"ws_start"		: (isAutoinstallation) ? "select_create" : "manage",
 		"manage"		:
 		    $[
 			`close		: `finish,
@@ -108,65 +114,65 @@
 		    $[
 			`install	: "install_prepare",
 			`existing	: "existing_prepare",
-			`abort		: "manage",
+			`abort		: (isAutoinstallation) ? `abort : "manage",
 		    ],
 		"install_prepare"	:
 		    $[
 			`forceback	: "select_create",
 			`next		: "install_proposal",
-			`abort		: "manage",
+			`abort		: (isAutoinstallation) ? `abort : "manage",
 		    ],
 		"install_proposal"	:
 		    $[
 			`forceback	: "select_create",
 			`next		: "install_start",
-			`abort		: "manage",
+			`abort		: (isAutoinstallation) ? `abort : "manage",
 		    ],
 		"install_start"		:
 		    $[
 			`forceback	: "install_proposal",
 			`next		: "boot_prepare",
-			`abort		: "manage",
+			`abort		: (isAutoinstallation) ? `abort : "manage",
 		    ],
 		"boot_prepare"		:
 		    $[
 			`forceback	: "install_prepare",
 			`next		: "boot_proposal",
-			`abort		: "manage",
+			`abort		: (isAutoinstallation) ? `abort : "manage",
 		     ],
 		"boot_proposal"		:
 		    $[
 		        `forceback	: "install_prepare",
 			`next		: "boot_start",
-			`abort		: "manage",
+			`abort		: (isAutoinstallation) ? `abort : "manage",
 		    ],
 		"boot_start"		:
 		    $[
 			`forceback	: "boot_proposal",
 			`again		: "select_create",
-			`next		: "manage",
-			`finish		: "manage",
-			`abort		: "manage",
+			`next		: (isAutoinstallation) ? `next : "manage",
+			`finish		: (isAutoinstallation) ? `finish : "manage",
+			`abort		: (isAutoinstallation) ? `abort : "manage",
 		    ],
 		"existing_prepare"	:
 		    $[
 			`forceback	: "select_create",
 			`next		: "existing_proposal",
-			`abort		: "manage",
+			`abort		: (isAutoinstallation) ? `abort : "manage",
 		    ],
 		"existing_proposal"	:
 		    $[
 			`forceback	: "select_create",
 			`next		: "existing_start",
-			`abort		: "manage",
+			`abort		: (isAutoinstallation) ? `abort : "manage",
 		    ],
 		"existing_start"	:
 		    $[
 			`forceback	: "existing_proposal",
 			`again		: "select_create",
-			`next		: "manage",
-			`finish		: "manage",
-			`abort		: "manage",
+			`next		: (isAutoinstallation) ? `next : "manage",
+			`finish		: (isAutoinstallation) ? `finish : "manage",
+			`abort		: (isAutoinstallation) ? `abort : "manage",
 		    ]
 	];
 

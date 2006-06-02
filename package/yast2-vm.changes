@@ -1,4 +1,22 @@
 -------------------------------------------------------------------
+Thu Jun  1 16:16:42 MDT 2006 - mgfritch@novell.com
+
+- Do not display the 'Manage Virtual Machines' dialog when 
+  creating an AutoYaST profile using the Autoinstallation wizard.
+  (#181072)
+- Only enable `view button on the 'Manage Virtual Machines' dialog
+  if YaST is running in a graphical display (XServer) and the 
+  selected vm is not configured to use SDL. (#181011)
+- Only enable `start button on the 'Manage Virtual Machines' dialog
+  if YaST is running in a graphical display (XServer) or the 
+  selected vm is configured as a paravirtualized guest. (#181009)
+- Disable service 'earlykbd' when running an install inside of a
+  domU. (#180919)
+- If paravirtualized domU install, use the 'extra' option 'vnc=1',
+  rather than 'textmode=1' (#181074)
+- 2.13.54 
+
+-------------------------------------------------------------------
 Mon May 29 01:10:44 MDT 2006 - mgfritch@novell.com
 
 - VM_XEN::ValidateConfigName() should return false if a vm name

@@ -311,6 +311,11 @@ define symbol VirtualMachineOverview() {
 
 	integer selected_table_item = 0;
 	symbol ret = nil;
+
+	// check whether X window system is accessible
+	integer isGraphicalDisplay = (integer) SCR::Execute(.target.bash, "/usr/X11R6/bin/xdpyinfo");
+	y2milestone("X check (isGraphicalDisplay): %1", isGraphicalDisplay);
+
 	while (true) {
 
 		Popup::ClearFeedback(); // Always clear pop-up feedback ... just in case we forget to clear one in the loop below.
@@ -329,12 +334,14 @@ define symbol VirtualMachineOverview() {
 				UI::ChangeWidget(`id(`shutdown), `Enabled, true);
 				UI::ChangeWidget(`id(`terminate), `Enabled, true);
 //				if ( isFullVirtualization(selected_table_item) && ! isSDL(selected_table_item) ) {
-				if ( ! isSDL(selected_table_item) ) {
+				if ( ( !isSDL(selected_table_item) ) && ( isGraphicalDisplay == 0 ) ) { // only enable `view button if graphical dispaly and selected vm is not configured to use SDL. (bugzilla #181011)
 					UI::ChangeWidget(`id(`view), `Enabled, true);
 				}
 			}
 			else if (size(SettingsList) > 0) { // vm state is not running (stopped) and at least on vm cfg file exists
-				UI::ChangeWidget(`id(`start), `Enabled, true);
+				if ( ( isGraphicalDisplay == 0 ) || ( isFullVirtualization(selected_table_item) == false ) ) { // only enable `start button if graphical display or selected vm is paravirtualized. (bugzilla #181009)
+					UI::ChangeWidget(`id(`start), `Enabled, true);
+				}
 				UI::ChangeWidget(`id(`delete), `Enabled, true);
 			}
 		}

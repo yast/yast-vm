@@ -60,7 +60,7 @@ else if (func == "Write")
     if (Arch::is_xenU())
     {
 	// disable HW services - they are useless and usually failing in a virtual machine
-	list<string> disable_services = ["acpid", "kbd"];
+	list<string> disable_services = ["acpid", "kbd", "earlykbd"];
 
 	y2milestone("disabling services: %1", disable_services);
 	foreach(string s, disable_services, {
