@@ -1,9 +1,9 @@
 /**
- * Module:	inst_vm_network.ycp
+ * Module:	inst_xen_mode.ycp
  *
  * Authors:	Ladislav Slezak <lslezak@suse.cz>
  *
- * Purpose:	Ask user for network settings.
+ * Purpose:	Select the virtualization mode (para or full)
  *
  * $Id$
  *

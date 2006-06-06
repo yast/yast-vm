@@ -52,9 +52,15 @@
 
 
     define symbol start() {
+
 	if (!Mode::config()) {
 		return (symbol)WFM::CallFunction("inst_vm_kickoff", [false, false]);
 	}
+	else {
+		// save the current settings into the AutoYaST profile settings
+		VM_Common::autoyast_profile_settings[VM_Common::proposal_type] = VM::SubExport();
+	}
+
 	return `next;
     }
 
@@ -67,6 +73,10 @@
 	if (VM_Common::proposal_type == "boot") {
 		VM::ResetSource();
 		VM::ResetExtraArgs();
+		if (!Mode::config()) {
+			//load the saved AutoYaST profile settings
+			VM::Import(VM_Common::autoyast_profile_settings);
+		}
 	}
 	else {
 		VM::ResetAllSettings();
@@ -101,7 +111,7 @@
 	}
 
 	map sequence = $[
-		"ws_start"		: (isAutoinstallation) ? "select_create" : "manage",
+		"ws_start"		: (isAutoinstallation) ? "install_prepare" : "manage",
 		"manage"		:
 		    $[
 			`close		: `finish,
@@ -118,13 +128,13 @@
 		    ],
 		"install_prepare"	:
 		    $[
-			`forceback	: "select_create",
+			`forceback	: (isAutoinstallation) ? `back : "select_create",
 			`next		: "install_proposal",
 			`abort		: (isAutoinstallation) ? `abort : "manage",
 		    ],
 		"install_proposal"	:
 		    $[
-			`forceback	: "select_create",
+			`forceback	: (isAutoinstallation) ? `back : "select_create",
 			`next		: "install_start",
 			`abort		: (isAutoinstallation) ? `abort : "manage",
 		    ],

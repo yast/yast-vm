@@ -16,26 +16,6 @@
     map functions = $[];
     string vmmtype = "";
 
-    global string GetAutoYastProfile() {
-	return VM_Common::GetAutoYastProfile();
-    }
-
-    global boolean SetAutoYastProfile(string profile) {
-	return VM_Common::SetAutoYastProfile(profile);
-    }
-
-    global string GetAutoYastProposal() {
-	return VM_Common::GetAutoYastProposal();
-    }
-
-    global map<string,any> GetAutoYastProposalWarning()
-    {
-	return VM_Common::GetAutoYastProposalWarning();
-    }
-
-    global boolean ResetAutoYastProfile() {
-	return VM_Common::SetAutoYastProfile("");
-    }
 
     boolean CallBooleanFunction(string name) {
 	boolean() toEval = (boolean())functions[name]:nil;
@@ -401,6 +381,10 @@
 	return CallBooleanFunction("resetExtraArgs");
     }
 
+    global boolean ResetHiddenArgs() {
+	return CallBooleanFunction("resetHiddenArgs");
+    }
+
     global string GetConfigName() {
 	return CallStringFunction("getConfigName");
     }
@@ -718,6 +702,64 @@
 	}
     }
 
+    global string GetDiskSource(list<map<string,any> > disks_list, string source) {
+	string(list<map<string,any> >, string) toEval = (string (list<map<string,any> >, string))functions["getDiskSource"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(disks_list, source);
+	}
+	else
+	{
+	    y2error("getDiskSource() function is missing!");
+	    return nil;
+	}
+    }
+
+    global string GetDiskTarget(list<map<string,any> > disks_list, string target) {
+	string(list<map<string,any> >, string) toEval = (string (list<map<string,any> >, string))functions["getDiskTarget"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(disks_list, target);
+	}
+	else
+	{
+	    y2error("getDiskTarget() function is missing!");
+	    return nil;
+	}
+    }
+
+
+    global string GetAutoYastProfile() {
+	return VM_Common::GetAutoYastProfile();
+    }
+
+    global boolean SetAutoYastProfile(string profile) {
+	return VM_Common::SetAutoYastProfile(profile);
+    }
+
+    global string GetAutoYastProposal() {
+	return VM_Common::GetAutoYastProposal();
+    }
+
+    global map<string,any> GetAutoYastProposalWarning()
+    {
+	return VM_Common::GetAutoYastProposalWarning();
+    }
+
+    global boolean ResetAutoYastProfile() {
+	// clear out the stored autoyast settings
+	VM_Common::autoyast_profile_settings = $[];
+
+	// remove any old image
+	string old_autoyast_image = VM::GetDiskSource(VM::GetDiskConfig(), "hdt63");
+	if (old_autoyast_image != nil && old_autoyast_image != "") {
+		VM::UpdateDiskConfig(old_autoyast_image, "", "");
+	}
+
+	return VM_Common::SetAutoYastProfile("");
+    }
 
     global map ReadConfigFileSettings(string cfg_file) {
 	map(string) toEval = (map(string))functions["ReadConfigFileSettings"]:nil;
@@ -903,6 +945,20 @@
 	}
     }
 
+    global map SubExport() {
+	map() toEval = (map())functions["subexport"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("subexport() function is missing!");
+	    return nil;
+	}
+    }
+
     global string GetVirtualizationType() {
 	return CallStringFunction("getVirtualizationType");
     }
@@ -954,6 +1010,7 @@
 
     global boolean ResetAllSettings() {
 	// must reset all values back to their defaults removing the settings from the last vm
+	ResetHiddenArgs();
 	ResetDiskConfig();
 	ResetSource();
 	ResetExtraArgs();
@@ -976,8 +1033,6 @@
 
 	return true;
     }
-
-
 
 
 /* EOF */

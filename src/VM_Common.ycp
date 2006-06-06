@@ -92,6 +92,7 @@
     global string root_device = "";
 
     global string autoyast_profile = "";
+    global map autoyast_profile_settings = $[];
 
     global boolean default_use_dhcp = false;
     global boolean use_dhcp = default_use_dhcp;
@@ -171,73 +172,93 @@
 	modified = modif;
     }
 
+
     global map Export() {
+
 	map ret = $[
-	    "source_id" :	  source_id,
-	    "inst_type" :	  inst_type,
-	    "custom_source" :	  custom_source,
-	    "memory_size" :	  memory_size,
-	    "number_of_cpus" :	  number_of_cpus,
-	    "start_mode" :	  start_mode,
-	    "on_poweroff" :	  on_poweroff,
-	    "on_reboot" :	  on_reboot,
-	    "on_crash" :	  on_crash,
-	    "ne2000" :		  ne2000,
-	    "stdvga" :		  stdvga,
-	    "sdl" :		  sdl,
-	    "localtime" :	  localtime,
-	    "MAC_address" :	  MAC_address,
-	    "random_MAC" :	  random_MAC,
-	    "config_name" :	  config_name,
-	    "extra_args" :	  extra_args,
-	    "hidden_args" :	  hidden_args,
-	    "root_device" :	  root_device,
-	    "custom_kernel" :	  custom_kernel,
-	    "custom_initrd" :	  custom_initrd,
-	    "use_custom_kernel" : use_custom_kernel,
-	    "virtualization_type" : virtualization_type,
+		"source_id"		: source_id,
+		"inst_type"		: inst_type,
+		"custom_source"		: custom_source,
+		"memory_size"		: memory_size,
+		"number_of_cpus"	: number_of_cpus,
+		"start_mode"		: start_mode,
+		"on_poweroff"		: on_poweroff,
+		"on_reboot"		: on_reboot,
+		"on_crash"		: on_crash,
+		"ne2000"		: ne2000,
+		"stdvga"		: stdvga,
+		"sdl"			: sdl,
+		"localtime"		: localtime,
+		"MAC_address"		: MAC_address,
+		"random_MAC"		: random_MAC,
+		"config_name"		: config_name,
+		"extra_args"		: extra_args,
+		"hidden_args"		: hidden_args,
+		"root_device"		: root_device,
+		"use_dhcp"		: use_dhcp,
+		"use_static"		: use_static,
+		"ip"			: ip,
+		"netmask"		: netmask,
+		"gateway"		: gateway,
+		"custom_kernel"		: custom_kernel,
+		"custom_initrd"		: custom_initrd,
+		"use_custom_kernel"	: use_custom_kernel,
+		"virtualization_type"	: virtualization_type
 	];
 
 	// export configured source as custom (source index may point later to another source)
 	if (inst_type == `network_configured && source_id != nil && source_id > 0)
 	{
-	    map general_data = Pkg::SourceGeneralData (source_id);
-	    string url = general_data["url"]:"";
-
-	    y2milestone("Exporting source config: %1", url);
-
-	    ret["custom_source"] = url;
-	    ret["inst_type"] = `network_custom;
+		map general_data = Pkg::SourceGeneralData (source_id);
+		string url = general_data["url"]:"";
+	
+		y2milestone("Exporting source config: %1", url);
+	
+		ret["custom_source"] = url;
+		ret["inst_type"] = `network_custom;
 	}
+
+	y2debug("VM_Common::Export() returned: %1", ret);
 
 	return ret;
     }
 
+
     global void Import(map input) {
-	source_id =		input["source_id"]:0;
-	inst_type =		input["inst_type"]:`cdrom;
-	custom_source =		input["custom_source"]:"";
-	memory_size =		input["memory_size"]:default_memory_size;
-	number_of_cpus =	input["number_of_cpus"]:1;
-	start_mode =		input["start_mode"]:default_start_mode;
-	on_poweroff = 		input["on_poweroff"]:"";
-	on_reboot = 		input["on_reboot"]:"";
-	on_crash = 		input["on_crash"]:"";
-	ne2000 =		input["ne2000"]:default_ne2000;
-	stdvga =		input["stdvga"]:default_stdvga;
-	sdl =			input["sdl"]:default_sdl;
-	localtime =		input["localtime"]:default_localtime;
-	MAC_address =		input["MAC_address"]:default_MAC;
-	random_MAC =		input["random_MAC"]:true;
-	config_name =		input["config_name"]:"";
-	extra_args =		input["extra_args"]:"";
-	hidden_args =		input["hidden_args"]:"";
-	root_device =		input["root_device"]:"";
-	custom_kernel =		input["custom_kernel"]:"";
-	custom_initrd =		input["custom_initrd"]:"";
-	use_custom_kernel =	input["use_custom_kernel"]:false;
-	virtualization_type =	input["virtualization_type"]:default_type;
+
+	y2debug("VM_Common::Import(%1)", input);
+
+	source_id =		input["source_id"]:source_id;
+	inst_type =		input["inst_type"]:inst_type;
+	custom_source =		input["custom_source"]:custom_source;
+	memory_size =		input["memory_size"]:memory_size;
+	number_of_cpus =	input["number_of_cpus"]:number_of_cpus;
+	start_mode =		input["start_mode"]:start_mode;
+	on_poweroff =		input["on_poweroff"]:on_poweroff;
+	on_reboot =		input["on_reboot"]:on_reboot;
+	on_crash =		input["on_crash"]:on_crash;
+	ne2000 =		input["ne2000"]:ne2000;
+	stdvga =		input["stdvga"]:stdvga;
+	sdl =			input["sdl"]:sdl;
+	localtime =		input["localtime"]:localtime;
+	MAC_address =		input["MAC_address"]:MAC_address;
+	random_MAC =		input["random_MAC"]:random_MAC;
+	config_name =		input["config_name"]:config_name;
+	extra_args =		input["extra_args"]:extra_args;
+	hidden_args =		input["hidden_args"]:hidden_args;
+	root_device =		input["root_device"]:root_device;
+	use_dhcp =		input["use_dhcp"]:use_dhcp;
+	use_static =		input["use_static"]:use_static;
+	ip =			input["ip"]:ip;
+	netmask =		input["netmask"]:netmask;
+	gateway =		input["gateway"]:gateway;
+	custom_kernel =		input["custom_kernel"]:custom_kernel;
+	custom_initrd =		input["custom_initrd"]:custom_initrd;
+	use_custom_kernel =	input["use_custom_kernel"]:use_custom_kernel;
+	virtualization_type =	input["virtualization_type"]:virtualization_type;
+
     }
+
 
     /**
     * Displays a formatted popup error message, with a details button.

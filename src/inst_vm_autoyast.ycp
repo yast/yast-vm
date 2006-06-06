@@ -1,9 +1,9 @@
 /**
- * Module:	inst_vm_network.ycp
+ * Module:	inst_vm_autoyast.ycp
  *
  * Authors:	Ladislav Slezak <lslezak@suse.cz>
  *
- * Purpose:	Ask user for network settings.
+ * Purpose:	Ask for an AutoYaST profile.
  *
  * $Id$
  *

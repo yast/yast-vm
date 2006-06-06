@@ -1,9 +1,9 @@
 /**
- * Module:	vm_source_proposal.ycp
+ * Module:	vm_autoyast_proposal.ycp
  *
  * Authors:	Ladislav Slezak <lslezak@suse.cz>
  *
- * Purpose:     Proposal for installation source configuration
+ * Purpose:     Proposal for AutoYaST profile
  *
  * $Id$
  *

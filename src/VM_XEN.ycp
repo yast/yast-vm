@@ -42,25 +42,57 @@
     string default_cdrom_image = "";
     string cdrom_image = default_cdrom_image;
 
-    global map Export() {
+    global map SubExport() {
 	map ret = $[
-	    "Common" :	VM_Common::Export(),
-	    "disks"  :	disks,
-	    "network" :	network,
-	    "restart" :	restart
+		"Common" 	: VM_Common::Export(),
+		"disks"		: disks,
+		"network"	: network,
+		"kernel_path"	: kernel_path,
+		"initrd_path"	: initrd_path,
+		"restart"	: restart,
+		"boot_device"	: boot_device,
+		"cdrom_image"	: cdrom_image
 	];
 
+	y2milestone("SubExport() returned: %1", ret);
 	return ret;
     }
 
-    global boolean Import(map input) {
-	    VM_Common::Import(input["Common"]:$[]);
+    global map Export() {
+	map ret = VM_Common::autoyast_profile_settings;
+	if (ret == nil || size(ret) <= 0) {
+		ret = SubExport();
+	}
+	y2milestone("Export() returned: %1", ret);
+	return ret;
+    }
 
-	    disks =	input["disks"]:[];
-	    network =	input["network"]:default_network;
-	    restart =	input["restart"]:default_restart;
+    global boolean Import(map full_input) {
 
-	    return true;
+	// save the parsed xml profile settings
+	VM_Common::autoyast_profile_settings = full_input;
+
+	// retrieve the AutoYaST settings for the current proposal_type
+	map input = full_input[VM_Common::proposal_type]:$[];
+
+	if (input == nil || size(input) <= 0) {
+		input = full_input;
+	}
+
+	y2milestone("Import() settings: %1", input);
+
+	// import the VM_Common AutoYaST settings
+	VM_Common::Import(input["Common"]:$[]);
+
+	disks =		input["disks"]:disks;
+	network =	input["network"]:network;
+	kernel_path = 	input["kernel_path"]:kernel_path;
+	initrd_path = 	input["initrd_path"]:initrd_path;
+	restart =	input["restart"]:restart; //FIXME: config file option 'restart' is depreciated!!!
+	boot_device = 	input["boot_device"]:boot_device;
+	cdrom_image = 	input["cdrom_image"]:cdrom_image;
+
+	return true;
     }
 
     global string getConfigFilePath() {
@@ -1299,7 +1331,9 @@
 
 			// Search each disk for the existance of the Xen kernel (Linux or NetWare)
 			// If one is found then set VM_Common::root_device to that disk partition.
-			ReadDiskImages();
+			if (!Mode::config()) {
+				ReadDiskImages();
+			}
 
 			y2milestone("KernelImage: %1", VM_Common::GetKernelImage());
 			y2milestone("InitrdImage: %1", VM_Common::GetInitrdImage());
@@ -2218,8 +2252,15 @@ source is accessible."));
 	if (VM_Common::autoyast_profile != nil && VM_Common::autoyast_profile != "" && VM_Common::GetVirtualizationType() != "full")
 	{
 	    string autoyast_image = target_dir + "/autoyast.img";
-	    if (! VM_Common::CreateImageWithProfile(autoyast_image, VM_Common::autoyast_profile))
+	    if (! VM_Common::CreateImageWithProfile(autoyast_image, VM_Common::autoyast_profile)) {
 		return false;
+	    }
+
+	    // remove any old image
+	    string old_autoyast_image = getDiskSource(disks, "hdt63");
+	    if (old_autoyast_image != nil && old_autoyast_image != "") {
+		updateDiskConfig(old_autoyast_image, "", "");
+	    }
 
 	    // add the disk image to the list
 	    disks = add(disks, $[ "target" : "hdt63", "type" : "loop-use", "source" : autoyast_image, "ro" : true ] );
@@ -2466,6 +2507,8 @@ source is accessible."));
 	    "getDiskProposal" : VM_XEN::getDiskProposal,
 	    "getDiskProposalWarning" : VM_XEN::getDiskProposalWarning,
 
+	    "getDiskSource" : VM_XEN::getDiskSource,
+	    "getDiskTarget" : VM_XEN::getDiskTarget,
 	    "getConfiguredDiskTargets" : VM_XEN::getConfiguredDiskTargets,
 	    "getConfiguredDiskSources" : VM_XEN::getConfiguredDiskSources,
 	    "getValidVirtualDevices" : VM_XEN::getValidVirtualDevices,
@@ -2479,6 +2522,7 @@ source is accessible."));
 	    "getExtraArgs"	: VM_XEN::getExtraArgs,
 	    "setExtraArgs"	: VM_XEN::setExtraArgs,
 	    "resetExtraArgs"	: VM_XEN::resetExtraArgs,
+	    "resetHiddenArgs"	: VM_XEN::resetHiddenArgs,
 //	    "updateRoot"	: VM_XEN::UpdateRoot,
 
 	    "getKernelImage"	: VM_Common::GetKernelImage,
@@ -2508,6 +2552,8 @@ source is accessible."));
 
 	    "import"	: VM_XEN::Import,
 	    "export"	: VM_XEN::Export,
+	    "subexport"	: VM_XEN::SubExport,
+
 
 	    "parseDiskConfig" : VM_XEN::parseDiskConfig,
 	    "updateDiskConfig" : VM_XEN::updateDiskConfig,

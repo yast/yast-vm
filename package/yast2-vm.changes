@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Tue Jun  6 12:03:55 MDT 2006 - mgfritch@novell.com
+
+- Preserve the AutoYaST settings for both the install proposal and 
+  the final proposal. Generate an autoinstallation summary proposal 
+  that contains the settings for both the install and final
+  proposals. (#182149) 
+- 2.13.55 
+
+-------------------------------------------------------------------
 Thu Jun  1 16:16:42 MDT 2006 - mgfritch@novell.com
 
 - Do not display the 'Manage Virtual Machines' dialog when 

@@ -1,7 +1,7 @@
 /**
- * File:	include/vm/vm.ycp
- * Module:	Installation in a virtual machine
- * Summary:	Main virtual machine installation
+ * File:	clients/xen.ycp
+ * Module:	Installation/management in a virtual machine
+ * Summary:	Main virtual machine installation/management
  * Authors:	Ladislav Slezak <lslezak@suse.cz>
  *
  * $Id$

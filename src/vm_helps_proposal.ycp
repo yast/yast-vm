@@ -1,5 +1,5 @@
 /**
- * Module:	xen_helps_proposal.ycp
+ * Module:	vm_helps_proposal.ycp
  *
  * Authors:	Michael G. Fritch <mgfritch@novell.com>
  *
@@ -10,7 +10,7 @@
  */
 {
 	textdomain "vm";
-	
+
 	import "VM_Common";
 	import "Wizard";
 
