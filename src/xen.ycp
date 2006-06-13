@@ -93,7 +93,7 @@ Configure the VM Server now?")))
     import "VM_Common";
     VM_Common::InitProductControl();
 
-    Pkg::TargetFinish();  // FIXME:: Does this break anything by adding this line???
+    Pkg::TargetFinish();
 
     any ret = CommandLine::Run(cmdline);
 

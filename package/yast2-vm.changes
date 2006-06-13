@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Jun 13 16:08:23 MDT 2006 - mgfritch@novell.com
+
+- Use 'sed -i' instead of 'sed -e' to avoid changing the file
+  permissions of /etc/sysconfig/console and /etc/inittab. (#184690)
+- 2.13.56 
+
+-------------------------------------------------------------------
 Tue Jun  6 12:03:55 MDT 2006 - mgfritch@novell.com
 
 - Preserve the AutoYaST settings for both the install proposal and 
