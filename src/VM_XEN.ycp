@@ -1929,7 +1929,7 @@
     }
 
     global define boolean resetExtraArgs() {
-	string arg = (VM_Common::proposal_type == "install") ? "TERM=xterm vnc=1" : "TERM=xterm";
+	string arg = (VM_Common::proposal_type == "install") ? "TERM=xterm textmode=1 vnc=0" : "TERM=xterm";
 	VM_Common::extra_args = arg;
 	return true;
     }
