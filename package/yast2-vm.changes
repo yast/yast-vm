@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Jun 27 09:06:17 CEST 2006 - lslezak@suse.cz
+
+- Initialize new installation sources, use the new source ID when
+  the installation source is modified (#179410)
+- 2.13.58
+
+-------------------------------------------------------------------
 Fri Jun 16 15:41:34 MDT 2006 - mgfritch@novell.com
 
 - Replace the 'extra' option 'vnc=1' with 'vnc=0 textmode=1'
