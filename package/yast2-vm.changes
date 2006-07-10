@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon Jul 10 12:54:11 MDT 2006 - mgfritch@novell.com
+
+- If paravirtualization, allow async mode disk read/write only 
+  during the VM install. (#190869)
+- 2.13.59
+
+-------------------------------------------------------------------
 Tue Jun 27 09:06:17 CEST 2006 - lslezak@suse.cz
 
 - Initialize new installation sources, use the new source ID when
