@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Jul 12 11:13:35 MDT 2006 - mgfritch@novell.com
+
+- Removed fix for async mode disk read/write during paravirtualized
+  installs (#190869)
+- 2.13.60
+
+-------------------------------------------------------------------
 Mon Jul 10 12:54:11 MDT 2006 - mgfritch@novell.com
 
 - If paravirtualization, allow async mode disk read/write only 

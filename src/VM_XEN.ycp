@@ -1255,10 +1255,6 @@
 
 		string rw_mode = (d["ro"]:true) ? "r" : "w";
 
-		if (VM_Common::GetVirtualizationType() == "para" && VM_Common::proposal_type != "install") {
-				rw_mode = rw_mode + "S"; // If para virtualzied, allow async read/write only during the VM install (bugzilla #190869)
-		}
-
 		if (d["type"]:"" == "phys")
 		{
 		    ret = ret + sformat("'phy:%1,%2%3,%4'", d["source"]:"", ioemu_option, d["target"]:"", rw_mode);
