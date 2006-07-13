@@ -1,4 +1,32 @@
 -------------------------------------------------------------------
+Thu Jul 13 11:44:48 MDT 2006 - mgfritch@novell.com
+
+- Do not create the disk images (i.e. dd) when proposal_type is
+  'boot' (#192135)
+- 2.13.61 
+
+-------------------------------------------------------------------
+Wed Jul 12 11:13:35 MDT 2006 - mgfritch@novell.com
+
+- Removed fix for async mode disk read/write during paravirtualized
+  installs (#190869)
+- 2.13.60
+
+-------------------------------------------------------------------
+Mon Jul 10 12:54:11 MDT 2006 - mgfritch@novell.com
+
+- If paravirtualization, allow async mode disk read/write only 
+  during the VM install. (#190869)
+- 2.13.59
+
+-------------------------------------------------------------------
+Tue Jun 27 09:06:17 CEST 2006 - lslezak@suse.cz
+
+- Initialize new installation sources, use the new source ID when
+  the installation source is modified (#179410)
+- 2.13.58
+
+-------------------------------------------------------------------
 Fri Jun 16 15:41:34 MDT 2006 - mgfritch@novell.com
 
 - Replace the 'extra' option 'vnc=1' with 'vnc=0 textmode=1'
