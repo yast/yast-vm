@@ -2038,9 +2038,11 @@
 
 	ret = ret && WriteOption(configpath, "disk", formatDiskConfig(disks, VM_Common::GetVirtualizationType() == "full"));
 
-	// create disk image file(s)
-	y2milestone("Creating disk images...");
-	ret = ret && CreateDiskImages();
+	if (VM_Common::proposal_type != "boot") { // do not recreate the disks (i.e. dd) when proposal_type is boot (bugzilla #192135
+		// create disk image file(s)
+		y2milestone("Creating disk images...");
+		ret = ret && CreateDiskImages();
+	}
 
 	// all following action are needed only in paravirtualization mode
 	if (VM_Common::GetVirtualizationType() == "full")
