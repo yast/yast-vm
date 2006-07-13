@@ -627,12 +627,14 @@ define symbol Network_SourceDialog() {
 	    // check if selected installation source is valid
 	    integer current = (integer) UI::QueryWidget (`id(`sources), `CurrentItem);
 
-	    y2milestone("sources: %1, current: %2", sources, current);
+	    y2milestone("sources: %1", sources);
 	    integer current_srcid = -1;
 	    if (size(sources) > 0)
 	    {
 		current_srcid = sources[current]:0;
 	    }
+
+	    y2milestone("current_srcid: %1", current_srcid);
 
 	    symbol selected_type = (symbol)UI::QueryWidget(`id(`source), `CurrentButton);
 	    string selected_custom_source = (string)UI::QueryWidget(`id(`custom_source), `Value);
@@ -689,10 +691,97 @@ are supported in the installation."));
 	    }*/
 	}
 	else if (ret == `inst_src) {
+	    integer current = (integer) UI::QueryWidget (`id(`sources), `CurrentItem);
+
+	    integer current_srcid = -1;
+	    if (size(sources) > 0)
+	    {
+		current_srcid = sources[current]:-1;
+	    }
+
+	    y2milestone("Selected source: %1", current_srcid);
+
+	    // remember the sources
+	    list<integer> sources_old = sources;
+
+
 	    // start installation source configuration module
 	    WFM::CallFunction("inst_source", []);
+
+
 	    // refresh table content
 	    sources = Pkg::SourceGetCurrent(false);
+	    y2milestone("Configured sources: %1", sources);
+
+
+	    // recreate the new sources to load the resolvables
+	    list<map> new_sources = [];
+
+	    foreach(integer src, sources,
+		{
+		    if (!contains(sources_old, src))
+		    {
+			map general_data = Pkg::SourceGeneralData(src);
+			string srcurl = general_data["url"]:"";
+			string product_dir = general_data["product_dir"]:"/";
+
+			new_sources = add(new_sources, $[ "id" : src, "url" : srcurl, "product_dir" : product_dir ]);
+		    }
+		}
+	    );
+
+	    y2milestone("New sources: %1", new_sources);
+
+	    // the recreated sources, inst_source doesn't call Pkg::SourceCreate(),
+	    // the new sources are not fully initialized
+	    list<integer> new_ids = [];
+
+	    if (size(new_sources) > 0)
+	    {
+		// initialize the new sources
+		foreach(map s, new_sources,
+		    {
+			Pkg::SourceDelete(s["id"]:-1);
+
+			integer new_id = Pkg::SourceCreate(s["url"]:"", s["product_dir"]:"/");
+
+			if (new_id != nil && new_id > 0)
+			{
+			    y2milestone("Created new source %1: %2", new_id, s["url"]:"");
+			    new_ids = add(new_ids, new_id);
+			}
+		    }
+
+		);
+
+		sources = Pkg::SourceGetCurrent(false);
+	    }
+
+	    // the current selected source is missing
+	    if (!contains(sources, current_srcid))
+	    {
+		y2milestone("Previously selected source %1 is not available (%2)", current_srcid, sources);
+
+		// exactly one new source, suppose the ID has changed
+		if (size(new_ids) == 1)
+		{
+		    integer src = new_ids[0]:0;
+		    y2milestone("Using new source ID %1 instead of %2", src , current_srcid);
+
+		    // select the source
+		    sconfig["source_id"] = src;
+		    // refresh list
+		    sources = Pkg::SourceGetCurrent(false);
+		}
+		else
+		{
+		    // reset config, the current source is not valid
+		    // TODO: display a warning popup - "The installation source is not available."
+		    VM::ResetSource();
+		    sconfig = VM::GetSourceConfig();
+		}
+	    }
+
 	    fill_table();
 	}
     }
