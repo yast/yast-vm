@@ -1,0 +1,59 @@
+/**
+ * Module:	vm_hardware_proposal.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *		Michael G. Fritch <mgfritch@novell.com>
+ *
+ * Purpose:     Proposal for virtual machine hardware
+ *
+ * $Id: vm_options_proposal.ycp 27936 2006-02-13 20:01:14Z olh $
+ *
+ */
+{
+    textdomain "vm";
+
+    import "VM";
+
+    string func = (string) WFM::Args (0);
+    map param = (map) WFM::Args (1);
+    map ret = $[];
+
+    if ( func == "MakeProposal" )
+    {
+	boolean force_reset      = param["force_reset"     ]:false;
+	boolean language_changed = param["language_changed"]:false;
+
+	if (force_reset)
+	{
+	    VM::ResetMemorySize();
+	    VM::ResetNumberOfCpus();
+	    VM::ResetStdVga();
+	    VM::ResetSdl();
+	    VM::ResetLocaltime();
+	}
+
+	return VM::getHardwareProposal();
+    }
+    else if ( func == "AskUser" )
+    {
+	boolean has_next = param["has_next"]:false;
+
+	symbol result = (symbol) WFM::CallFunction ("inst_vm_hardware",
+						    [true, has_next]);
+
+	ret = $[ "workflow_sequence" : result ];
+    }
+    else if ( func == "Description" )
+    {
+	ret =
+	    $[
+	      // this is a heading
+	      "rich_text_title"	:	_("Hardware"),
+	      // this is a menu entry
+	      "menu_title"	:	_("&Hardware"),
+	      "id"		:	"vm_hardware_stuff"
+	    ];
+    }
+
+    return ret;
+}

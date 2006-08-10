@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<productDefines  xmlns="http://www.suse.com/1.0/yast2ns"
+    xmlns:config="http://www.suse.com/1.0/configns">
+
+<!--
+Work around for the text domain
+textdomain="vm"
+-->
+
+    <textdomain>vm</textdomain>
+
+    <proposals config:type="list">
+        <proposal>
+            <label>Virtual Machine (Installation Settings)</label>
+            <name>xen_install</name>
+            <stage>normal</stage>
+            <enable_skip>no</enable_skip>
+            <proposal_modules config:type="list">
+                <proposal_module>vm_helps</proposal_module>
+                <proposal_module>vm_autoyast</proposal_module>
+                <proposal_module>xen_mode</proposal_module>
+                <proposal_module>vm_options</proposal_module>
+                <proposal_module>vm_hardware</proposal_module>
+                <proposal_module>vm_disks</proposal_module>
+                <proposal_module>vm_network</proposal_module>
+                <proposal_module>vm_source</proposal_module>
+            </proposal_modules>
+        </proposal>
+        <proposal>
+            <label>Virtual Machine (Final Settings)</label>
+            <name>xen_boot</name>
+            <stage>normal</stage>
+            <enable_skip>no</enable_skip>
+            <proposal_modules config:type="list">
+                <proposal_module>vm_helps</proposal_module>
+                <proposal_module>vm_options</proposal_module>
+                <proposal_module>vm_hardware</proposal_module>
+                <proposal_module>vm_disks</proposal_module>
+                <proposal_module>vm_network</proposal_module>
+		<proposal_module>vm_source</proposal_module>
+            </proposal_modules>
+        </proposal>
+        <proposal>
+            <label>Virtual Machine (Final Settings)</label>
+            <name>xen_existing</name>
+            <stage>normal</stage>
+            <enable_skip>no</enable_skip>
+            <proposal_modules config:type="list">
+                <proposal_module>vm_helps</proposal_module>
+                <proposal_module>xen_mode</proposal_module>
+                <proposal_module>vm_options</proposal_module>
+                <proposal_module>vm_hardware</proposal_module>
+                <proposal_module>vm_disks</proposal_module>
+                <proposal_module>vm_network</proposal_module>
+		<proposal_module>vm_source</proposal_module>
+            </proposal_modules>
+        </proposal>
+    </proposals>
+
+</productDefines>

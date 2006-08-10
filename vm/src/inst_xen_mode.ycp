@@ -1,0 +1,99 @@
+/**
+ * Module:	inst_xen_mode.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *
+ * Purpose:	Select the virtualization mode (para or full)
+ *
+ * $Id$
+ *
+ */
+
+{
+    textdomain "vm";
+
+    import "VM";
+    import "VM_Common";
+    import "Wizard";
+    import "Popup";
+    import "Report";
+    import "Label";
+    import "Mode";
+
+
+    // screen title for the Xen mode selection
+    string title = _("Virtualization Mode");
+
+    // build and show dialog
+    Wizard::OpenAcceptDialog ();
+
+    term contents = `HBox(
+	`HSpacing(2),
+	`RadioButtonGroup(`id(`rb_group),
+	    `Frame( title,
+		`VBox(
+		    `VSpacing(0.5),
+		    `Left(`RadioButton(`id("para"), _("Paravirtualization (requires Xen-enabled guest OS)"), VM::GetVirtualizationType() == "para")),
+		    `VSpacing(0.5),
+		    `Left(`RadioButton(`id("full"), _("Full Virtualization (requires specialized hardware)"), VM::GetVirtualizationType() == "full")),
+		    `VSpacing(0.5)
+		)
+	    )
+	),
+	`HSpacing(2)
+    );
+
+    // help text for virtualization mode setting (1/5)
+    string help_text = sformat(_("<p><b><big>%1</big></b></p>"), title)
+	// help text for virtualization mode setting (2/5)
+	+ _("<p>Virtual machines can be created to run in either paravirtualization mode or full virtualization mode.</p>")
+
+	// help text for virtualization mode setting (3/5)
+	+ _("<p><b>Paravirtualization mode</b> uses selective emulation of the hardware devices. To run in paravirtualization mode, the OS must be optimized to run in the Xen virtual server environment. This type of optimized OS is often called a paravirtualized or Xen-enabled guest.</p>")
+
+	// help text for virtualization mode setting (4/5)
+	+ _("<p><b>Full virtualization mode</b> completely emulates all hardware devices but must run on a computer that supports hardware-assisted virtualization. Most popular operating systems can run in full virtualization mode.</p>");
+
+
+    Wizard::SetContents (title, contents, help_text, true, true);
+
+    // set full virtualization widget state
+    if (!Mode::config() && !VM_Common::VirtualizationCPU())
+    {
+	// not autoyast config mode and no virtualization CPU => disable full virtualization
+	UI::ChangeWidget(`id("full"), `Enabled, false);
+    }
+
+    symbol ret = nil;
+
+    while (true)
+    {
+	ret = (symbol) Wizard::UserInput();
+
+	if (ret == `abort && Popup::ConfirmAbort(`painless))
+	    break;
+
+	if (ret == `cancel || ret == `back)
+	    break;
+
+	if (ret == `next)
+	{
+	    string selected = (string)(UI::QueryWidget(`id(`rb_group), `CurrentButton));
+
+	    if (selected != VM::GetVirtualizationType()) {
+		VM_Common::SetModified(true);
+		VM::SetVirtualizationType(selected);
+		//VM::ResetAllSettings();
+		VM::ResetNumberOfCpus();
+		VM::UpdateDiskConfig(VM_Common::custom_source, "", ""); // remove any old custom sources that were added as disks. See bugzilla #171696
+		VM::ResetSource();
+	    }
+
+	    break;
+	}
+    }
+
+    Wizard::CloseDialog();
+
+    return ret;
+}
