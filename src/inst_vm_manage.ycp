@@ -66,6 +66,7 @@ boolean DeleteVirtualMachine(integer table_item) {
 			if (contains(all_other_sources, src))
 				remove_disk = false;
 			// before deleting a disk source, make sure no other running VM is using it
+			VM::IsXendRunning();
 			string cmd = sformat("%1 list | grep %2", VM_XEN::xm, src);
 			integer retval = (integer) SCR::Execute(.target.bash, cmd);
 			if (retval == 0)
@@ -147,6 +148,7 @@ void RemoveIDFromSettingsList(integer id) {
 
 
 void Read_XM_List() {
+	VM::IsXendRunning();
 	string cmd = sformat("%1 list", VM_XEN::xm);
 	y2milestone("Executing: %1", cmd);
 	map retmap = (map) SCR::Execute(.target.bash_output, cmd);
@@ -303,7 +305,7 @@ define symbol VirtualMachineOverview() {
 	Wizard::SetNextButton(`close, _("&Close"));
 	Wizard::HideBackButton();
 	Wizard::HideAbortButton();
-	
+
 	// popup feedback message
 	Popup::ShowFeedback(_("Reading Virtual Machine Settings"), _("Please Wait..."));
 	refresh_table();
@@ -311,10 +313,7 @@ define symbol VirtualMachineOverview() {
 
 	integer selected_table_item = 0;
 	symbol ret = nil;
-
-	// check whether X window system is accessible
-	integer isGraphicalDisplay = (integer) SCR::Execute(.target.bash, "/usr/X11R6/bin/xdpyinfo");
-	y2milestone("X check (isGraphicalDisplay): %1", isGraphicalDisplay);
+	boolean isGraphicalDisplay = VM_Common::isGraphicalDisplay();
 
 	while (true) {
 
@@ -334,12 +333,12 @@ define symbol VirtualMachineOverview() {
 				UI::ChangeWidget(`id(`shutdown), `Enabled, true);
 				UI::ChangeWidget(`id(`terminate), `Enabled, true);
 //				if ( isFullVirtualization(selected_table_item) && ! isSDL(selected_table_item) ) {
-				if ( ( !isSDL(selected_table_item) ) && ( isGraphicalDisplay == 0 ) ) { // only enable `view button if graphical dispaly and selected vm is not configured to use SDL. (bugzilla #181011)
+				if ( ( !isSDL(selected_table_item) ) && isGraphicalDisplay ) { // only enable `view button if graphical dispaly and selected vm is not configured to use SDL. (bugzilla #181011)
 					UI::ChangeWidget(`id(`view), `Enabled, true);
 				}
 			}
 			else if (size(SettingsList) > 0) { // vm state is not running (stopped) and at least on vm cfg file exists
-				if ( ( isGraphicalDisplay == 0 ) || ( isFullVirtualization(selected_table_item) == false ) ) { // only enable `start button if graphical display or selected vm is paravirtualized. (bugzilla #181009)
+				if ( isGraphicalDisplay || ( isFullVirtualization(selected_table_item) == false ) ) { // only enable `start button if graphical display or selected vm is paravirtualized. (bugzilla #181009)
 					UI::ChangeWidget(`id(`start), `Enabled, true);
 				}
 				UI::ChangeWidget(`id(`delete), `Enabled, true);
@@ -415,7 +414,7 @@ Do you wish to continue?
 			if (selected_table_item != nil && selected_table_item >= 0) {
 				map item = SettingsList[selected_table_item]:$[];
 				// make sure there is enough free memory to start the VM.
-				integer maxmem = VM::GetMaxFreeMemory();
+				integer maxmem = (VM_Common::GetVirtualizationType() == "para") ? VM::GetMaxParaMemory() : VM::GetMaxHVMMemory();
 				if (tointeger(item["memory"]:"0") > maxmem) {
 					// popup error message
 					// %1 = integer size in MB

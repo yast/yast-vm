@@ -1,4 +1,25 @@
 -------------------------------------------------------------------
+Mon Aug  7 17:46:28 MDT 2006 - mgfritch@novell.com
+
+- Always write out "/usr/lib/xen/bin/qemu-dm" for the device_model
+  field in a fully virtualized VM configuration file. (#193854)
+- Add Logical Volumes (LVM) to the list of available block devices. 
+  (#186930, #189765)
+- Check whether X window system is accessible by testing for the 
+  existance of the DISPLAY enviroment value. (#194389)
+- When fully virtualized, if a bridge has not been specifed for a 
+  given vif, do not default to the value 'bridge=xenbr0' in the 
+  VM config file (#197777)
+- Use the 'xm info' values 'max_para_memory' or 'max_hvm_memory'
+  instead of 'max_free_memory' when calculating the amount of
+  memory available for a given VM. (#184727)
+- Display a popup feedback message when creating a non-sparse disk.
+  (#167145)
+- Display a popup yes/no dialog asking if xend should be started 
+  when it is not running. (#176369)
+- 2.13.62
+
+-------------------------------------------------------------------
 Thu Jul 13 11:44:48 MDT 2006 - mgfritch@novell.com
 
 - Do not create the disk images (i.e. dd) when proposal_type is

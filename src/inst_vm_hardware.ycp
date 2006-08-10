@@ -14,6 +14,7 @@
     textdomain "vm";
 
     import "VM";
+    import "VM_Common";
     import "Wizard";
     import "Popup";
     import "String";
@@ -135,11 +136,9 @@
 		break;
 	}
 	if (ret == `next) {
-
-//	    list<string> configs = SCR::Dir(.etc.xen.section);  //FIXME: this should probably be removed!!!
 	    string mem_str = (string) UI::QueryWidget (`id(`memory), `Value);
 	    integer mem = tointeger(mem_str);
-	    integer freemem = VM::GetMaxFreeMemory();
+	    integer freemem = (VM_Common::GetVirtualizationType() == "para") ? VM::GetMaxParaMemory() : VM::GetMaxHVMMemory();
 
 	    if (mem > freemem) {
 		// error message: requested memory size is greater that available free memory
@@ -148,6 +147,7 @@ There is %1MB free memory available."), freemem);
 		Report::Error(memory_size_error);
 		continue;
 	    }
+
 	    if (mem < 16) {
 		Report::Error(_("Memory Size in MB cannot be less than 16 MB."));
 		continue;
