@@ -142,6 +142,24 @@
 	return CallBooleanFunction("resetMemorySize");
     }
 
+    global boolean IsXendRunning() {
+	return CallBooleanFunction("isXendRunning");
+    }
+
+    global string GetXMInfo(string key) {
+	string(string) toEval = (string(string))functions["getXMInfo"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval(key);
+	}
+	else
+	{
+	    y2error("getXMInfo() function is missing!");
+	    return nil;
+	}
+    }
+
     global integer GetMaxFreeMemory() {
 	integer() toEval = (integer())functions["getMaxFreeMemory"]:nil;
 
@@ -152,6 +170,34 @@
 	else
 	{
 	    y2error("getMaxFreeMemory() function is missing!");
+	    return nil;
+	}
+    }
+
+    global integer GetMaxParaMemory() {
+	integer() toEval = (integer())functions["getMaxParaMemory"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("getMaxParaMemory() function is missing!");
+	    return nil;
+	}
+    }
+
+    global integer GetMaxHVMMemory() {
+	integer() toEval = (integer())functions["getMaxHVMMemory"]:nil;
+
+	if (toEval != nil)
+	{
+	    return toEval();
+	}
+	else
+	{
+	    y2error("getMaxHVMMemory() function is missing!");
 	    return nil;
 	}
     }

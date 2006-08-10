@@ -9,11 +9,14 @@
     module "VM_XEN";
 
     import "VM_Common";
+    import "Popup";
     import "Report";
     import "HTML";
     import "Mode";
     import "Arch";
     import "String";
+    import "Label";
+    import "Service";
 
     textdomain "vm";
 
@@ -32,6 +35,7 @@
     string initrd_path = "";
 
     global string xm = "/usr/sbin/xm";
+    global string xend = "/etc/init.d/xend";
 
     string default_restart = "onreboot";  //FIXME: config file option 'restart' is depreciated!!!
     string restart = default_restart;  //FIXME: config file option 'restart' is depreciated!!!
@@ -308,24 +312,67 @@
 	return VM_Common::on_crash;
     }
 
-    global integer FreeMemory() {
+    global boolean isXendRunning() {
+	integer running = Service::Status("xend");
+	if (running != 0) {
+		// xend is not running
+		y2error("Service '%1' is not running.", xend);
+		// Popup yes/no dialog
+		// %1 - file location of the xend service
+		if ( ! Popup::AnyQuestionRichText(_("Warning: Xend is not running"), 
+				sformat(_("<p>A Xen virtual machine requires the xend service (%1) to be running.</p><p>Start the xend service now?</p>"), xend), 
+				45, 5, Label::YesButton(), Label::NoButton(), `focus_yes) ) {
+			y2warning("Contining without service '%1'", xend);
+			return false;
+		}
+
+		// restart xend
+		y2milestone("Restarting service '%1'", xend);
+		boolean success = Service::Restart("xend");
+		if ( ! success ) {
+			y2error("Failed to restart service '%1'", xend);
+			// Popup error message
+			// %1 - file location of the xend service
+			Report::Error(sformat(_("Failed to restart the xend service (%1)"), xend));
+			return false;
+		}
+	}
+	return true;
+    }
+
+    global string XMInfo(string key) {
+	isXendRunning();
+
 	// run 'xm info command'
-	string cmd = sformat("%1 info | grep ^free_memory", xm);
+	string cmd = sformat("%1 info | grep ^%2", xm, key);
 
 	map out = (map)SCR::Execute(.target.bash_output, cmd);
-	y2debug("free_memory out: %1", out);
+	y2debug("xm_info - %1 out: %2", key, out);
 
 	list<string> output = splitstring(out["stdout"]:"", "\n");
-	string free_line = output[0]:"";
+	string info_line = output[0]:"";
 
-	string msize = regexpsub(free_line, "free_memory[ \t]*:[ \t]*(.*)", "\\1");
-	y2milestone("free_memory size: %1", msize);
+	string value = regexpsub(info_line, sformat("%1[ \t]*:[ \t]*(.*)",key), "\\1");
+	y2milestone("xm_info - %1: %2", key, value);
 
-	if (msize == nil)
+	return value;
+    }
+
+    global integer FreeMemory() {
+
+	string msize = XMInfo("free_memory");
+	integer ret = tointeger(msize);
+	if (ret == nil)
 	{
-	    return 0;
+	    ret = 0;
 	}
 
+	return ret;
+    }
+
+    global integer MaxFreeMemory() {
+
+	string msize = XMInfo("max_free_memory");
 	integer ret = tointeger(msize);
 
 	if (ret == nil)
@@ -336,26 +383,22 @@
 	return ret;
     }
 
-    global integer MaxFreeMemory() {
-	// run 'xm info command'
-	string cmd = sformat("%1 info | grep ^max_free_memory", xm);
+    global integer MaxParaMemory() {
 
-	map out = (map)SCR::Execute(.target.bash_output, cmd);
-	y2debug("max_free_memory out: %1", out);
-
-	list<string> output = splitstring(out["stdout"]:"", "\n");
-	string free_line = output[0]:"";
-
-	string msize = regexpsub(free_line, "max_free_memory[ \t]*:[ \t]*(.*)", "\\1");
-	y2milestone("max_free_memory size: %1", msize);
-
-	if (msize == nil)
+	string msize = XMInfo("max_para_memory");
+	integer ret = tointeger(msize);
+	if (ret == nil)
 	{
-	    return 0;
+	    ret = 0;
 	}
 
-	integer ret = tointeger(msize);
+	return ret;
+    }
 
+    global integer MaxHVMMemory() {
+
+	string msize = XMInfo("max_hvm_memory");
+	integer ret = tointeger(msize);
 	if (ret == nil)
 	{
 	    ret = 0;
@@ -374,19 +417,19 @@
 
 	if (VM_Common::proposal_type != "install") {
 		y2milestone("mode: %1", getStartMode());
-	
+
 		// Proposal for virtual machine settings - %1 is a start mode (On boot/Manually)
 		tmp = add (tmp, sformat (_("Activation: %1"),
 			VM_Common::start_mode_names[getStartMode()]:_("Unknown")));
-	
+
 		// Proposal for virtual machine settings
 		tmp = add (tmp, sformat (_("On Power Off: %1"),
 			VM_Common::lifecycle_event_mapping[VM_Common::on_poweroff]:_("Unknown") ));
-	
+
 		// Proposal for virtual machine settings
 		tmp = add (tmp, sformat (_("On Reboot: %1"),
 			VM_Common::lifecycle_event_mapping[VM_Common::on_reboot]:_("Unknown") ));
-	
+
 		// Proposal for virtual machine settings
 		tmp = add (tmp, sformat (_("On Crash: %1"),
 			VM_Common::lifecycle_event_mapping[VM_Common::on_crash]:_("Unknown") ));
@@ -439,7 +482,7 @@
 	if (!Mode::config())
 	{
 	    // check maximum available free memory
-	    integer fm = MaxFreeMemory();
+	    integer fm = (VM_Common::GetVirtualizationType() == "para") ? MaxParaMemory() : MaxHVMMemory();
 
 	    if (getMemorySize() > fm)
 	    {
@@ -1657,13 +1700,8 @@
 		    iface = iface + "mac=" + mac;
 		}
 
-		if (bridge != "" || (VM_Common::GetVirtualizationType() == "full"))
+		if (bridge != "")
 		{
-		    if (bridge == "")
-		    {
-			bridge = "xenbr0";
-		    }
-
 		    if (iface != "")
 		    {
 			iface = iface + ",";
@@ -1695,7 +1733,7 @@
 
     global define boolean Write() {
 	y2milestone("Writing the config to file %1", conf_path + VM_Common::config_name);
-	
+
 	//check whether the config file already exists, if so remove it.
 	string configfilename = sformat("%1%2", conf_path, VM_Common::config_name);
 	if (SCR::Read(.target.size, configfilename) >= 0) {
@@ -1715,16 +1753,13 @@
 	    // use hvm builder for full virtualized hosts
 	    ret = ret && WriteStringOption(configpath, "builder", "hvm");
 
-	    // library dir (32/64bit)
-	    string arch_libdir = Arch::i386() ? "lib" : "lib64";
-
 	    // set pae=1, if dom0 is 64bit, domU is full virtualization, and domU mem >= 3.5 GB (#180361)
 	    if (Arch::x86_64() && VM_Common::memory_size >= 3584) { // (3.5 GB * 1024) = 3584 MB
 		ret = ret && WriteOption(configpath, "pae", "1");
 	    }
 
 	    // set device model
-	    ret = ret && WriteStringOption(configpath, "device_model", "/usr/" + arch_libdir + "/xen/bin/qemu-dm");
+	    ret = ret && WriteStringOption(configpath, "device_model", "/usr/lib/xen/bin/qemu-dm");
 	    ret = ret && WriteStringOption(configpath, "kernel", "/usr/lib/xen/boot/hvmloader");
 	}
 	else {
@@ -1982,6 +2017,8 @@
 
     define integer dom0Mem()
     {
+	isXendRunning();
+
 	// get dom0 memory size
 	string cmd = sformat("%1 list --long 0 | /usr/bin/grep -E \"[[:space:]]\(memory[[:space:]]\"", xm);
 	map out = (map)SCR::Execute(.target.bash_output, cmd);
@@ -2319,6 +2356,7 @@ source is accessible."));
 
 
     global define boolean ViewVirtualMachineConsole(string DomName, boolean isFullVirtualization, boolean isNetWare, boolean background, boolean displayError) {
+	isXendRunning();
 	y2milestone("ViewVirtualMachineConsole(%1, %2, %3, %4, %5)", DomName, isFullVirtualization, isNetWare, background, displayError);
 	if (DomName != nil && DomName != "") {
 		string cmd = sformat("/usr/bin/xterm -geometry 80x%3 -T \"Xen - %2\" -e %1 console %2",
@@ -2350,6 +2388,7 @@ source is accessible."));
     }
 
     global define boolean ShutdownVirtualMachine(string DomName, boolean displayError) {
+	isXendRunning();
 	if (DomName != nil && DomName != "") {
 		string cmd = sformat("%1 shutdown '%2' -w", xm, DomName);
 		y2milestone("Executing: %1", cmd);
@@ -2364,6 +2403,7 @@ source is accessible."));
     }
 
     global define boolean TerminateVirtualMachine(string DomName, boolean displayError) {
+	isXendRunning();
 	if (DomName != nil && DomName != "") {
 		string cmd = sformat("%1 destroy '%2'", xm, DomName);
 		y2milestone("Executing: %1", cmd);
@@ -2378,6 +2418,7 @@ source is accessible."));
     }
 
     global define boolean StartVirtualMachine(string DomName, boolean displayError) {
+	isXendRunning();
 	y2milestone("StartVirtualMachine(%1, %2)", DomName, displayError);
 	if (DomName != nil && DomName != "") {
 		string cmd = sformat("%1 create %2%3", xm, conf_path, DomName);
@@ -2455,7 +2496,12 @@ source is accessible."));
 	    "getMemorySize" : VM_XEN::getMemorySize,
 	    "resetMemorySize" : VM_XEN::resetMemorySize,
 
+	    "isXendRunning" : VM_XEN::isXendRunning,
+	    "getXMInfo" : VM_XEN::XMInfo,
+
 	    "getMaxFreeMemory" : VM_XEN::MaxFreeMemory,
+	    "getMaxParaMemory" : VM_XEN::MaxParaMemory,
+	    "getMaxHVMMemory" : VM_XEN::MaxHVMMemory,
 
 	    "setNumberOfCpus" : VM_XEN::setNumberOfCpus,
 	    "getNumberOfCpus" : VM_XEN::getNumberOfCpus,

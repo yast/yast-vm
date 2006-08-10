@@ -19,6 +19,9 @@
     import "Wizard";
     import "Report";
     import "Sequencer";
+    import "Storage";
+
+    include "partitioning/lvm_lv_lib.ycp";
 
 
     list<map<string,any> > disks = VM::GetDiskConfig();
@@ -368,6 +371,33 @@ so it will be exported to the VM as read-only.")))
     }
 
 
+    define list<map> getBlockDevicesList() {
+	// Read /proc/partitions to generate a list of available physical devices.
+	list<map> devmap = (list<map>)SCR::Read(.proc.partitions);
+	y2milestone("current partitions (/proc/partitions): %1", devmap);
+
+	// Add Logical Volumes (LVM) to the list of available physical devices. See Bugzilla #186930.
+	map<string,map> targetMap = Storage::GetTargetMap();
+	list<map> parts_lv   = get_lvs_and_mounted_partitions( targetMap, true, "none" );
+	y2milestone("parts_lv (get_lvs_and_mounted_partitions): %1", parts_lv);
+	foreach(map m, parts_lv, {
+		if (m["type"]:`none == `lvm) {
+			boolean dev_exists = false;
+			string lv_name = sformat("%1/%2", m["lvm_name"]:"", m["name"]:"");
+			integer lv_size = m["size_k"]:-1;
+			// don't add the device if it already exists in the list of available physical devices.
+			foreach(map m, devmap, { if (m["name"]:"" == lv_name) dev_exists = true; });
+			if ( !dev_exists ) {
+				devmap = add(devmap, $["name":lv_name, "size":lv_size]);
+			}
+		}
+	});
+
+	y2milestone("devmap: %1", devmap);
+	return devmap;
+    }
+
+
     /**
     * Add a block device (in dom0)
     * @param device target device in a VM
@@ -377,13 +407,11 @@ so it will be exported to the VM as read-only.")))
     */
     define map<string,any> AddBlockDeviceDialog(string device, string phys, boolean ro) ``{
 
-	list<map> devmap = (list<map>)SCR::Read(.proc.partitions);
-	y2milestone("current partitions (/proc/partitions): %1", devmap);
+	list<map> devmap = getBlockDevicesList();
 	list<map> mounted = (list<map>) SCR::Read(.proc.mounts);
 	y2milestone("mounted partitions (/proc/mounts): %1", mounted);
 	list<map> swaps = (list<map>) SCR::Read(.proc.swaps);
 	y2milestone("swap partitions (/proc/swaps): %1", swaps);
-
 
 	// Remove currently mounted partitions from the list of available physical devices.  See bugzilla #173433.
 	foreach(map m, mounted, {
@@ -434,7 +462,7 @@ so it will be exported to the VM as read-only.")))
 						break;
 					}
 				});
-				
+
 				if (isMounted == false) {
 					valid_phys_devices_term = add(valid_phys_devices_term, `item(`id(name), name));
 					valid_phys_devices = add(valid_phys_devices, name);
@@ -458,7 +486,7 @@ so it will be exported to the VM as read-only.")))
 							// combobox label - the device name as it appers to the virtual machine
 							_("&Virtual Disk"),
 							valid_virtual_devices),
-						`ComboBox(`id(`phys), `opt(`editable, `hstretch), 
+						`ComboBox(`id(`phys), `opt(`editable, `hstretch),
 							// combobox label - the block device to use (in dom0)
 							_("Block Device"),
 							valid_phys_devices_term),
@@ -561,10 +589,9 @@ Please select a different Virtual Disk."));
     define void refresh_table(list<map<string,any> > disks) {
 	integer id_cnt = 0;
 	list <term> d = [];
-	list<map> devmap = (list<map>)SCR::Read(.proc.partitions);
+	list<map> devmap = getBlockDevicesList();
 
 	map<string,integer> device_sizes = $[];
-
 	foreach(map device, devmap, {
 		string name = device["name"]:"";
 		integer sz = device["size"]:0;
@@ -575,7 +602,6 @@ Please select a different Virtual Disk."));
 		}
 	    }
 	);
-
 	y2milestone("device_sizes: %1", device_sizes);
 
 	foreach (map<string,any> m, disks, ``{

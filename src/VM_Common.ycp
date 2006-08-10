@@ -445,7 +445,7 @@
     global void SetNetWareHiddenArgs()
     {
         string args = "";
-	
+
 	// Set the display
 	string cmd = "set | grep 'DISPLAY' | grep -v 'BASH_EXECUTION_STRING'";
 	y2milestone("Executing: %1", cmd);
@@ -590,6 +590,12 @@
     global define boolean CreateDiskImage(string file, integer image_mb, boolean sparse) ``{
 	boolean ret = true;
 
+	if ( ! sparse ) {
+		// non-sparse images might take a long time to create (Bugzilla #167145)
+		// Popup Feedback message
+		Popup::ShowFeedback(_("Preparing Disk Image"), sformat("%1 (%2 MB)\n\n%3", file, image_mb, _("This might take a while.")));
+	}
+
 	string dd_options = (sparse) ? (" bs=1 count=1 " + sformat ("seek=%1", (image_mb*1024*1024)-1)) : (" bs=1M " + sformat ("count=%1", image_mb));
 	string cmd = "/bin/dd if=/dev/zero of='" + file + "'" + dd_options;
 
@@ -597,6 +603,8 @@
 	y2debug("dd command: %1", cmd);
 	map result = (map) SCR::Execute (.target.bash_output, cmd);
 	y2debug("result=%1", result);
+
+	Popup::ClearFeedback();
 
 	if (result["exit"]:-1 != 0)
 	{
@@ -999,6 +1007,21 @@ to create the specified disk image.
 	return ret;
     }
 
+    global boolean isGraphicalDisplay() {
+	// check whether X window system is accessible by testing
+	// for the existance of the DISPLAY enviroment value (#194389)
+	boolean ret = true;
+	string cmd = "echo $DISPLAY";
+	map result = (map) SCR::Execute(.target.bash_output, cmd);
+	string display_val = deletechars(result["stdout"]:"", String::CSpace());
+	y2milestone("DISPLAY=%1", display_val);
+        if (display_val == nil || display_val == "") {
+                ret = false;
+        }
+
+        y2milestone("X check (isGraphicalDisplay): %1", ret);
+	return ret;
+    }
 
 
 /* EOF */
