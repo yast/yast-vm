@@ -1,0 +1,100 @@
+/**
+ * File:
+ *  vm_finish.ycp
+ *
+ * Module:
+ *  Step of base installation finish
+ *
+ * Authors:
+ *  Ladislav Slezak <lslezak@suse.cz>
+ *
+ * $Id$
+ *
+ */
+
+{
+
+textdomain "vm";
+
+import "Arch";
+import "Report";
+
+any ret = nil;
+string func = "";
+map param = $[];
+
+/* Check arguments */
+if(size(WFM::Args()) > 0 && is(WFM::Args(0), string)) {
+    func = (string)WFM::Args(0);
+    if(size(WFM::Args()) > 1 && is(WFM::Args(1), map))
+	param = (map)WFM::Args(1);
+}
+
+y2milestone ("starting vm_finish");
+y2debug("func=%1", func);
+y2debug("param=%1", param);
+
+if (func == "Info")
+{
+    // return nil when the system is not Xen domainU,
+    // no change is allowed
+    if (Arch::is_xenU())
+    {
+	y2milestone("Detected Xen DomainU");
+	ret = $[
+	    "steps" : 1,
+	    // progress step title
+	    "title" : _("Configuring the virtual machine..."),
+	    "when" : [ `installation, `update, `autoinst ],
+	];
+    }
+    else
+    {
+	y2milestone("Xen DomainU not detected, skipping domain configuration");
+	ret = nil;
+    }
+}
+else if (func == "Write")
+{
+    // be sure that we are in Xen domU
+    if (Arch::is_xenU())
+    {
+	// disable HW services - they are useless and usually failing in a virtual machine
+	list<string> disable_services = ["acpid", "kbd", "earlykbd"];
+
+	y2milestone("disabling services: %1", disable_services);
+	foreach(string s, disable_services, {
+		integer disabled = (integer) SCR::Execute(.target.bash, sformat("/sbin/insserv -r %1", s));
+		y2milestone("insserv: service %1 disabled: %2", s, (disabled == 0) ? true : false);
+	    }
+	);
+
+	// these services need force option to disable them
+	list<string> disable_services_force = ["boot.clock"];
+	y2milestone("disabling services (forced): %1", disable_services_force);
+	foreach(string s, disable_services_force, {
+		integer disabled = (integer) SCR::Execute(.target.bash, sformat("/sbin/insserv -r -f %1", s));
+		y2milestone("insserv-force: service %1 disabled: %2", s, (disabled == 0) ? true : false);
+	    }
+	);
+
+	// domU has only one console
+	SCR::Execute(.target.bash, "/bin/sed -i 's/.*mingetty tty[2-9]$//' /etc/inittab");
+	// Although console appears to be a tty, do not do character translations
+	SCR::Execute(.target.bash, "/bin/sed -i 's/^CONSOLE_MAGIC=.*$/CONSOLE_MAGIC=\"\"/' /etc/sysconfig/console");
+    }
+}
+else
+{
+    y2error ("unknown function: %1", func);
+    ret = nil;
+}
+
+y2debug("ret=%1", ret);
+y2milestone("vm_finish finished");
+return ret;
+
+
+} /* EOF */
+
+

@@ -1,0 +1,256 @@
+/**
+ * File:
+ *   xen_auto.ycp
+ *
+ * Package:
+ *   Configuration of Xen virtual machine - AutoYaST client
+ *
+ * Summary:
+ *   Client for autoinstallation
+ *
+ * Authors:
+ *   Ladislav Slezák <lslezak@suse.cz>
+ *   Michael G. Fritch <mgfritch@novell.com>
+ *
+ * $Id$
+ *
+ * This is a client for autoinstallation. It takes its arguments,
+ * goes through the configuration and return the setting.
+ * Does not do any changes to the configuration.
+ */
+
+{
+    textdomain "vm";
+
+    y2milestone("----------------------------------------");
+    y2milestone("Xen auto started");
+
+    import "Summary";
+    import "VM";
+    import "VM_Common";
+
+    // set virtualization type here
+    VM::SetVMMtype("xen");
+
+    any ret = nil;
+    string func = "";
+    map param = $[];
+
+    /* Check arguments */
+    if (size(WFM::Args()) > 0 && is(WFM::Args(0), string)) {
+	func = (string) WFM::Args(0);
+	if(size(WFM::Args()) > 1 && is(WFM::Args(1), map))
+	    param = (map) WFM::Args(1);
+    }
+    y2debug("func=%1", func);
+    y2debug("param=%1", param);
+
+
+
+    /* Create a  summary*/
+    if (func == "Import") {
+	ret = VM::Import(param);
+    }
+    /* Create a  summary*/
+    else if (func == "Summary") {
+	string summary_ret = "";
+
+	if (VM_Common::autoyast_profile_settings == nil || size(VM_Common::autoyast_profile_settings) <= 0) {
+		summary_ret = Summary::NotConfigured();
+	}
+	else {
+
+		// Generate the "Virtual Machine (Installation Settings)" proposal - proposal_mode == "install"
+		if ( VM_Common::autoyast_profile_settings["install"]:nil != nil && size(VM_Common::autoyast_profile_settings["install"]:$[]) > 0 ) {
+
+			//load the saved AutoYaST profile settings
+			VM_Common::proposal_type = "install";
+			VM::Import(VM_Common::autoyast_profile_settings);
+	
+			// NOTE: don't show AutoYaST in the summary, in AutoYaST config mode it doesn't make sense
+			map proposal = (map)WFM::CallFunction("xen_mode_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string xen_mode = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("xen_mode_proposal", ["Description", $[]]);
+			string xen_mode_title = proposal["rich_text_title"]:"";
+	
+			proposal = (map)WFM::CallFunction("vm_options_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string vm_options = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("vm_options_proposal", ["Description", $[]]);
+			string vm_options_title = proposal["rich_text_title"]:"";
+	
+			proposal = (map)WFM::CallFunction("vm_hardware_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string vm_hardware = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("vm_hardware_proposal", ["Description", $[]]);
+			string vm_hardware_title = proposal["rich_text_title"]:"";
+	
+			proposal = (map)WFM::CallFunction("vm_disks_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string vm_disks = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("vm_disks_proposal", ["Description", $[]]);
+			string vm_disks_title = proposal["rich_text_title"]:"";
+	
+			proposal = (map)WFM::CallFunction("vm_network_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string vm_network = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("vm_network_proposal", ["Description", $[]]);
+			string vm_network_title = proposal["rich_text_title"]:"";
+	
+			proposal = (map)WFM::CallFunction("vm_source_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string vm_source = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("vm_source_proposal", ["Description", $[]]);
+			string vm_source_title = proposal["rich_text_title"]:"";
+	
+	
+			summary_ret = summary_ret + "<p><h2><b>" + _("Virtual Machine (Installation Settings)") + "</b></h2></p>"
+				+ "<p><h3><b>" + xen_mode_title    + "</b></h3></p>" + xen_mode
+				+ "<p><h3><b>" + vm_options_title  + "</b></h3></p>" + vm_options
+				+ "<p><h3><b>" + vm_hardware_title + "</b></h3></p>" + vm_hardware
+				+ "<p><h3><b>" + vm_disks_title    + "</b></h3></p>" + vm_disks
+				+ "<p><h3><b>" + vm_network_title  + "</b></h3></p>" + vm_network
+				+ "<p><h3><b>" + vm_source_title   + "</b></h3></p>" + vm_source;
+		}
+	
+		// Generate the "Virtual Machine (Final Settings)" proposal - proposal_mode == "boot"
+		if (VM_Common::autoyast_profile_settings != nil && VM_Common::autoyast_profile_settings["boot"]:nil != nil && size(VM_Common::autoyast_profile_settings["boot"]:$[]) > 0) {
+	
+			//load the saved AutoYaST profile settings
+			VM_Common::proposal_type = "boot";
+			VM::Import(VM_Common::autoyast_profile_settings);
+	
+			// NOTE: don't show AutoYaST in the summary, in AutoYaST config mode it doesn't make sense
+			map proposal = (map)WFM::CallFunction("vm_options_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string vm_options = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("vm_options_proposal", ["Description", $[]]);
+			string vm_options_title = proposal["rich_text_title"]:"";
+	
+			proposal = (map)WFM::CallFunction("vm_hardware_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string vm_hardware = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("vm_hardware_proposal", ["Description", $[]]);
+			string vm_hardware_title = proposal["rich_text_title"]:"";
+
+			// FIXME: disk proposal should not show when in proposal_type "boot".  Why is it in the control.xml???	
+//			proposal = (map)WFM::CallFunction("vm_disks_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+//			string vm_disks = proposal["preformatted_proposal"]:"";
+//			proposal = (map)WFM::CallFunction("vm_disks_proposal", ["Description", $[]]);
+//			string vm_disks_title = proposal["rich_text_title"]:"";
+	
+			proposal = (map)WFM::CallFunction("vm_network_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string vm_network = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("vm_network_proposal", ["Description", $[]]);
+			string vm_network_title = proposal["rich_text_title"]:"";
+	
+			proposal = (map)WFM::CallFunction("vm_source_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string vm_source = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("vm_source_proposal", ["Description", $[]]);
+			string vm_source_title = proposal["rich_text_title"]:"";
+	
+	
+			summary_ret = summary_ret + "<br><p><h2><b>" + _("Virtual Machine (Final Settings)") + "</b></h2></p>"
+				+ "<p><h3><b>" + vm_options_title  + "</b></h3></p>" + vm_options
+				+ "<p><h3><b>" + vm_hardware_title + "</b></h3></p>" + vm_hardware
+//				+ "<p><h3><b>" + vm_disks_title    + "</b></h3></p>" + vm_disks
+				+ "<p><h3><b>" + vm_network_title  + "</b></h3></p>" + vm_network
+				+ "<p><h3><b>" + vm_source_title   + "</b></h3></p>" + vm_source;
+		}
+	
+		// Generate the "Virtual Machine (Final Settings)" proposal - proposal_mode == "existing"
+		if (VM_Common::autoyast_profile_settings != nil && VM_Common::autoyast_profile_settings["existing"]:nil != nil && size(VM_Common::autoyast_profile_settings["existing"]:$[]) > 0) {
+	
+			//load the saved AutoYaST profile settings
+			VM_Common::proposal_type = "existing";
+			VM::Import(VM_Common::autoyast_profile_settings);
+	
+			// NOTE: don't show AutoYaST in the summary, in AutoYaST config mode it doesn't make sense
+			map proposal = (map)WFM::CallFunction("xen_mode_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string xen_mode = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("xen_mode_proposal", ["Description", $[]]);
+			string xen_mode_title = proposal["rich_text_title"]:"";
+	
+			proposal = (map)WFM::CallFunction("vm_options_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string vm_options = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("vm_options_proposal", ["Description", $[]]);
+			string vm_options_title = proposal["rich_text_title"]:"";
+	
+			proposal = (map)WFM::CallFunction("vm_hardware_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string vm_hardware = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("vm_hardware_proposal", ["Description", $[]]);
+			string vm_hardware_title = proposal["rich_text_title"]:"";
+	
+			proposal = (map)WFM::CallFunction("vm_disks_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string vm_disks = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("vm_disks_proposal", ["Description", $[]]);
+			string vm_disks_title = proposal["rich_text_title"]:"";
+	
+			proposal = (map)WFM::CallFunction("vm_network_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string vm_network = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("vm_network_proposal", ["Description", $[]]);
+			string vm_network_title = proposal["rich_text_title"]:"";
+	
+			proposal = (map)WFM::CallFunction("vm_source_proposal", ["MakeProposal", $["force_reset":false, "language_changed":false]]);
+			string vm_source = proposal["preformatted_proposal"]:"";
+			proposal = (map)WFM::CallFunction("vm_source_proposal", ["Description", $[]]);
+			string vm_source_title = proposal["rich_text_title"]:"";
+	
+	
+			summary_ret = summary_ret + "<p><h2><b>" + _("Virtual Machine (Final Settings)") + "</b></h2></p>"
+				+ "<p><h3><b>" + xen_mode_title    + "</b></h3></p>" + xen_mode
+				+ "<p><h3><b>" + vm_options_title  + "</b></h3></p>" + vm_options
+				+ "<p><h3><b>" + vm_hardware_title + "</b></h3></p>" + vm_hardware
+				+ "<p><h3><b>" + vm_disks_title    + "</b></h3></p>" + vm_disks
+				+ "<p><h3><b>" + vm_network_title  + "</b></h3></p>" + vm_network
+				+ "<p><h3><b>" + vm_source_title   + "</b></h3></p>" + vm_source;
+		}
+	}
+
+	y2milestone("proposal: %1", summary_ret);
+	ret = summary_ret;
+    }
+    else if (func == "GetModified") {
+	ret = VM_Common::GetModified();
+    }
+    else if (func == "SetModified") {
+	VM_Common::SetModified(true);
+	ret = true;
+    }
+    /* Reset configuration */
+    else if (func == "Reset") {
+	// reset the configuration (propose new config)
+	VM_Common::proposal_type = "install";
+	VM_Common::autoyast_profile_settings = $[];
+	VM::ResetAllSettings();
+
+	ret = $[];
+    }
+    /* Change the configuration */
+    else if (func == "Change") {
+	ret = WFM::CallFunction("xen", [] );
+    }
+    /* Return required package list */
+    else if (func == "Packages") {
+	ret = $[];
+    }
+    /* Return actual state */
+    else if (func == "Export") {
+	ret = VM::Export();
+    }
+    else if (func == "Read") {
+	ret = false;
+	y2warning("Read handler is not implemented");
+    }
+    /* Write given settings */
+    else if (func == "Write") {
+	ret = false;
+	y2warning("Write handler is not implemented");
+    }
+    /* Unknown function */
+    else {
+	y2error("Unknown function: %1", func);
+	ret = false;
+    }
+
+    y2debug("ret=%1", ret);
+    y2milestone("Xen auto finished");
+    y2milestone("----------------------------------------");
+
+    return ret;
+
+    /* EOF */
+}
