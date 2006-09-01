@@ -806,9 +806,10 @@ define symbol FullOptionsDialog()
 
     map<string,string> fulloption = VM_XEN::GetFullOptions();
     string cd = fulloption["cdrom_image"]:"";
+    string cd_type = fulloption["cdrom_image_type"]:"phy";
     string boot = fulloption["boot_device"]:"c";
 
-    y2milestone("VTx config: cdrom_image: %1, boot_device: %2", cd, boot);
+    y2milestone("VTx config: cdrom_image: %1, cdrom_image_type: %2, boot_device: %3", cd, cd_type, boot);
 
     list<string> cd_devs = [];
     list<term> cd_items = [];
@@ -841,7 +842,7 @@ define symbol FullOptionsDialog()
 				`RadioButtonGroup(`id(`rb_group),
 					`VBox(
 						// radio button label
-						`Left(`RadioButton(`id(`cdrom), `opt(`notify), _("&CD / DVD Device"), boot == "d" && contains(cd_devs, cd))),
+						`Left(`RadioButton(`id(`cdrom), `opt(`notify), _("&CD / DVD Device"), boot == "d" && cd_type != "file")),
 						`HBox(
 							`HSpacing(3),
 							// combo box label
@@ -850,11 +851,11 @@ define symbol FullOptionsDialog()
 						),
 						`VSpacing(1),
 						// radio button label
-						`Left(`RadioButton(`id(`iso), `opt(`notify), _("&ISO Image File"), boot == "d" && !contains(cd_devs, cd))),
+						`Left(`RadioButton(`id(`iso), `opt(`notify), _("&ISO Image File"), boot == "d" && cd_type == "file")),
 						`HBox(
 							`HSpacing(3),
 							// textbox label
-							`TextEntry(`id(`cdromimage), `opt(`hstretch), _("&File Name"), boot == "d" && !contains(cd_devs, cd) ? cd : ""),
+							`TextEntry(`id(`cdromimage), `opt(`hstretch), _("&File Name"), (boot == "d" && cd_type == "file" && !contains(cd_devs, cd)) ? cd : ""),
 							`HSpacing(1),
 							`VBox(
 								`Label(""),
@@ -877,8 +878,8 @@ define symbol FullOptionsDialog()
 
     Wizard::SetContents (caption, contents, help_text, true, true);
 
-    if (contains(cd_devs, cd))
-    	UI::ChangeWidget(`id(`rb_group), `CurrentButton, `cdrom);
+    if (cd_type != "file")
+	UI::ChangeWidget(`id(`rb_group), `CurrentButton, `cdrom);
     else
 	UI::ChangeWidget(`id(`rb_group), `CurrentButton, `iso);
 
@@ -898,7 +899,6 @@ define symbol FullOptionsDialog()
 	}
 	else if (ret == `next) {
 	    symbol bootdev_symbol = (symbol)(UI::QueryWidget(`id(`rb_group), `CurrentButton));
-//	    string bootdev = (bootdev_symbol == `disk) ? "c" : "d";
 	    string bootdev = (VM_Common::proposal_type == "install") ? "d" : "c";
 
 	    y2milestone("bootdev_symbol: %1",  bootdev_symbol);
@@ -922,7 +922,7 @@ define symbol FullOptionsDialog()
 	    }
 	    else
 	    {
-		map<string,string> opts = $["boot_device":bootdev, "cdrom_image":cdimg];
+		map<string,string> opts = $["boot_device":bootdev, "cdrom_image":cdimg, "cdrom_image_type": ((bootdev_symbol == `cdrom) ? "phy" : "file")];
 		y2milestone("Full virtualization options: %1", opts);
 		VM_XEN::SetFullOptions( opts );
 		break;

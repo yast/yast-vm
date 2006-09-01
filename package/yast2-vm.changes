@@ -1,4 +1,15 @@
 -------------------------------------------------------------------
+Fri Sep  1 12:43:23 MDT 2006 - mgfritch@novell.com
+
+- Replace the 'cdrom=' entry in fully virtualized config files with
+  a corresponding disk line entry.
+- If para virtualized, kernel is extracted from a SUSE installation
+  source, and domU kernel version >= 2.6.18, add "sdl=1" to config
+  file.
+- Remove the 'extra' option with 'vnc=0 textmode=1'.
+- 2.14.0 
+
+-------------------------------------------------------------------
 Mon Aug  7 17:46:28 MDT 2006 - mgfritch@novell.com
 
 - Always write out "/usr/lib/xen/bin/qemu-dm" for the device_model
