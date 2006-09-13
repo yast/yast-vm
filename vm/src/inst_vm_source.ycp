@@ -1,0 +1,1133 @@
+/**
+ * Module:	inst_vm_source.ycp
+ *
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *		Michael G. Fritch <mgfritch@novell.com>
+ *
+ * Purpose:	Ask the user for installation source for the virtual machine.
+ *
+ * $Id$
+ *
+ */
+{
+    textdomain "vm";
+
+    import "VM";
+    import "VM_Common";
+    import "VM_XEN";
+    import "URL";
+    import "Label";
+    import "Popup";
+    import "Wizard";
+    import "Report";
+    import "Sequencer";
+    import "String";
+
+    // screen title - installation source configuration
+    string title = _("Installation Source");
+
+
+    list<integer> sources = Pkg::SourceGetCurrent (false);
+
+    map<string,any> sconfig = VM::GetSourceConfig();
+
+    define term create_item (integer index, integer id) ``{
+        map product_data = Pkg::SourceProductData (id);
+        map general_data = Pkg::SourceGeneralData (id);
+	string srcurl = general_data["url"]:"";
+	map parsed_url = URL::Parse(srcurl);
+	if (!URL::Check(srcurl) || parsed_url["host"]:"" == "")	{
+		return nil;
+	}
+	else {
+		return `item (`id (index),
+		      product_data["label"]:"unknown",
+		      general_data["url"]:"");
+	}
+    }
+
+
+    define void fill_table () ``{
+
+	integer i = 0;
+        list items = [];
+	integer j = -1;
+
+        while (i < size (sources))
+	{
+	    term new_item = create_item (i, sources[i]:0);
+	    if (new_item != nil) items = add (items, new_item);
+	    if (sources[i]:0 == sconfig["source_id"]:0)
+		j = i;
+	    i = i + 1;
+        }
+
+        UI::ChangeWidget (`id (`sources), `Items, items);
+	if (j > -1)
+	    UI::ChangeWidget (`id(`sources), `CurrentItem, j);
+    }
+
+
+    define void updateConfig(map<string,any> conf) {
+	y2debug("updateConfig(%1)", conf);
+	VM::SetSourceConfig(conf["source_id"]:0, conf["inst_type"]:`cdrom, conf["custom_source"]:"");
+    }
+
+    define void Refresh_SourceDialog() {
+	any rb = UI::QueryWidget (`id(`rbg), `CurrentButton);
+
+	UI::ChangeWidget(`id(`kernel), `Enabled, (rb == `specify));
+	UI::ChangeWidget(`id(`select_kernel), `Enabled, (rb == `specify));
+	UI::ChangeWidget(`id(`initrd), `Enabled, (rb == `specify));
+	UI::ChangeWidget(`id(`select_initrd), `Enabled, (rb == `specify));
+
+    }
+
+
+    /**
+    * Popup dialog - source configuration
+    * return symbol
+    */
+    define symbol SourceTypeDialog() {
+
+	// screen title
+	string caption = _("Operating System Installation");
+
+	term contents =
+	`MarginBox(1.5, 0.2, `VBox(
+		`RadioButtonGroup(`id(`rbg),
+			// frame label
+			`Frame(_("Install Using"),
+				`MarginBox(1.5, 0.2, `VBox(
+					// radio button
+					`Left(`RadioButton(`id(`network_configured), `opt(`notify), _("Network Installation &Source"))),
+					`VSpacing(0.5),
+					// radio button
+					`Left(`RadioButton(`id(`cdrom), `opt(`notify), _("&CD / DVD Device"))),
+					`VSpacing(0.5),
+					// radio button
+					`Left(`RadioButton(`id(`iso), `opt(`notify), _("&ISO Image File")))
+				))
+			)
+		),
+		`VSpacing(2),
+		// frame label
+		`Frame(_("Installation Options"),
+			`MarginBox(1.5, 0.2,
+				`TextEntry(`id(`bootopts), `opt(`hstretch), "", VM::GetExtraArgs())))
+	));
+
+	// Operating System Installation - help text 1/4
+	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	// Operating System Installation - help text 2/4
+	help_text = help_text + _("<p>The VM's operating system can be installed from a YaST Network Installation Source, a CD / DVD device, or an ISO image file.</p>");
+	// Operating System Installation - help text 3/4
+	help_text = help_text + _("<p>Any of these methods can be used to install SUSE operating systems.  Non-SUSE operating systems must be installed from a CD / DVD device or an ISO image file.</p>");
+	// Operating System Installation - help text 4/4
+	help_text = help_text + _("<p><b>Installation Options</b> are optional arguments passed to the kernel during installation.</p>");
+
+
+	Wizard::SetContents(caption, contents, help_text, true, true);
+
+	symbol s = `dummy;
+
+	// set the default state for the radio buttons
+	if (sconfig["inst_type"]:`cdrom == `network_configured || sconfig["inst_type"]:`cdrom == `network_custom)
+		UI::ChangeWidget(`id(`rbg), `CurrentButton, `network_configured);
+	else if (sconfig["inst_type"]:`cdrom == `iso)
+		UI::ChangeWidget(`id(`rbg), `CurrentButton, `iso);
+	else
+		UI::ChangeWidget(`id(`rbg), `CurrentButton, `cdrom);
+
+
+	while(!contains([`next, `back, `abort, `cancel], s))
+	{
+	    s = (symbol) UI::UserInput();
+	    y2milestone("s=%1", s);
+
+//FIXME: popup confirmation for abort???
+	    if (s == `next) {
+		symbol type = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton);
+
+		if (type == `network_configured) {
+			if (sconfig["inst_type"]:`cdrom == `network_custom)
+				type = `network_custom;
+			VM::SetCustomKernel(false);
+		}
+
+		y2milestone("old sconfig: %1", sconfig);
+		sconfig["inst_type"] = type;
+		updateConfig(sconfig);
+		y2milestone("new sconfig: %1", sconfig);
+
+		string boot = (string) UI::QueryWidget (`id(`bootopts), `Value);
+		VM::SetExtraArgs(boot);
+
+		s = type;
+		break;
+	    }
+// FIXME: add catch for any unknown return values???
+	}
+
+	return s;
+    }
+
+
+
+
+    define symbol CD_SourceDialog() {
+
+	// dialog title
+	string caption = _("Install Using a CD / DVD Device");
+
+        list<term> cd_items = [];
+        list<map> cd_hwinfo = (list<map>)SCR::Read(.probe.cdrom);
+
+        if (cd_hwinfo != nil) {
+            foreach(map dev, cd_hwinfo, {
+	        string device = dev["dev_name"]:"";
+	        string model = dev["model"]:"";
+
+	        y2milestone("CD-ROM model: %1, device: %2", model, device);
+
+	        if (device != nil && device != "") {
+		    // format CD device name: %1 is model name (e.g. "TOSHIBA DVD-ROM SD-M1402"), %2 is device name (e.g. /dev/hdc)
+		    cd_items = add(cd_items, `item(`id(device), sformat(_("%1 (%2)"), model, device)/*, device == cd*/));
+	        }
+	    });
+        }
+
+	term contents =
+		`MarginBox(1.5, 0.2, `VBox(
+			`HBox(
+//				`HSpacing(3),
+				// combobox label
+				`ComboBox(`id(`cddev), _("&CD / DVD Device"), cd_items),
+				`HStretch()
+			),
+			`VSpacing(2),
+			`RadioButtonGroup(`id(`rbg),
+				// frame label
+				`Frame(_("CD / DVD Media Type"),
+					`MarginBox(1.5, 1, `VBox(
+						// radio button
+						`Left(`RadioButton(`id(`extract), `opt(`notify), _("&SUSE Installation Source"))),
+						`VSpacing(0.5),
+						// radio button
+						`Left(`RadioButton(`id(`specify), `opt(`notify), _("&Other Installation Source"))),
+						`HBox(
+							`HSpacing(3),
+							// textbox label
+							`TextEntry(`id(`kernel), `opt(`hstretch), _("&Xen-Enabled Kernel"), VM::GetKernelImage()),
+							`HSpacing(1),
+							`VBox(
+								`Label(""),
+								// button label
+								`PushButton(`id(`select_kernel), _("Browse..."))
+							)
+						),
+						`HBox(
+							`HSpacing(3),
+							// textbox label
+							`TextEntry(`id(`initrd), `opt(`hstretch), _("&Installation File (initrd)"), VM::GetInitrdImage()),
+							`HSpacing(1),
+							`VBox(
+								`Label(""),
+								// button label
+								`PushButton(`id(`select_initrd), _("Browse..."))
+							)
+						)
+					))
+				)
+			)
+		));
+
+	// Install Using a CD / DVD Device help text 1/3
+	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	// Install Using a CD / DVD Device help text 2/3
+	help_text = help_text + _("<p>The VM's operating system will be installed from the selected <b>CD / DVD device</b>.</p>");
+	// Install Using a CD / DVD Device help text 3/3
+	help_text = help_text + _("<p>Specify whether the <b>CD / DVD media type</b> is a SUSE installation source, or some other type.  Using installation media other than SUSE requires you to designate the locations of the Xen-enabled kernel and, optionally, the initial installation program (initrd).  These files must be accessible on the VM Server's file system.</p>");
+
+	Wizard::SetContents(caption, contents, help_text, true, true);
+
+	symbol s = `dummy;
+
+	if (VM::GetCustomKernel()) {
+		UI::ChangeWidget(`id(`rbg), `CurrentButton, `specify);
+	}
+	else {
+		UI::ChangeWidget(`id(`rbg), `CurrentButton, `extract);
+	}
+
+	string old_cddev = sconfig["custom_source"]:""; // remember the old source, just in case it needs to be removed from the disks config
+	UI::ChangeWidget(`id(`cddev), `Value, old_cddev);
+
+	// initialize the widgets
+	Refresh_SourceDialog();
+
+	while(!contains([`next, `back, `abort, `cancel], s))
+	{
+
+	    s = (symbol) UI::UserInput();
+	    y2milestone("s=%1", s);
+
+	    Refresh_SourceDialog();
+
+//FIXME: popup confirmation for abort???
+	    if (s == `next) {
+		symbol type = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton);
+		string cddev = (string) UI::QueryWidget (`id(`cddev), `Value);
+		string kernel = "";
+		string initrd = "";
+
+		if (cddev == nil || cddev == "") {
+			// popup error message
+			Report::Error(_("A CD / DVD device name must be selected."));
+			s = `again;
+			continue;
+		}
+		// FIXME: check whether the file exists
+/*		if ((integer)SCR::Read(.target.size, cddev) < 0) {
+			// popup error message
+			// %1 is file name
+			Report::Error(_("The specified CD / DVD device does not exist, or
+there is no media in the CD / DVD device.
+
+Please ensure that the desired media is in the selected CD / DVD device.
+"));
+			s = `again;
+			continue;
+		}
+*/
+
+		if (type == `specify) {
+			kernel = (string) UI::QueryWidget (`id(`kernel), `Value);
+			initrd = (string) UI::QueryWidget (`id(`initrd), `Value);
+
+		    if (kernel == nil || kernel == "") {
+			// popup error message
+			Report::Error(_("The kernel file name cannot be empty."));
+			s = `again;
+			continue;
+		    }
+
+		    VM::SetCustomKernel(true);
+		    VM::SetKernelImage(kernel);
+		    VM::SetInitrdImage(initrd);
+
+		    // if NetWare always set localtime=1 in para virtualization
+		    if (VM_Common::GetVirtualizationType() == "para" && VM_Common::IsNetWareKernel(kernel)) {
+			VM::SetLocaltime(1);
+			if (VM::GetMemorySize() < 512) {
+				VM::SetMemorySize(512); // if NetWare increase the memory_size=512
+			}
+		    }
+		}
+		else {
+		    VM::SetCustomKernel(false);
+		}
+
+		// set custom installation source
+		y2milestone("old sconfig: %1", sconfig);
+		sconfig["custom_source"] = cddev;
+		updateConfig(sconfig);
+		y2milestone("new sconfig: %1", sconfig);
+
+		VM::UpdateDiskConfig(old_cddev, cddev, "phys");
+
+	    }
+	    else if (s == `select_kernel) {
+		string new_kernel = (string)UI::QueryWidget(`id(`kernel), `Value);
+		// popup title
+		new_kernel = UI::AskForExistingFile(new_kernel, "*", _("Select Xen-Enabled Kernel"));
+
+		if (new_kernel != nil)
+		{
+		    UI::ChangeWidget(`id(`kernel), `Value, new_kernel);
+		}
+	    }
+	    else if (s == `select_initrd) {
+		string new_initrd = (string)UI::QueryWidget(`id(`initrd), `Value);
+		// popup title
+		new_initrd = UI::AskForExistingFile(new_initrd, "*", _("Select Initial RAM Disk"));
+
+		if (new_initrd != nil)
+		{
+		    UI::ChangeWidget(`id(`initrd), `Value, new_initrd);
+		}
+	    }
+// FIXME: add catch for any unknown return values???
+	}
+
+	return s;
+    }
+
+
+    define symbol ISO_SourceDialog() {
+
+	// dialog title
+	string caption = _("Install Using an ISO Image");
+
+	term contents =
+	`MarginBox(1.5, 0.2, `VBox(
+		`HBox(
+//			`HSpacing(3),
+			// textbox label
+			`TextEntry(`id(`cdromimage), `opt(`hstretch), _("&ISO Image File")),
+			`HSpacing(1),
+			`VBox(
+				`Label(""),
+				// button label
+				`PushButton(`id(`select_cdromimage), _("Browse..."))
+			)
+		),
+		`VSpacing(2),
+		`RadioButtonGroup(`id(`rbg),
+			// heading in a popup dialog
+			`Frame(_("ISO Type"),
+				`MarginBox(1.5, 1, `VBox(
+					// radio button label
+					`Left(`RadioButton(`id(`extract), `opt(`notify), _("&SUSE Installation Source"))),
+					`VSpacing(0.5),
+					// radio button label
+					`Left(`RadioButton(`id(`specify), `opt(`notify), _("&Other Installation Source"))),
+					`HBox(
+						`HSpacing(3),
+						// textbox label
+						`TextEntry(`id(`kernel), `opt(`hstretch), _("&Xen-Enabled Kernel"), VM::GetKernelImage()),
+						`HSpacing(1),
+						`VBox(
+							`Label(""),
+							// button label
+							`PushButton(`id(`select_kernel), _("Browse..."))
+						)
+					),
+					`HBox(
+						`HSpacing(3),
+						// textbox label
+						`TextEntry(`id(`initrd), `opt(`hstretch), _("&Installation File (initrd)"), VM::GetInitrdImage()),
+						`HSpacing(1),
+						`VBox(
+							`Label(""),
+							// button label
+							`PushButton(`id(`select_initrd), _("Browse..."))
+						)
+					)
+				))
+			)
+		)
+	));
+
+	// Install Using an ISO Image - help text 1/3
+	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	// Install Using an ISO Image - help text 2/3
+	help_text = help_text + _("If the installation source files are stored in an .ISO image file, you can specify its location on the VM Server's file system.</p>");
+	// Install Using an ISO Image - help text 3/3
+	help_text = help_text + _("<p>Specify whether the <b>ISO image file</b> is a SUSE installation source, or some other type. Using installation media other than SUSE requires you to designate the locations of the Xen-enabled kernel and, optionally, the initial installation program (initrd). These files must be accessible on the VM Server's file system.</p>");
+
+	Wizard::SetContents(caption, contents, help_text, true, true);
+
+	symbol s = `dummy;
+
+	if (VM::GetCustomKernel()) {
+		UI::ChangeWidget(`id(`rbg), `CurrentButton, `specify);
+	}
+	else {
+		UI::ChangeWidget(`id(`rbg), `CurrentButton, `extract);
+	}
+	
+	string old_cdromimage = sconfig["custom_source"]:""; // remember the old source, just in case it needs to be removed from the disks config
+	UI::ChangeWidget(`id(`cdromimage), `Value, (regexpmatch(old_cdromimage, ".*iso")) ? old_cdromimage : "");
+
+	// initialize the widgets
+	Refresh_SourceDialog();
+
+	while(!contains([`next, `back, `abort, `cancel], s))
+	{
+	    s = (symbol) UI::UserInput();
+	    y2milestone("s=%1", s);
+
+	    Refresh_SourceDialog();
+
+//FIXME: popup confirmation for abort???
+	    if (s == `next) {
+		symbol type = (symbol) UI::QueryWidget (`id(`rbg), `CurrentButton);
+		string cdromimage = "";
+		string kernel = "";
+		string initrd = "";
+
+		cdromimage = (string) UI::QueryWidget (`id(`cdromimage), `Value);
+		if (cdromimage == nil || cdromimage == "") {
+			// popup error message
+			Report::Error(_("ISO file name cannot be empty."));
+			s = `again;
+			continue;
+		}
+
+		if (type == `specify) { // kernel and initrd specified by user
+			kernel = (string) UI::QueryWidget (`id(`kernel), `Value);
+			initrd = (string) UI::QueryWidget (`id(`initrd), `Value);
+
+			if (kernel == nil || kernel == "") {
+				// popup error message
+				Report::Error(_("The kernel file name cannot be empty."));
+				s = `again;
+				continue;
+			}
+	
+			VM::SetCustomKernel(true);
+			VM::SetKernelImage(kernel);
+			VM::SetInitrdImage(initrd);
+	
+			// if NetWare always set localtime=1 in para virtualization
+			if (VM_Common::GetVirtualizationType() == "para" && VM_Common::IsNetWareKernel(kernel)) {
+				VM::SetLocaltime(1);
+				if (VM::GetMemorySize() < 512) {
+					VM::SetMemorySize(512); // if NetWare increase the memory_size=512
+				}
+			}
+
+		}
+		else { // extract the kernel and initrd from a SUSE inst source
+			VM::SetCustomKernel(false);
+		}
+
+		// set custom installation source
+		y2milestone("old sconfig: %1", sconfig);
+		sconfig["custom_source"] = cdromimage;
+		updateConfig(sconfig);
+		y2milestone("new sconfig: %1", sconfig);
+
+		VM::UpdateDiskConfig(old_cdromimage, cdromimage, "loop-use");
+
+	    }
+	    else if (s == `select_kernel) {
+		string new_kernel = (string)UI::QueryWidget(`id(`kernel), `Value);
+		// popup title
+		new_kernel = UI::AskForExistingFile(new_kernel, "*", _("Select Xen-Enabled Kernel"));
+
+		if (new_kernel != nil)
+		{
+		    UI::ChangeWidget(`id(`kernel), `Value, new_kernel);
+		}
+	    }
+	    else if (s == `select_initrd) {
+		string new_initrd = (string)UI::QueryWidget(`id(`initrd), `Value);
+		// popup title
+		new_initrd = UI::AskForExistingFile(new_initrd, "*", _("Select Initial RAM Disk"));
+
+		if (new_initrd != nil)
+		{
+		    UI::ChangeWidget(`id(`initrd), `Value, new_initrd);
+		}
+	    }
+	    else if (s == `select_cdromimage) {
+		string cdimg = (string)(UI::QueryWidget(`id(`cdromimage), `Value));
+		// popup title
+		string new_img = UI::AskForExistingFile(cdimg, "*.iso", _("Select ISO Image"));
+	
+		if (new_img != nil)
+		{
+			UI::ChangeWidget(`id(`cdromimage), `Value, new_img);
+		}
+	    }
+// FIXME: add catch for any unknown return values???
+	}
+
+	return s;
+    }
+
+
+
+define symbol Network_SourceDialog() {
+    // build and show dialog
+    integer indent = 3;
+    // dialog title
+    string caption = _("Install Using a Network Installation Source");
+
+    string old_custom_source = sconfig["custom_source"]:""; // remember the old source, just in case it needs to be removed from the disks config
+    string default_custom_src = "";
+    if (! regexpmatch(sconfig["custom_source"]:"", ".*iso") && ! regexpmatch(sconfig["custom_source"]:"", "/dev.*")) {
+	default_custom_src = sconfig["custom_source"]:"";
+    }
+    boolean inst_type_configured = true;
+    if (sconfig["inst_type"]:`unknown != `network_configured && default_custom_src != "") {
+	inst_type_configured = false;
+    }
+
+    term contents = `VBox(
+			`RadioButtonGroup(`id(`source), `opt(`notify),
+			    `VBox(
+				`VSpacing(0.3),
+				// radio button label
+				`Left(`RadioButton(`id(`network_configured),  `opt(`notify), _("&Configured Installation Source"),  inst_type_configured)),
+				`VSpacing(0.3),
+				`HBox(
+				    `HSpacing(indent),
+				    `Table(`id(`sources),
+					// table column heading
+					`header(_("Name"), _("URL")), [ ])
+				),
+				// push button label
+				// installation source configuration module
+				// is started when it's pressed
+				`PushButton(`id(`inst_src), _("C&onfigure...")),
+				`VSpacing(1),
+				// radio button label
+				`Left(`RadioButton(`id(`network_custom),  `opt(`notify), _("Custom &Installation Source"), inst_type_configured == false)),
+				`HBox(
+				    `HSpacing(indent),
+				    // textbox label
+				    `TextEntry(`id(`custom_source), _("&URL of Installation Source"), default_custom_src)
+				),
+				`VSpacing(1)
+
+// TODO: disabled, we need kernel package before starting VM, we MUST know the URL
+//				// textbox label
+//				`Left(`RadioButton(`id(`slp),  `opt(`notify), _("&SLP Installation Source"), sconfig["inst_type"]:`unknown == `slp)),
+//				`VSpacing(1)
+			    )
+			)
+		    );
+
+    // Install Using a Network Installation Source - help text 1/4
+    string help_text = sformat(_("<P><B><big>%1</big></B></P>"), caption);
+	// Install Using a Network Installation Source - help text 2/4
+	help_text = help_text + _("<p>YaST provides a library for storing <b>SUSE installation source</b> files with their associated kernel and initial install programs (initrd).</p>");
+	// Install Using a Network Installation Source - help text 3/4
+	help_text = help_text + _("<p>Make sure to select an installation source that includes a Xen-enabled kernel.</p>");
+	// Install Using a Network Installation Source - help text 4/4
+	help_text = help_text + _("<P>Only network installation sources, such as FTP or NFS, are supported.</P>");
+
+    Wizard::SetContents(caption, contents, help_text, true, true);
+
+    fill_table();
+
+    symbol ret = nil;
+
+    while (true)
+    {
+	// refresh status of the widgets
+	symbol selected = (symbol)(UI::QueryWidget(`id(`source), `CurrentButton));
+	UI::ChangeWidget(`id(`sources), `Enabled, selected == `network_configured);
+	UI::ChangeWidget(`id(`inst_src), `Enabled, selected == `network_configured);
+	UI::ChangeWidget(`id(`custom_source), `Enabled, selected == `network_custom);
+
+	ret = (symbol) Wizard::UserInput ();
+
+	if (ret == `abort || ret == `cancel) {
+		if (Popup::ReallyAbort(VM_Common::GetModified()))
+			break;
+	}
+	else if (ret == `back) {
+	    break;
+	}
+	else if (ret == `next) {
+	    // check if selected installation source is valid
+	    integer current = (integer) UI::QueryWidget (`id(`sources), `CurrentItem);
+
+	    y2milestone("sources: %1", sources);
+	    integer current_srcid = -1;
+	    if (size(sources) > 0)
+	    {
+		current_srcid = sources[current]:0;
+	    }
+
+	    y2milestone("current_srcid: %1", current_srcid);
+
+	    symbol selected_type = (symbol)UI::QueryWidget(`id(`source), `CurrentButton);
+	    string selected_custom_source = (string)UI::QueryWidget(`id(`custom_source), `Value);
+	    string srcurl = "";
+
+	    if (selected_type == `network_configured)
+	    {
+		if (current_srcid >= 0)
+		{
+		    map general_data = Pkg::SourceGeneralData(current_srcid);
+		    srcurl = general_data["url"]:"";
+		}
+	    }
+	    else
+	    {
+		srcurl = selected_custom_source;
+	    }
+
+	    map parsed_url = URL::Parse(srcurl);
+
+	    if (!URL::Check(srcurl) || parsed_url["host"]:"" == "")
+	    {
+		// popup error message
+		Report::Error(_("Entered URL value is not valid."));
+	    }
+	    else
+	    {
+		y2debug("Selected source: %1", srcurl);
+		sconfig["inst_type"] = selected_type;
+
+		if (selected_type == `network_configured)
+		{
+		    sconfig["source_id"] = current_srcid;
+		}
+		else if (selected_type == `network_custom)
+		{
+		    sconfig["custom_source"] = selected_custom_source;
+		}
+		else
+		{
+		    y2error("Unknown installation type");
+		}
+
+		updateConfig(sconfig);
+		VM::SetCustomKernel(false);
+		VM::UpdateDiskConfig(old_custom_source, "", ""); // remove any old custom sources that were added as disks
+		break;
+	    }
+/*	    else
+	    {
+		// popup error message
+		Report::Error(_("Only network installation sources
+are supported in the installation."));
+	    }*/
+	}
+	else if (ret == `inst_src) {
+	    integer current = (integer) UI::QueryWidget (`id(`sources), `CurrentItem);
+
+	    integer current_srcid = -1;
+	    if (size(sources) > 0)
+	    {
+		current_srcid = sources[current]:-1;
+	    }
+
+	    y2milestone("Selected source: %1", current_srcid);
+
+	    // remember the sources
+	    list<integer> sources_old = sources;
+
+
+	    // start installation source configuration module
+	    WFM::CallFunction("inst_source", []);
+
+
+	    // refresh table content
+	    sources = Pkg::SourceGetCurrent(false);
+	    y2milestone("Configured sources: %1", sources);
+
+
+	    // recreate the new sources to load the resolvables
+	    list<map> new_sources = [];
+
+	    foreach(integer src, sources,
+		{
+		    if (!contains(sources_old, src))
+		    {
+			map general_data = Pkg::SourceGeneralData(src);
+			string srcurl = general_data["url"]:"";
+			string product_dir = general_data["product_dir"]:"/";
+
+			new_sources = add(new_sources, $[ "id" : src, "url" : srcurl, "product_dir" : product_dir ]);
+		    }
+		}
+	    );
+
+	    y2milestone("New sources: %1", new_sources);
+
+	    // the recreated sources, inst_source doesn't call Pkg::SourceCreate(),
+	    // the new sources are not fully initialized
+	    list<integer> new_ids = [];
+
+	    if (size(new_sources) > 0)
+	    {
+		// initialize the new sources
+		foreach(map s, new_sources,
+		    {
+			Pkg::SourceDelete(s["id"]:-1);
+
+			integer new_id = Pkg::SourceCreate(s["url"]:"", s["product_dir"]:"/");
+
+			if (new_id != nil && new_id > 0)
+			{
+			    y2milestone("Created new source %1: %2", new_id, s["url"]:"");
+			    new_ids = add(new_ids, new_id);
+			}
+		    }
+
+		);
+
+		sources = Pkg::SourceGetCurrent(false);
+	    }
+
+	    // the current selected source is missing
+	    if (!contains(sources, current_srcid))
+	    {
+		y2milestone("Previously selected source %1 is not available (%2)", current_srcid, sources);
+
+		// exactly one new source, suppose the ID has changed
+		if (size(new_ids) == 1)
+		{
+		    integer src = new_ids[0]:0;
+		    y2milestone("Using new source ID %1 instead of %2", src , current_srcid);
+
+		    // select the source
+		    sconfig["source_id"] = src;
+		    // refresh list
+		    sources = Pkg::SourceGetCurrent(false);
+		}
+		else
+		{
+		    // reset config, the current source is not valid
+		    // TODO: display a warning popup - "The installation source is not available."
+		    VM::ResetSource();
+		    sconfig = VM::GetSourceConfig();
+		}
+	    }
+
+	    fill_table();
+	}
+    }
+
+    return ret;
+}
+
+define void RefreshFullOptionsDialog()
+{
+    symbol enabled = (symbol) UI::QueryWidget (`id(`rb_group), `CurrentButton);
+
+    UI::ChangeWidget(`id(`cdromimage), `Enabled, enabled == `iso);
+    UI::ChangeWidget(`id(`select_file), `Enabled, enabled == `iso);
+
+    UI::ChangeWidget(`id(`cddev), `Enabled, enabled == `cdrom);
+}
+
+define symbol FullOptionsDialog()
+{
+    // dialog title
+    string caption = _("Operating System Installation");
+
+    map<string,string> fulloption = VM_XEN::GetFullOptions();
+    string cd = fulloption["cdrom_image"]:"";
+    string cd_type = fulloption["cdrom_image_type"]:"phy";
+    string boot = fulloption["boot_device"]:"c";
+
+    y2milestone("VTx config: cdrom_image: %1, cdrom_image_type: %2, boot_device: %3", cd, cd_type, boot);
+
+    list<string> cd_devs = [];
+    list<term> cd_items = [];
+
+    list<map> cd_hwinfo = (list<map>)SCR::Read(.probe.cdrom);
+
+    if (cd_hwinfo != nil) {
+	foreach(map dev, cd_hwinfo,
+	{
+	    string device = dev["dev_name"]:"";
+	    string model = dev["model"]:"";
+
+	    y2milestone("CD-ROM model: %1, device: %2", model, device);
+
+	    if (device != nil && device != "")
+	    {
+		cd_devs = add(cd_devs, device);
+		// format CD device name: %1 is model name (e.g. "TOSHIBA DVD-ROM SD-M1402"), %2 is device name (e.g. /dev/hdc)
+		cd_items = add(cd_items, `item(`id(device), sformat(_("%1 (%2)"), model, device), device == cd));
+	    }
+	}
+	);
+    }
+
+    term contents =
+	`MarginBox(1.5, 0.2,
+		// frame label
+		`Frame(_("Install Using"),
+			`MarginBox(0.5, 0.5,
+				`RadioButtonGroup(`id(`rb_group),
+					`VBox(
+						// radio button label
+						`Left(`RadioButton(`id(`cdrom), `opt(`notify), _("&CD / DVD Device"), boot == "d" && cd_type != "file")),
+						`HBox(
+							`HSpacing(3),
+							// combo box label
+							`ComboBox(`id(`cddev), _("&Device Name"), cd_items),
+							`HStretch()
+						),
+						`VSpacing(1),
+						// radio button label
+						`Left(`RadioButton(`id(`iso), `opt(`notify), _("&ISO Image File"), boot == "d" && cd_type == "file")),
+						`HBox(
+							`HSpacing(3),
+							// textbox label
+							`TextEntry(`id(`cdromimage), `opt(`hstretch), _("&File Name"), (boot == "d" && cd_type == "file" && !contains(cd_devs, cd)) ? cd : ""),
+							`HSpacing(1),
+							`VBox(
+								`Label(""),
+								// button label
+								`PushButton(`id(`select_file), _("Br&owse..."))
+							),
+							`HSpacing(1)
+						)
+					)
+				)
+			)
+		)
+	);
+
+
+    // help text for OS selection in full virtualization mode (1/2)
+    string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+    // help text for OS selection in full virtualization mode (2/2)
+    help_text = help_text + _("<p>The installation of the operating system can be started from a physical CD / DVD or an ISO image file.</p>");
+
+    Wizard::SetContents (caption, contents, help_text, true, true);
+
+    if (cd_type != "file")
+	UI::ChangeWidget(`id(`rb_group), `CurrentButton, `cdrom);
+    else
+	UI::ChangeWidget(`id(`rb_group), `CurrentButton, `iso);
+
+    symbol ret = nil;
+
+    while (true) {
+	RefreshFullOptionsDialog();
+
+	ret = (symbol) Wizard::UserInput();
+
+	if (ret == `abort || ret == `cancel) {
+		if (Popup::ReallyAbort(VM_Common::GetModified()))
+			break;
+	}
+	else if (ret == `back) {
+	    break;
+	}
+	else if (ret == `next) {
+	    symbol bootdev_symbol = (symbol)(UI::QueryWidget(`id(`rb_group), `CurrentButton));
+	    string bootdev = (VM_Common::proposal_type == "install") ? "d" : "c";
+
+	    y2milestone("bootdev_symbol: %1",  bootdev_symbol);
+	    y2milestone("bootdev: %1", bootdev);
+
+	    string cdimg = "";
+
+	    if (bootdev_symbol == `cdrom)
+	    {
+		cdimg = (string)(UI::QueryWidget(`id(`cddev), `Value));
+	    }
+	    else
+	    {
+		cdimg = (string)(UI::QueryWidget(`id(`cdromimage), `Value));
+	    }
+
+	    if (bootdev_symbol == `iso && cdimg == "")
+	    {
+		// error - entered empty ISO image file name
+		Report::Error(_("Select an ISO image file for CD-ROM emulation."));
+	    }
+	    else
+	    {
+		map<string,string> opts = $["boot_device":bootdev, "cdrom_image":cdimg, "cdrom_image_type": ((bootdev_symbol == `cdrom) ? "phy" : "file")];
+		y2milestone("Full virtualization options: %1", opts);
+		VM_XEN::SetFullOptions( opts );
+		break;
+	    }
+	}
+	else if (ret == `select_file) {
+	    string cdimg = (string)(UI::QueryWidget(`id(`cdromimage), `Value));
+	    string new_img = UI::AskForExistingFile(cdimg, "*.iso", _("Select ISO Image"));
+
+	    if (new_img != nil)
+	    {
+		UI::ChangeWidget(`id(`cdromimage), `Value, new_img);
+	    }
+	}
+	else {
+		y2error("unexpected retcode: %1", ret);
+		continue;
+	}
+    }
+
+    return ret;
+}
+
+
+/**
+ * dialog - boot options configuration
+ * @return symbol dialog result
+ */
+define symbol BootOptionsDialog() {
+	// figure out what disks are configured.
+	list<string> used_targets = VM::GetConfiguredDiskTargets(VM::GetDiskConfig());
+	// propose some partions based on the configured disks.
+	list<string> valid_partitions = [];
+	foreach (string target, used_targets, {
+		if (target != nil && target != "") {
+			list<string> postfix = [];
+			if (findfirstof(target, String::CDigit()) != nil) {// already contains partition.
+				postfix = [ target ];
+			}
+			else {
+				postfix = ["1", "2", "3", "4", "5", "6"];
+				postfix = maplist(string postchar, postfix, { return target + postchar; });
+			}
+			valid_partitions = (list<string>) union(valid_partitions, postfix);
+		}
+	});
+	valid_partitions = toset(valid_partitions); //sort list and remove duplicates
+
+	// dialog title
+	string caption = _("Operating System Boot Files");
+	
+	term contents =
+		`MarginBox(1.5, 0.2, `VBox(
+			// frame label
+			`Frame(_("Boot Using"),
+				`MarginBox(1.5, 0.2, `VBox(
+					// combobox label
+					`ComboBox(`id(`device), `opt(`editable,`hstretch), _("&Partition Containing Boot Files"), valid_partitions),
+					`VSpacing(0.5),
+					// textbox label
+					`TextEntry(`id(`kernel), `opt(`hstretch), _("&Xen-Enabled Kernel"), VM::GetKernelImage()),
+					`VSpacing(0.5),
+					// textbox label
+					`TextEntry(`id(`initrd), `opt(`hstretch), _("Boot &File (initrd)"), VM::GetInitrdImage())
+				))
+			),
+			`VSpacing(2),
+			// frame label
+			`Frame(_("Boot Options"),
+				`MarginBox(1.5, 0.2,
+				`TextEntry(`id(`bootopts), `opt(`hstretch), "", VM::GetExtraArgs()))
+			)
+		));
+
+	// boot options - help text 1/3
+	string help_text = sformat(_("<p><b><big>%1</big></b></p>"), caption);
+	// boot options - help text 2/3
+	help_text = help_text + _("<p>The VM boots its operating system using the <b>kernel</b> and <b>boot file</b> stored on a virtual disk. Specify the partition that holds these files and the location of each. For example, partition: <tt>hda1</tt>; location of <b>kernel</b>: <tt>/boot/vmlinuz-xen</tt>; and location of <b>boot file</b>: <tt>/boot/initrd-xen.</tt></p>");
+	// boot options - help text 3/3
+	help_text = help_text + _("<p><b>Boot options</b> are optional arguments passed to the kernel each time it boots.</p>");
+
+	Wizard::SetContents(caption, contents, help_text, true, true);
+
+	UI::ChangeWidget (`id(`device), `Value, VM_Common::root_device);
+
+	symbol ui = `dummy;
+	while(!contains([`next, `back, `abort, `cancel], ui)) {
+
+		ui = (symbol) UI::UserInput();
+		y2milestone("ui=%1", ui);
+
+		if (ui == `abort || ui == `cancel) {
+			if (!Popup::ReallyAbort(VM_Common::GetModified()))
+				ui = `again;
+				continue;
+		}
+		else if (ui == `next) {
+			string device = (string) UI::QueryWidget (`id(`device), `Value);
+			string kernel = (string) UI::QueryWidget (`id(`kernel), `Value);
+			string initrd = (string) UI::QueryWidget (`id(`initrd), `Value);
+			string bootopts = (string) UI::QueryWidget (`id(`bootopts), `Value);
+	
+			if (device == nil || device == "") {
+				// popup error message
+				Report::Error(_("Partition Containing Kernel and RAM Disk cannot be empty."));
+				ui = `again;
+				continue;
+			}
+		// make sure the device is a defined virtual disk...
+		boolean success = false;
+		foreach(string target, used_targets, {
+			if (issubstring(device, target)) success = true;
+		});
+		if (!success) {
+			// popup error message with continue/cancel buttons
+			if (!Popup::ContinueCancelHeadline(_("Warning"), _("The Partition Containing Kernel and RAM Disk,
+does not match any configued disks."))) {
+				ui = `again;
+				continue;
+			}
+		}
+
+			if (kernel == nil || kernel == "") {
+				// popup error message
+				Report::Error(_("Xen-Enabled Kernel cannot be empty."));
+				ui = `again;
+				continue;
+			}
+
+/*			if (initrd == nil || initrd == "") {
+				// popup error message
+				Report::Error(_("RAM Disk cannot be empty."));
+				s = `again;
+				continue;
+			}*/
+	
+			VM::SetCustomKernel(true);
+	
+			VM::SetKernelImage(kernel);
+			VM::SetInitrdImage(initrd);
+			VM_Common::root_device = device;
+	
+			VM::SetExtraArgs(bootopts);
+		}
+		// FIXME: add catch for any unknown return values???
+	}
+	return ui;
+}
+
+
+
+    Wizard::OpenNextBackDialog();
+
+    map aliases = $[
+	    "SourceTypeDialog"		: ``(SourceTypeDialog()),
+	    "Network_SourceDialog"	: ``(Network_SourceDialog()),
+	    "CD_SourceDialog"		: ``(CD_SourceDialog()),
+	    "ISO_SourceDialog"		: ``(ISO_SourceDialog()),
+	    "FullOptionsDialog"		: ``(FullOptionsDialog()),
+	    "BootOptionsDialog"		: ``(BootOptionsDialog())
+	];
+
+    map sequence = $[
+	    // start differnt workflow for full virtualization mode
+	    "ws_start"	: (VM::GetVirtualizationType() == "full") ? "FullOptionsDialog" : ((VM_Common::proposal_type == "install") ? "SourceTypeDialog" : "BootOptionsDialog"),
+	    "SourceTypeDialog"	:
+		$[
+		    `network_configured	    :   "Network_SourceDialog",
+		    `network_custom	    :   "Network_SourceDialog",
+		    `cdrom	    :   "CD_SourceDialog",
+		    `iso	    :   "ISO_SourceDialog",
+		    `abort	    :   `abort,
+		    `next	    :   `next
+		],
+	    "Network_SourceDialog"	:
+		$[
+		    `abort	    :   `abort,
+		    `next	    :   `next
+		],
+	    "CD_SourceDialog"	:
+		$[
+		    `abort	    :   `abort,
+		    `next	    :   `next
+		],
+	    "ISO_SourceDialog"	:
+		$[
+		    `abort	    :   `abort,
+		    `next	    :   `next
+		],
+	    "FullOptionsDialog"	:
+		$[
+		    `abort	    :   `abort,
+		    `next	    :   `next
+		],
+	    "BootOptionsDialog" :
+		$[
+		    `abort	    :   `abort,
+		    `next	    :   `next
+		]
+	    ];
+
+    symbol ret = Sequencer::Run(aliases, sequence);
+
+    Wizard::CloseDialog();
+
+    return ret;
+
+}

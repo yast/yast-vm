@@ -1,0 +1,656 @@
+-------------------------------------------------------------------
+Wed Sep 13 14:17:31 MDT 2006 - mgfritch@novell.com
+
+- Added pkg-config to BuildRequires field of rpm spec
+
+-------------------------------------------------------------------
+Fri Sep  1 12:43:23 MDT 2006 - mgfritch@novell.com
+
+- Replace the 'cdrom=' entry in fully virtualized config files with
+  a corresponding disk line entry.
+- If para virtualized, kernel is extracted from a SUSE installation
+  source, and domU kernel version >= 2.6.18, add "sdl=1" to config
+  file.
+- Remove the 'extra' option with 'vnc=0 textmode=1'.
+- 2.14.0 
+
+-------------------------------------------------------------------
+Mon Aug  7 17:46:28 MDT 2006 - mgfritch@novell.com
+
+- Always write out "/usr/lib/xen/bin/qemu-dm" for the device_model
+  field in a fully virtualized VM configuration file. (#193854)
+- Add Logical Volumes (LVM) to the list of available block devices. 
+  (#186930, #189765)
+- Check whether X window system is accessible by testing for the 
+  existance of the DISPLAY enviroment value. (#194389)
+- When fully virtualized, if a bridge has not been specifed for a 
+  given vif, do not default to the value 'bridge=xenbr0' in the 
+  VM config file (#197777)
+- Use the 'xm info' values 'max_para_memory' or 'max_hvm_memory'
+  instead of 'max_free_memory' when calculating the amount of
+  memory available for a given VM. (#184727)
+- Display a popup feedback message when creating a non-sparse disk.
+  (#167145)
+- Display a popup yes/no dialog asking if xend should be started 
+  when it is not running. (#176369)
+- 2.13.62
+
+-------------------------------------------------------------------
+Thu Jul 13 11:44:48 MDT 2006 - mgfritch@novell.com
+
+- Do not create the disk images (i.e. dd) when proposal_type is
+  'boot' (#192135)
+- 2.13.61 
+
+-------------------------------------------------------------------
+Wed Jul 12 11:13:35 MDT 2006 - mgfritch@novell.com
+
+- Removed fix for async mode disk read/write during paravirtualized
+  installs (#190869)
+- 2.13.60
+
+-------------------------------------------------------------------
+Mon Jul 10 12:54:11 MDT 2006 - mgfritch@novell.com
+
+- If paravirtualization, allow async mode disk read/write only 
+  during the VM install. (#190869)
+- 2.13.59
+
+-------------------------------------------------------------------
+Tue Jun 27 09:06:17 CEST 2006 - lslezak@suse.cz
+
+- Initialize new installation sources, use the new source ID when
+  the installation source is modified (#179410)
+- 2.13.58
+
+-------------------------------------------------------------------
+Fri Jun 16 15:41:34 MDT 2006 - mgfritch@novell.com
+
+- Replace the 'extra' option 'vnc=1' with 'vnc=0 textmode=1'
+  (#185944)
+- 2.13.57
+
+-------------------------------------------------------------------
+Tue Jun 13 16:08:23 MDT 2006 - mgfritch@novell.com
+
+- Use 'sed -i' instead of 'sed -e' to avoid changing the file
+  permissions of /etc/sysconfig/console and /etc/inittab. (#184690)
+- 2.13.56 
+
+-------------------------------------------------------------------
+Tue Jun  6 12:03:55 MDT 2006 - mgfritch@novell.com
+
+- Preserve the AutoYaST settings for both the install proposal and 
+  the final proposal. Generate an autoinstallation summary proposal 
+  that contains the settings for both the install and final
+  proposals. (#182149) 
+- 2.13.55 
+
+-------------------------------------------------------------------
+Thu Jun  1 16:16:42 MDT 2006 - mgfritch@novell.com
+
+- Do not display the 'Manage Virtual Machines' dialog when 
+  creating an AutoYaST profile using the Autoinstallation wizard.
+  (#181072)
+- Only enable `view button on the 'Manage Virtual Machines' dialog
+  if YaST is running in a graphical display (XServer) and the 
+  selected vm is not configured to use SDL. (#181011)
+- Only enable `start button on the 'Manage Virtual Machines' dialog
+  if YaST is running in a graphical display (XServer) or the 
+  selected vm is configured as a paravirtualized guest. (#181009)
+- Disable service 'earlykbd' when running an install inside of a
+  domU. (#180919)
+- If paravirtualized domU install, use the 'extra' option 'vnc=1',
+  rather than 'textmode=1' (#181074)
+- 2.13.54 
+
+-------------------------------------------------------------------
+Mon May 29 01:10:44 MDT 2006 - mgfritch@novell.com
+
+- VM_XEN::ValidateConfigName() should return false if a vm name
+  setting inside of a config file conflicts with the proposed
+  vm name (#181001)
+- Search physical disk partitions specified in the VM disk settings
+  for a valid Xen kernel. (#180130)
+- Remove any single or double quotes surrounding values read from a
+  VM config file. (#179324)
+- If dom0 is 64 bit OS, domU is full virtualization, and domU
+  memory is >= 3.5 GB, set 'pae=1' in the VM config file. (#180361)
+- 2.13.53
+
+-------------------------------------------------------------------
+Mon May 22 15:30:40 MDT 2006 - mgfritch@novell.com
+
+- Allow the cdrom_image setting to persist when moving from 
+  proposal_type 'install' to proposal_type 'boot'. (#174616)
+- 2.13.52
+
+-------------------------------------------------------------------
+Fri May 19 11:12:34 CEST 2006 - lslezak@suse.cz
+
+- allow the VM management in ncurses UI (#149045)
+- 2.13.51
+
+-------------------------------------------------------------------
+Thu May 18 15:57:32 MDT 2006 - mgfritch@novell.com
+
+- Do not install kernel-xen when installing kernel-xenpae. 
+  (#175117)
+- 2.13.50
+
+-------------------------------------------------------------------
+Wed May 17 09:59:07 CEST 2006 - lslezak@suse.cz
+
+- check whether the package management is available at start
+  of the yast module (#175148)
+- 2.13.49
+
+-------------------------------------------------------------------
+Tue May 16 11:23:17 MDT 2006 - mgfritch@novell.com
+
+- Re-generate the proposed MAC address for the default network
+  settings when VM_XEN::resetNetworkConfig() is called. (#175955)
+- Don't display mounted disk partitions in dom0 as physical disk 
+  partitions available for use in domU. (#173433)
+- Select the correct disk partition containing the xenpae kernel
+  or the NetWare viX kernel. (#175426, #175729) 
+- 2.13.48
+
+-------------------------------------------------------------------
+Thu May 11 16:18:15 MDT 2006 - mgfritch@novell.com
+
+- Always write out the 'cdrom=' entry to the vm config file if 
+  full virtualization and proposal_mode != 'existing'.
+  (#174616) 
+- Ask for the initrd package first and the kernel package last 
+  when extracting a kernel/initrd from a SUSE installation source.
+  This should ensure CD1 is in the CD-ROM drive when the VM 
+  installation starts. (#175111)
+- Install kernel-xenpae by default for dom0 when running on 
+  kernel-bigsmp. (#175117)
+- 2.13.47
+
+-------------------------------------------------------------------
+Tue May  9 16:14:30 MDT 2006 - mgfritch@novell.com
+
+- Default the root device if a disk partition contains the
+  Xen Linux kernel and ramdisk. (#162593) 
+- When a NetWare kernel is detected, set the 'DISPLAY=' value to 
+  the IP address of the network interface assigned to the default 
+  route in the IP routing table. (#173594)
+- Do not display the message 'Installation will be aborted' when
+  we are not installing a virtual machine. (#173991)
+- Remove any inst sources that were added to the disk configuration
+  when switching virtualization mode. (#171696)
+- 2.13.46
+
+-------------------------------------------------------------------
+Mon May  8 09:37:14 MDT 2006 - mgfritch@novell.com
+
+- Enable the Write portion of vm_finish.ycp if Arch::is_xenU()
+  and when `installation, `update, or `autoinst. 
+  (#167204, #171476, #161721)
+- 2.13.45
+
+-------------------------------------------------------------------
+Thu May  4 11:43:35 MDT 2006 - mgfritch@novell.com
+
+- resetSourceConfig() must always be called after resetDiskConfig()
+  to ensure the disk config settings are not overrun by the source
+  config settings. (#172714)
+- Final settings proposal should default to the PAE kernel 
+  (vmlinuz-xenpae) when the PAE kernel was used to install the 
+  VM. (#172977)
+- Remove workaround for AMD Pacifica (svm) processor on arch x86_64 
+  with full virtualization. (#169855)
+- Display an error message if a new disk image (loopback-create) 
+  already exists. (#173267)
+- Updated text strings and comments to comply with the Style Guide 
+  for SUSE Program Texts located on forge.
+- 2.13.44
+
+-------------------------------------------------------------------
+Tue May  2 12:58:42 MDT 2006 - mgfritch@novell.com
+
+- Added patch for "srcid" not set in results from 
+  Pkg::PkgPropertiesAll (#163609)
+- Added a popup error message to VM_Common::CreateDiskImage() for 
+  when the 'dd' command fails to create a disk image (#172083) 
+- Added an additional popup error message when installing/finalizing 
+  a VM's settings. This new popup contains a details button with the
+  output (stdout/stderr) of a failed xm create command (#172084)
+- Final text review in preparation for text freeze.
+- 2.13.43
+
+-------------------------------------------------------------------
+Tue May  2 10:21:36 MDT 2006 - mgfritch@novell.com
+
+- Add a second yes/no pop-up warning the user about deleting a VM.
+- 2.13.42
+
+-------------------------------------------------------------------
+Thu Apr 27 16:15:37 MDT 2006 - mgfritch@novell.com
+
+- If AMD Pacifica (svm) processor, architecture is x86_64 and full 
+  virtualization, always write out 'cpus=0' (#169855)
+- Don't reset all of the proposal settings when the virtualization 
+  mode changes (#170028)
+- 2.13.41
+
+-------------------------------------------------------------------
+Wed Apr 26 12:02:46 MDT 2006 - mgfritch@novell.com
+
+- Specify the CD-ROM device name in the URL to be used for 
+  extracting the kernel/initrd from a SUSE CD/DVD media.
+- Always display the size of each disk in the disk overview table 
+  regardless of it's type (loop-create, loop-use, or phys).
+- Values on_reboot, on_crash, and on_poweroff must always be 
+  rewritten to the config file when virtualization type is 
+  full. (#168203)
+- Strip off any query string before writing the "install=" 
+  setting. (#169829)
+- 2.13.40 
+
+-------------------------------------------------------------------
+Tue Apr 25 12:18:21 MDT 2006 - mgfritch@novell.com
+
+- Must always create new disk images when they are added as a new 
+  disk to the table of disk images (#168206)
+- Always Unmount the YaST ini agent before writing settings to a 
+  config file (#168165)
+- 2.13.39 
+
+-------------------------------------------------------------------
+Fri Apr 21 14:25:58 MDT 2006 - mgfritch@novell.com
+
+- Although console appears to be a tty, don't do character 
+  translations (#149175)
+- 2.13.38
+
+-------------------------------------------------------------------
+Thu Apr 20 12:58:34 MDT 2006 - mgfritch@novell.com
+
+- domU has only one console (#167204)
+- 2.13.37
+
+-------------------------------------------------------------------
+Wed Apr 19 15:41:23 MDT 2006 - mgfritch@novell.com
+
+- SCR::Read(.target.dir, "/etc/xen/vm") instead of 
+  SCR::Dir("/etc/xen/vm") to read list of used vm names (#165855)
+- Can now extract the kernel and initrd using a SUSE ISO or 
+  CD/DVD media. (#158529).
+- 2.13.36
+
+-------------------------------------------------------------------
+Fri Apr 14 12:21:05 CEST 2006 - lslezak@suse.cz
+
+- updated vm_finish client (#161720, #161721, #161756)
+- pass static network configuration to linuxrc (#162713)
+- 2.13.35
+
+-------------------------------------------------------------------
+Wed Apr 12 14:04:43 MDT 2006 - mgfritch@novell.com
+
+- Launch the vncviewer using 'vncviewer localhost:<vm id>',
+  instead of using 'xm console <vmname>' (#165619)
+- 2.13.34
+
+-------------------------------------------------------------------
+Fri Apr  7 08:37:26 CEST 2006 - lslezak@suse.cz
+
+- don't modify bootloader configuration when confguring domain0,
+  it's modified by kernel-xen package (#163138)
+- 2.13.33
+
+-------------------------------------------------------------------
+Thu Apr  6 22:57:50 MDT 2006 - mgfritch@novell.com
+
+- Add dialog for managing virtual machines, similar to the 
+  xm commands (xm list, xm create, xm destory, etc.)
+- Add help text for MAC address and Bridge Name (#145663)
+- Change Control Center icon name to 'Virtual Machine Management (Xen)'.
+- Move Control Center icon from 'Software' catagory to 'System'.
+- Various text string changes (help and UI).
+- 2.13.32
+
+-------------------------------------------------------------------
+Tue Apr  4 14:52:02 CEST 2006 - lslezak@suse.cz
+
+- dom0 configuration: modify firewall configuration - add the Xen
+  bridge into FW_FORWARD_ALWAYS_INOUT_DEV option (#154133),
+  fixed detection of a Xen section in bootloader
+- 2.13.31
+
+-------------------------------------------------------------------
+Wed Mar 29 15:27:15 CEST 2006 - lslezak@suse.cz
+
+- use "Xen" term only in the texts (#161737)
+- 2.13.30
+
+-------------------------------------------------------------------
+Tue Mar 28 15:43:10 CEST 2006 - lslezak@suse.cz
+
+- x86_64 arch: use x86_64 packages, not i386 (#161267)
+- 2.13.29
+
+-------------------------------------------------------------------
+Sat Mar 25 22:46:13 MST 2006 - ccoffing@novell.com
+
+- Overhaul from Provo, to make module more feature complete.
+- 2.13.28
+
+-------------------------------------------------------------------
+Sun Mar 19 01:10:24 CET 2006 - jsrain@suse.de
+
+- fixed size of image for AutoYaST profile (#159369)
+- create mountpoint for autoinst.img (#159370)
+- fixed writing AutoYaST image to domU config file
+- add -F to mkfs.ext2
+
+-------------------------------------------------------------------
+Fri Mar 10 15:17:41 CET 2006 - lslezak@suse.cz
+
+- image directory is configurable now (#156591)
+- check for existing config file, don't overwrite it (#156322)
+- 2.13.27
+
+-------------------------------------------------------------------
+Thu Mar  9 13:33:50 CET 2006 - lslezak@suse.cz
+
+- merged proofread texts
+- 2.13.26
+
+-------------------------------------------------------------------
+Wed Mar  8 15:48:40 CET 2006 - lslezak@suse.cz
+
+- fixed network configuration in full virtualization mode (#145064)
+- 2.13.25
+
+-------------------------------------------------------------------
+Wed Mar  8 14:04:43 CET 2006 - lslezak@suse.cz
+
+- initialize package manager, source proposal fix (#152638)
+- removed unused code (product detection)
+- fixed network config reset
+- 2.13.24
+
+-------------------------------------------------------------------
+Wed Mar  8 11:33:03 CET 2006 - lslezak@suse.cz
+
+- fixed capitalization in DHCP label and proposal text
+- 2.13.23
+
+-------------------------------------------------------------------
+Fri Mar  3 16:11:26 CET 2006 - lslezak@suse.cz
+
+- display full file path and device prefix (#154016)
+- 2.13.22
+
+-------------------------------------------------------------------
+Mon Feb 27 10:49:28 CET 2006 - lslezak@suse.cz
+
+- 2.13.21
+
+-------------------------------------------------------------------
+Fri Feb 24 18:51:18 CET 2006 - lslezak@suse.cz
+
+- new DHCP option in the network configuratino dialog (#153385)
+- allow to boot from CD-ROM in full virtualization mode
+
+-------------------------------------------------------------------
+Thu Feb 23 18:26:48 CET 2006 - lslezak@suse.cz
+
+- don't remove CD-ROM after reboot in full virtualization mode
+  (#145064)
+
+-------------------------------------------------------------------
+Tue Feb 21 11:29:27 CET 2006 - lslezak@suse.cz
+
+- display warning in full virtualization mode if AutoYast
+  profile is configured
+- check URL of an installation source
+- fixed package download from an inst. source
+- fixed crash due to uninitialized source (#150241)
+- 2.13.20
+
+-------------------------------------------------------------------
+Tue Feb 21 08:52:58 CET 2006 - lslezak@suse.cz
+
+- check valid disk devices in full virtualization mode (#145064)
+- .spec: removed yast2-devel-packages and yast2-users
+
+-------------------------------------------------------------------
+Fri Feb 17 15:42:04 CET 2006 - lslezak@suse.cz
+
+- boot device configuration in full virtualization mode,
+  start VM in background (#145064)
+- xen config file fixes
+- 2.13.19
+
+-------------------------------------------------------------------
+Mon Feb 13 17:29:54 CET 2006 - lslezak@suse.cz
+
+- 2.13.18
+
+-------------------------------------------------------------------
+Mon Feb 13 17:13:42 CET 2006 - lslezak@suse.cz
+
+- validate domain name (only alphanumeric and _-.:+ characterrs
+  are allowed) (#150054)
+
+-------------------------------------------------------------------
+Mon Feb 13 16:55:24 CET 2006 - lslezak@suse.cz
+
+- resize dom0 memory size if needed (#147612)
+
+-------------------------------------------------------------------
+Mon Feb 13 15:04:06 CET 2006 - lslezak@suse.cz
+
+- start 2nd stage at background, finish yast module (#149665)
+- show the network device config popup when adding new interface
+
+-------------------------------------------------------------------
+Mon Feb 13 12:55:11 CET 2006 - lslezak@suse.cz
+
+- don't start VM when file downloading from source fails (#147428)
+- initialize target (#150241)
+
+-------------------------------------------------------------------
+Mon Feb 13 11:24:32 CET 2006 - lslezak@suse.cz
+
+- increased default disk image size to 4GB (#149604)
+- generate default MAC address for network interface (#149177) 
+
+-------------------------------------------------------------------
+Mon Feb  6 14:32:16 CET 2006 - lslezak@suse.cz
+
+- full virtualization fix (use hvm loader and builder)
+- write vif option correctly (#145390)
+- allow non-network source
+- suppose VM crash if runtime is lower than 3 sec
+- 2.13.17
+
+-------------------------------------------------------------------
+Wed Feb  1 13:12:57 CET 2006 - lslezak@suse.cz
+
+- extract translatable strings from vm_install.xml control file
+  (#146651)
+- 2.13.16
+
+-------------------------------------------------------------------
+Mon Jan 30 14:44:55 CET 2006 - lslezak@suse.cz
+
+- don't write obsoleted 'nics' options to domain configuration
+  file (#145390)
+- 2.13.15
+
+-------------------------------------------------------------------
+Wed Jan 25 11:02:12 CET 2006 - lslezak@suse.cz
+
+- Use "RAM Disk" instead of "initrd" (#143673)
+- 2.13.14
+
+-------------------------------------------------------------------
+Mon Jan 23 16:53:39 CET 2006 - lslezak@suse.cz
+
+- merged proofed texts
+- 2.13.13
+
+-------------------------------------------------------------------
+Fri Jan 20 12:53:58 CET 2006 - lslezak@suse.cz
+
+- Improved help texts (#143669, #143672, #143674)
+- Use "RAM Disk" instead of "initrd" (#143673)
+- Fixes in the Full Virtualization mode
+- Propose sparse images
+- Create extra disk image for AutoYast profile
+- 2.13.12
+
+-------------------------------------------------------------------
+Tue Jan 17 11:07:32 CET 2006 - lslezak@suse.cz
+
+- fixed .spec file (missing inst_xen_mode.ycp in the file list)
+- 2.13.11
+
+-------------------------------------------------------------------
+Fri Jan 13 15:55:27 CET 2006 - lslezak@suse.cz
+
+- no network interfaces possible in virtual machine
+- AutoYast profile selection is part of the proposal
+- export selected installation source as URL in AutoYast
+- configure Xen virtualization mode (paravirtualization or
+  full virtualization) (GUI only)
+- 2.13.10
+
+-------------------------------------------------------------------
+Wed Jan 11 12:53:53 CET 2006 - lslezak@suse.cz
+
+- AutoYast client
+- 2.13.9
+
+-------------------------------------------------------------------
+Wed Jan  4 13:03:28 CET 2006 - lslezak@suse.cz
+
+- install xen-tools package
+- check whether kernel-xen and install-initrd packages
+  are available (#116395)
+- fixed $URL_INSTALL macro expansion
+- 2.13.8
+
+-------------------------------------------------------------------
+Mon Dec 19 14:18:36 CET 2005 - jsuchome@suse.cz
+
+- merged proofed texts
+- 2.13.7 
+
+-------------------------------------------------------------------
+Fri Dec 16 15:11:11 CET 2005 - lslezak@suse.cz
+
+- new client for Xen domain0 configuration (#117215)
+- spelling fixes
+- 2.13.6
+
+-------------------------------------------------------------------
+Mon Dec 12 17:07:25 CET 2005 - lslezak@suse.cz
+
+- removed UML support
+- 2.13.5
+
+-------------------------------------------------------------------
+Mon Dec 12 09:49:05 CET 2005 - lslezak@suse.cz
+
+- custom kernel and RAM disk configuration
+- workflow update for custom kernel
+- renamed search variable
+- new help texts + updates
+- xen - configure more virtual network interfaces, allow to use
+  physical partition as storage, use existing disk image
+- 2.13.4
+
+-------------------------------------------------------------------
+Tue Nov 22 11:08:39 CET 2005 - lslezak@suse.cz
+
+- installation boot parameter - boot option has been splitted into
+  two parts: boot option and additional installation boot option
+  (used only at the first stage, e.g. autoyast option)
+- xen - configure restart option
+- fixed error message (part of #117215)
+- version 2.13.3
+
+-------------------------------------------------------------------
+Fri Nov 11 10:30:05 CET 2005 - lslezak@suse.cz
+
+- added command line mode support
+- merged UML functionality (yast2-uml package can be dropped)
+- uml - configure UMID option, um-host-install-initrd package
+  is not used any more (#96323)
+- version 2.13.2
+
+-------------------------------------------------------------------
+Fri Oct 14 09:30:02 CEST 2005 - lslezak@suse.cz
+
+- moved generic code to VM_Common::
+- proposal definition is part of the package
+- version 2.13.1
+
+-------------------------------------------------------------------
+Tue Sep 27 11:21:31 CEST 2005 - lslezak@suse.cz
+
+- install required X packages (xorg-x11, xterm) (#117660)
+- write option ioemu for emulated disk (#117711)
+- version 2.13.0
+
+-------------------------------------------------------------------
+Mon Sep 19 09:34:47 CEST 2005 - lslezak@suse.cz
+
+- fixed 'Xen' spelling (#117226)
+
+-------------------------------------------------------------------
+Fri Sep  9 11:32:13 CEST 2005 - lslezak@suse.cz
+
+- write vif option properly into VM configuration file (#115791)
+- don't start an installatinon without network source (#114740) 
+- 2.12.4
+
+-------------------------------------------------------------------
+Fri Aug 26 13:30:30 CEST 2005 - lslezak@suse.cz
+
+- fixed layout of the tables (#112971)
+- use arch dependend kernel-xen and install-initrd package
+- reinitialize installtion sources
+- fixed logging
+- 2.12.3
+
+-------------------------------------------------------------------
+Fri Aug 19 12:46:23 CEST 2005 - lslezak@suse.cz
+
+- use properly custom installation source
+- mount partitions in virtual disk image
+- search for kernel files, copy them to domain0
+- search for root device name
+- update VM configuration file before starting the 2nd stage
+- create link in /etc/xen/auto when 'on boot' start
+  mode is selected
+- add TERM=xterm kernel option (to have colours in 2nd stage)
+- 2.12.2
+
+-------------------------------------------------------------------
+Fri Aug 12 12:24:14 CEST 2005 - lslezak@suse.cz
+
+- fixed creating of an installation initrd (#104339)
+- fixed configuration update after reboot (after first
+  installation stage)
+- 2.12.1
+
+-------------------------------------------------------------------
+Fri Aug 12 09:08:10 CEST 2005 - visnov@suse.cz
+
+- fix textdomain 
+
+-------------------------------------------------------------------
+Fri Aug  5 12:34:43 CEST 2005 - lslezak@suse.cz
+
+- initial release
+- 2.12.0
+
