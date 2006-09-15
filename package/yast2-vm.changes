@@ -1,9 +1,4 @@
 -------------------------------------------------------------------
-Wed Sep 13 14:17:31 MDT 2006 - mgfritch@novell.com
-
-- Added pkg-config to BuildRequires field of rpm spec
-
--------------------------------------------------------------------
 Fri Sep  1 12:43:23 MDT 2006 - mgfritch@novell.com
 
 - Replace the 'cdrom=' entry in fully virtualized config files with
