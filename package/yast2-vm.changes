@@ -1,9 +1,4 @@
 -------------------------------------------------------------------
-Wed Sep 13 14:54:12 MDT 2006 - mgfritch@novell.com
-
-- Added pkg-config to BuildRequires field of rpm spec 
-
--------------------------------------------------------------------
 Mon Aug  7 17:46:28 MDT 2006 - mgfritch@novell.com
 
 - Always write out "/usr/lib/xen/bin/qemu-dm" for the device_model
