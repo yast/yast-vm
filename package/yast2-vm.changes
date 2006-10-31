@@ -2,7 +2,7 @@
 Mon Oct 30 09:46:41 CET 2006 - lslezak@suse.cz
 
 - command line mode support: 'install' command handler (install
-  a new VM using an Aytoyast profile), print messages on
+  a new VM using an Autoyast profile), print messages on
   the console instead of displaying popups, example autoyast
   profile, documentation of the CLI (feature #301326)
 - 2.13.63
