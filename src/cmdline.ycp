@@ -24,7 +24,9 @@
     import "Mode";
     import "Sequencer";
     import "CommandLine";
-
+    import "ProductControl";
+    import "Stage";
+    import "Report";
 
     textdomain "vm";
 
@@ -83,6 +85,111 @@
 	}
 
 	return `next;
+    }
+
+
+    // command line mode - installation start handler
+    define boolean start_installation(map options)
+    {
+	y2milestone("Command line 'install' options: %1", options);
+
+	// display the console during installation?
+	VM_Common::display_console = haskey(options, "display");
+
+	// set the options
+	string autoyast = options["autoyast"]:"";
+	if (autoyast != "")
+	{
+
+	    // prepare for installation
+	    prepare("install");
+
+	    import "Profile";
+
+	    if (!Profile::ReadXML(autoyast))
+	    {
+		// error message
+		Report::Error(_("Cannot load the profile in
+the current system. It may be broken."));
+		return false;
+	    }
+	    else
+	    {
+		y2milestone("Loaded AutoYaST profile: %1", Profile::current);
+
+		// import VM config
+		map xen_setting = Profile::current["xen"]:$[];
+
+		if (xen_setting != nil && xen_setting != $[])
+		{
+		    y2milestone("Import settings: %1", xen_setting);
+		    VM::Import(xen_setting);
+		}
+		else
+		{
+		    // error message
+		    Report::Error(_("Autoyast profile '%1' does not contain virtual machine parameters."));
+		    return false;
+		}
+
+		// set autoyast profile
+		VM::SetAutoYastProfile(autoyast);
+	    }
+	}
+	else
+	{
+	    // error message - an Autoyast profile is mandatory
+	    CommandLine::Error(_("Option 'autoyast' is missing, an Autoyast profile is required."));
+	    return false;
+	}
+
+	// log the current configuration
+	VM::Export();
+
+	// generate missing (empty) configuration options
+	VM::SetEmptyOptions();
+
+	string configuration_name = VM::GetConfigName();
+	if (!VM::ValidateConfigName(configuration_name))
+	{
+	    Report::Error(sformat(_("Configuration name '%1' is already in use"), configuration_name));
+	    return false;
+	}
+
+	// progress message, %1 is name of the virtual machine (e.g. vm1)
+	CommandLine::PrintVerbose(sformat(_("Installing virtual machine '%1'"), configuration_name));
+
+	// start the VM
+	symbol started = start();
+	y2milestone("VM result: %1", started);
+
+	if (started != `next)
+	{
+	    // command line - error message
+	    CommandLine::Print(_("Aborted."));
+	    return false;
+	}
+
+	// start the 2nd stage
+	prepare("boot");
+
+	// start the 2nd stage
+	started = start();
+
+	if (started != `next)
+	{
+	    // command line - error message
+	    CommandLine::Print(_("Aborted."));
+	    return false;
+	}
+
+	return true;
+    }
+
+    // this dummy handler is required to print "saved changes" in command line (verbose) mode
+    define boolean DummyHandler()
+    {
+	return true;
     }
 
 

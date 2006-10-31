@@ -22,6 +22,7 @@ import "Report";
 import "Label";
 import "IP";
 import "Sequencer";
+import "Mode";
 
 
 list<map<string, string> > network_conf = VM::GetNetworkConfig();
@@ -116,10 +117,18 @@ define map<string,string> InterfaceDialog(string mac, string bridge) ``{
 		new_bridge = (string) UI::QueryWidget (`id(`bridge), `Value);
 
 		if (!Check_MAC(new_mac)) {
+		    // in the autoyast configuration mode the MAC address can be empty (it will be assigned at runtime)
+		    if (Mode::config() && new_mac == "")
+		    {
+			ret = `next;
+			break;
+		    }
+
 		    // error message
 		    Report::Error(_("The MAC address entered is not valid."));
 		    UI::SetFocus(`id(`MAC_address));
 		    ret = `again;
+		    continue;
 		}
 		ret = `next;
 		break;

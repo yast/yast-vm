@@ -1054,6 +1054,11 @@
 	return CallBooleanStringFunction("setImgPrefix", p);
     }
 
+    global boolean SetEmptyOptions()
+    {
+	return CallBooleanFunction("SetEmptyOptions");
+    }
+
     global boolean ResetAllSettings() {
 	// must reset all values back to their defaults removing the settings from the last vm
 	ResetHiddenArgs();

@@ -19,6 +19,8 @@
     import "HTML";
     import "PackageCallbacksInit";
     import "String";
+    import "Mode";
+    import "CommandLine";
 
     textdomain "vm";
 
@@ -103,6 +105,9 @@
     global string gateway = "";
 
     global string proposal_type = "install";
+
+    // display the console during installation in command line mode?
+    global boolean display_console = false;
 
     string custom_kernel = "";
     string custom_initrd = "";
@@ -270,10 +275,22 @@
     global void PopupErrorDetails(string errorMessage, map out, string cmd) ``{
         string message = _("Undefined Error");
         if (errorMessage != nil && errorMessage != "") message = errorMessage;
+
+	if (Mode::commandline())
+	{
+	    // print header
+	    CommandLine::Print(Label::ErrorMsg());
+	    CommandLine::Print(message);
+	    // print the error messages
+	    CommandLine::Print(out["stderr"]:"");
+	    CommandLine::Print(out["stdout"]:"");
+	    return;
+	}
+
         Popup::ClearFeedback();
 	// Details button on a popup error message
         if (!Popup::AnyQuestion( Label::ErrorMsg(), message, Label::OKButton(), _("&Details..."), `focus )) {
-                string description = sformat("<pre>command: %1 return \n %2 %3</pre>", cmd, out["stderr"]:"", out["stdout"]:"");
+                string description = sformat(_("<pre>command: %1 return \n %2 %3</pre>"), cmd, out["stderr"]:"", out["stdout"]:"");
                 UI::OpenDialog (`opt(`decorated ),
                         `HBox( `VSpacing(16),
                                 `VBox (

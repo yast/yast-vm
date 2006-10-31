@@ -19,6 +19,7 @@
     import "Popup";
     import "String";
     import "Report";
+    import "Mode";
 
     // screen title for virtual machine options
     string title = _("VM Properties");
@@ -85,8 +86,17 @@
     // virtual machine options - help text title
     string help_text = sformat(_("<p><b><big>%1</big></b></p>"), title);
     if (VM_Common::proposal_type != "boot")
+    {
 	// virtual machine options (boot) - help text 1/1
 	help_text = help_text + _("<p>Each virtual machine must have a unique name. The <b>name of virtual machine</b> entered here will be used as the name of the VM configuration file.</p>");
+
+	// in the autoyast config mode the name can be empty
+	if (Mode::config())
+	{
+	    // virtual machine options (boot) - help text - displayed in the autoyast config mode only
+	    help_text = help_text + _("<p>The name can be empty, in this case it will be generated before starting the virtual machine.</p>");
+	}
+    }
     if (VM_Common::proposal_type != "install") {
 	help_text = help_text
 	// virtual machine options (install) - help text 1/8
@@ -150,20 +160,27 @@
 
 	    if (VM_Common::proposal_type != "boot") {
 		    string vmname = (string) UI::QueryWidget (`id(`vmname), `Value);
-		    if (vmname == nil || vmname == "") {
-			// error message: do not allow empty name of virtual machine
-			Report::Error(_("Name of Virtual Machine cannot be left empty.
-Please, specify a Name of Virtual Machine."));
-			continue;
+
+		    // in the cautoyast config mode the name can be empty (it will be assigned in runtime),
+		    // skip validation, the profile might be used in another machine with different VMs
+		    if (!Mode::config())
+		    {
+			if (vmname == nil || vmname == "") {
+			    // error message: do not allow empty name of virtual machine
+			    Report::Error(_("Name of Virtual Machine cannot be left empty.
+    Please, specify a Name of Virtual Machine."));
+			    continue;
+			}
+
+			if ( VM::ValidateConfigName(vmname) == false ) {
+			    // error message: name of virtual machine must be unique, entered name is already in use
+			    Report::Error(_("Name of Virtual Machine is already used.
+    Enter another name.
+    "));
+			    continue;
+			}
 		    }
 
-		    if ( VM::ValidateConfigName(vmname) == false ) {
-			// error message: name of virtual machine must be unique, entered name is already in use
-			Report::Error(_("Name of Virtual Machine is already used.
-Enter another name.
-"));
-			continue;
-	    	    }
 		    // do not allow machine names of '.' or '..'
 		    if (vmname == "." || vmname == "..") {
 			// popup error message

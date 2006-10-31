@@ -1,0 +1,169 @@
+<?xml version="1.0"?>
+<!DOCTYPE profile SYSTEM "/usr/share/autoinstall/dtd/profile.dtd">
+<profile xmlns="http://www.suse.com/1.0/yast2ns" xmlns:config="http://www.suse.com/1.0/configns">
+  <general>
+    <mode>
+      <confirm config:type="boolean">false</confirm>
+      <second_stage config:type="boolean">true</second_stage>
+    </mode>
+    <mouse>
+      <id>none</id>
+    </mouse>
+    <signature-handling/>
+  </general>
+  <groups config:type="list"/>
+  <networking>
+    <dhcp_options>
+      <dhclient_additional_options></dhclient_additional_options>
+      <dhclient_client_id></dhclient_client_id>
+      <dhclient_hostname_option>AUTO</dhclient_hostname_option>
+    </dhcp_options>
+    <dns>
+      <dhcp_hostname config:type="boolean">true</dhcp_hostname>
+      <dhcp_resolv config:type="boolean">true</dhcp_resolv>
+    </dns>
+    <managed config:type="boolean">false</managed>
+    <routing>
+      <ip_forward config:type="boolean">false</ip_forward>
+    </routing>
+  </networking>
+  <partitioning config:type="list">
+    <drive>
+      <device>/dev/hda</device>
+      <initialize config:type="boolean">false</initialize>
+      <partitions config:type="list"/>
+      <use>free</use>
+    </drive>
+  </partitioning>
+  <software>
+    <patterns config:type="list">
+      <pattern>base</pattern>
+    </patterns>
+  </software>
+  <user_defaults>
+    <expire></expire>
+    <group>100</group>
+    <groups>video,dialout</groups>
+    <home>/home</home>
+    <inactive>-1</inactive>
+    <shell>/bin/bash</shell>
+    <skel>/etc/skel</skel>
+  </user_defaults>
+  <users config:type="list">
+    <user>
+      <encrypted config:type="boolean">true</encrypted>
+      <user_password>$2a$05$tqliMdR/9Kv8ebed4cii1.vOLV3aA15uLn4wAClKchb7a4uUcxBuy</user_password>
+      <username>root</username>
+    </user>
+  </users>
+  <xen>
+    <boot>
+      <Common>
+        <MAC_address></MAC_address>
+        <config_name></config_name>
+        <custom_initrd>/boot/initrd-xen</custom_initrd>
+        <custom_kernel>/boot/vmlinuz-xen</custom_kernel>
+        <custom_source>ftp://10.20.3.1/netboot/find/SLES-10-i386-GMC</custom_source>
+        <extra_args>TERM=xterm</extra_args>
+        <gateway></gateway>
+        <hidden_args></hidden_args>
+        <inst_type config:type="symbol">network_custom</inst_type>
+        <ip></ip>
+        <localtime config:type="integer">0</localtime>
+        <memory_size config:type="integer">256</memory_size>
+        <ne2000 config:type="integer">0</ne2000>
+        <netmask></netmask>
+        <number_of_cpus config:type="integer">1</number_of_cpus>
+        <on_crash>restart</on_crash>
+        <on_poweroff>destroy</on_poweroff>
+        <on_reboot>restart</on_reboot>
+        <random_MAC config:type="boolean">true</random_MAC>
+        <root_device></root_device>
+        <sdl config:type="integer">1</sdl>
+        <source_id config:type="integer">1</source_id>
+        <start_mode>manual</start_mode>
+        <stdvga config:type="integer">0</stdvga>
+        <use_custom_kernel config:type="boolean">true</use_custom_kernel>
+        <use_dhcp config:type="boolean">false</use_dhcp>
+        <use_static config:type="boolean">false</use_static>
+        <virtualization_type>para</virtualization_type>
+      </Common>
+      <boot_device>d</boot_device>
+      <cdrom_image></cdrom_image>
+      <disks config:type="list">
+        <listentry>
+          <prefix>/var/lib/xen/images/</prefix>
+          <ro config:type="boolean">false</ro>
+          <size config:type="integer">4096</size>
+          <source><![CDATA[hda]]></source>
+          <sparse config:type="boolean">true</sparse>
+          <target>hda</target>
+          <type>loop-create</type>
+        </listentry>
+      </disks>
+      <initrd_path></initrd_path>
+      <kernel_path></kernel_path>
+      <network config:type="list">
+        <listentry>
+          <bridge></bridge>
+          <mac></mac>
+        </listentry>
+      </network>
+      <restart>onreboot</restart>
+    </boot>
+    <install>
+      <Common>
+        <MAC_address></MAC_address>
+        <config_name></config_name>
+        <custom_initrd></custom_initrd>
+        <custom_kernel></custom_kernel>
+        <custom_source>ftp://10.20.3.1/netboot/find/SLES-10-i386-GMC</custom_source>
+        <extra_args>TERM=xterm textmode=1 vnc=0</extra_args>
+        <gateway></gateway>
+        <hidden_args>install=$URL_INSTALL</hidden_args>
+        <inst_type config:type="symbol">network_custom</inst_type>
+        <ip></ip>
+        <localtime config:type="integer">0</localtime>
+        <memory_size config:type="integer">256</memory_size>
+        <ne2000 config:type="integer">0</ne2000>
+        <netmask></netmask>
+        <number_of_cpus config:type="integer">1</number_of_cpus>
+        <on_crash>restart</on_crash>
+        <on_poweroff>destroy</on_poweroff>
+        <on_reboot>restart</on_reboot>
+        <random_MAC config:type="boolean">true</random_MAC>
+        <root_device></root_device>
+        <sdl config:type="integer">1</sdl>
+        <source_id config:type="integer">1</source_id>
+        <start_mode>manual</start_mode>
+        <stdvga config:type="integer">0</stdvga>
+        <use_custom_kernel config:type="boolean">false</use_custom_kernel>
+        <use_dhcp config:type="boolean">false</use_dhcp>
+        <use_static config:type="boolean">false</use_static>
+        <virtualization_type>para</virtualization_type>
+      </Common>
+      <boot_device>d</boot_device>
+      <cdrom_image></cdrom_image>
+      <disks config:type="list">
+        <listentry>
+          <prefix>/var/lib/xen/images/</prefix>
+          <ro config:type="boolean">false</ro>
+          <size config:type="integer">4096</size>
+          <source><![CDATA[hda]]></source>
+          <sparse config:type="boolean">true</sparse>
+          <target>hda</target>
+          <type>loop-create</type>
+        </listentry>
+      </disks>
+      <initrd_path></initrd_path>
+      <kernel_path></kernel_path>
+      <network config:type="list">
+        <listentry>
+          <bridge></bridge>
+          <mac></mac>
+        </listentry>
+      </network>
+      <restart>onreboot</restart>
+    </install>
+  </xen>
+</profile>

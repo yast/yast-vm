@@ -17,6 +17,7 @@
     import "String";
     import "Label";
     import "Service";
+    import "CommandLine";
 
     textdomain "vm";
 
@@ -317,6 +318,14 @@
 	if (running != 0) {
 		// xend is not running
 		y2error("Service '%1' is not running.", xend);
+
+		if (Mode::commandline())
+		{
+		    // error message
+		    Report::Error(_("Error: Xend is not running"));
+		    return false;
+		}
+
 		// Popup yes/no dialog
 		// %1 - file location of the xend service
 		if ( ! Popup::AnyQuestionRichText(_("Warning: Xend is not running"), 
@@ -413,7 +422,13 @@
 
 	// Proposal for virtual machine installation
 	// %1 = Name of Virtual Machine (i.e. 'vm1')
-	tmp = add (tmp, sformat (_("Name of Virtual Machine: %1"), VM_Common::config_name));
+	string vm_name = VM_Common::config_name;
+	if (vm_name == "")
+	{
+	    vm_name = _("<em>Dynamically Assigned</em>");
+	}
+
+	tmp = add (tmp, sformat (_("Name of Virtual Machine: %1"), vm_name));
 
 	if (VM_Common::proposal_type != "install") {
 		y2milestone("mode: %1", getStartMode());
@@ -808,7 +823,7 @@
 	    else
 	    {
 		// proposal item
-		ret = add(ret, _("Partition Containing Boot Files: ") + VM_Common::root_device);
+		ret = add(ret, _("Partition Containing Boot Files: ") + (VM_Common::root_device == "" ? _("<em>Search the Boot Files Automatically</em>") : VM_Common::root_device));
 		// proposal item
 		ret = add(ret, _("Xen-Enabled Kernel: ") + VM_Common::GetKernelImage());
 		if (VM_Common::GetInitrdImage() != nil && VM_Common::GetInitrdImage() != "") {
@@ -834,7 +849,10 @@
 	}
 	else if (VM_Common::GetVirtualizationType() == "para") {
 		map<string,any> ret = $[];
-		if (VM_Common::root_device == nil || VM_Common::root_device == "") {
+
+		// do not show the warning in the autoyast config mode,
+		// if the boot parition is empty it will be probed automatically
+		if (!Mode::config() && (VM_Common::root_device == nil || VM_Common::root_device == "")) {
 			// error in the installation proposal - do not allow to continue
 			ret = add(ret, "warning", _("Partition Containing Boot Files not specified."));
 			ret = add(ret, "warning_level", `blocker);
@@ -1499,21 +1517,23 @@
 
 
     string ReadOption(path configpath, string optname) {
-	
 	string optvalue = (string)SCR::Read(configpath + topath(optname));
 
-	if (regexpmatch(optvalue, "'.*'")) {
-		// remove the single quotes
-		string tmpoptvalue = regexpsub(optvalue, "'(.*)'", "\\1");
-		if (optvalue != nil || optvalue != "")
-			optvalue = tmpoptvalue;
+	if (optvalue != nil)
+	{
+	    if (regexpmatch(optvalue, "'.*'")) {
+		    // remove the single quotes
+		    string tmpoptvalue = regexpsub(optvalue, "'(.*)'", "\\1");
+		    if (optvalue != nil || optvalue != "")
+			    optvalue = tmpoptvalue;
+	    }
+	    else if (regexpmatch(optvalue, "\".*\"")) {
+		    // remove the double quotes
+		    string tmpoptvalue = regexpsub(optvalue, "\"(.*)\"", "\\1");
+		    if (optvalue != nil || optvalue != "")
+			    optvalue = tmpoptvalue;
+	    }
 	}
-	else if (regexpmatch(optvalue, "\".*\"")) {
-                // remove the double quotes
-                string tmpoptvalue = regexpsub(optvalue, "\"(.*)\"", "\\1");
-                if (optvalue != nil || optvalue != "")
-                        optvalue = tmpoptvalue;
-        }
 
 	return optvalue;
     }
@@ -1969,8 +1989,9 @@
 	return true;
     }
 
-    global define void resetHiddenArgs() {
+    global define boolean resetHiddenArgs() {
         VM_Common::hidden_args = "";
+	return true;
     }
 
 
@@ -2054,20 +2075,6 @@
 	SCR::UnmountAgent(.etc.xen);
 	path configpath = .etc.xen.value + topath(conf_path + VM_Common::config_name);
 
-	// remove the disk with autoyast profile
-	if (VM_Common::GetVirtualizationType() != "full" && VM_Common::autoyast_profile != nil && VM_Common::autoyast_profile != "")
-	{
-	    // remove the last disk (image with autoyast profile)
-	    disks = remove(disks, size(disks) - 1);
- 
-	    string command = "/bin/rm " + img_prefix + VM_Common::config_name + "/autoyast.img";
-	    integer out = (integer)SCR::Execute(.target.bash, command);
-	    if (out != 0)
-	    {
-		y2warning("Cannot remove autoyast image, command: %1 failed", command);
-	    }
-	}
-
 	if (VM_Common::IsNetWareKernel(kernel_path) && VM_Common::proposal_type == "boot") {
 		// remove the NetWare installation source
 		updateDiskConfig(VM_Common::custom_source, "", "");
@@ -2099,6 +2106,7 @@
 		ret = ret && WriteStringOption(configpath, "bootloader", "/usr/lib/xen/boot/domUloader.py");
 
 		if (VM_Common::root_device == nil || VM_Common::root_device == "") {
+			y2milestone("Root device is empty, detecting the root device...");
 			ReadDiskImages();
 		}
 
@@ -2108,7 +2116,7 @@
 		VM_Common::SetHiddenArgs(kernel_path);
 		string extra = VM_Common::hidden_args + " " + VM_Common::extra_args;
 		ret = ret && WriteStringOption(configpath, "extra", extra);
-	
+
 		string bootentry = sformat("%1:%2", VM_Common::root_device, kernel_path);
 		if (initrd_path != "") {
 			bootentry = bootentry + "," + initrd_path;
@@ -2359,6 +2367,31 @@ source is accessible."));
 	isXendRunning();
 	y2milestone("ViewVirtualMachineConsole(%1, %2, %3, %4, %5)", DomName, isFullVirtualization, isNetWare, background, displayError);
 	if (DomName != nil && DomName != "") {
+		// print a message how to connect to the console in command line mode
+		if (Mode::commandline() && !VM_Common::display_console)
+		{
+		    // command line mode message - %1 is command name, %2 is a virtual machine name
+		    CommandLine::Print(sformat(_("Use command '%1 console %2' for attaching to the VM console
+(Note: Press CTRL+] to detach from the console)"), xm, VM_Common::config_name));
+
+		    // wait until the VM finishes
+		    if (!background)
+		    {
+			string command = sformat("%1 list '%2'", xm, VM_Common::config_name);
+			boolean vm_running = true;
+
+			while(vm_running)
+			{
+			    sleep(5000);
+
+			    map out = (map)SCR::Execute(.target.bash_output, command);
+			    vm_running = (out["exit"]:-1 == 0);
+			}
+			y2milestone("The VM has finished.");
+		    }
+		    return true;
+		}
+
 		string cmd = sformat("/usr/bin/xterm -geometry 80x%3 -T \"Xen - %2\" -e %1 console %2",
 					xm, DomName, isNetWare ? 25 : 24);
 		if ( isFullVirtualization ) { // start VNC viewer
@@ -2487,6 +2520,39 @@ source is accessible."));
 	return false;
     }
 
+    global boolean SetEmptyOptions()
+    {
+	// success
+	boolean ret = true;
+
+	if (VM_Common::proposal_type == "install")
+	{
+	    integer idx = 0;
+	    list <map <string,string> > network_new = maplist(map<string,string> net, network,
+		{
+		    if (net["mac"]:"" == "")
+		    {
+			net["mac"] = VM_Common::Propose_MAC_address("");
+			y2milestone("Proposed MAC address for device %1: %2", idx, net["mac"]:"");
+		    }
+
+		    idx = idx + 1;
+
+		    return net;
+		}
+	    );
+
+	    if (network_new != network)
+	    {
+		y2milestone("Updating the network configuration: %1", network_new);
+		network = network_new;
+	    }
+
+	}
+
+	return ret;
+    }
+
     global define map GetFunctions()
     {
 	return $[
@@ -2607,6 +2673,8 @@ source is accessible."));
 	    "updateDiskConfig" : VM_XEN::updateDiskConfig,
 	    "ReadConfigFileSettings" : VM_XEN::ReadConfigFileSettings,
 	    "ReadAllConfigFileSettings" : VM_XEN::ReadAllConfigFileSettings,
+
+	    "SetEmptyOptions" : VM_XEN::SetEmptyOptions,
 
 	    "Write" : VM_XEN::Write,
 	    "Prepare" : VM_XEN::Prepare,
