@@ -1,4 +1,17 @@
 -------------------------------------------------------------------
+Fri Nov  3 16:47:57 MST 2006 - carnold@novell.com
+
+- yast2-vm inserts empty cdrom line when booting from an already
+  installed disk causing the guest to fail because it can't attach 
+  to the non-existent CDROM. (#210099)
+- yast2-vm does not remove link in /etc/xen/auto when deleting a
+  VM causing error messages from xendomains when it tries to auto
+  start it. (#207082)
+- Eliminate a "no GUI" warning message that is displayed in the pv 
+  guest during install because textmode=1 was removed for the
+  framebuffer feature that did not make it in. (#215990)
+
+-------------------------------------------------------------------
 Fri Sep  1 12:43:23 MDT 2006 - mgfritch@novell.com
 
 - Replace the 'cdrom=' entry in fully virtualized config files with

@@ -1335,12 +1335,14 @@
 	);
 
 	if (ioemu) { // fully virtualized guest
-	    if (size(ret) > 0)
-	    {
-		ret = ret + ", ";
+	    if ( VM_Common::proposal_type != "existing" ) {
+		if (size(ret) > 0)
+		{
+		    ret = ret + ", ";
+		}
+		// Replace the 'cdrom=' line in config files for hvm guests with a disk line entry for the cdrom
+		ret = ret + sformat("'%1:%2,hdc:cdrom,r'", cdrom_image_type, cdrom_image);
 	    }
-	    // Replace the 'cdrom=' line in config files for hvm guests with a disk line entry for the cdrom
-	    ret = ret + sformat("'%1:%2,hdc:cdrom,r'", cdrom_image_type, cdrom_image);
 	}
 
 	ret = "[ " + ret + " ]";
@@ -1991,8 +1993,7 @@
     }
 
     global define boolean resetExtraArgs() {
-//	string arg = (VM_Common::proposal_type == "install") ? "TERM=xterm textmode=1 vnc=0" : "TERM=xterm";
-	string arg = "TERM=xterm";
+	string arg = (VM_Common::proposal_type == "install") ? "TERM=xterm textmode=1 vnc=0" : "TERM=xterm";
 	VM_Common::extra_args = arg;
 	return true;
     }
