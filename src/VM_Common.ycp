@@ -113,6 +113,8 @@
     string default_type = "para";
     string virtualization_type = default_type; // currently "para" or "full"
 
+    string yast_tmp_dir = "";
+
     global define list<string> CPUflags()
     {
 	// check only the first processor (assume the same processors)
@@ -628,19 +630,6 @@ to create the specified disk image.
 	return ret;
     }
 
-    global define string GetTmpDir() {
-	// get temporary directory
-	string tmpdir = (string)SCR::Read(.target.tmpdir);
-	if (tmpdir == "" || tmpdir == nil)
-	{
-	    y2warning("Using /tmp directory for temporary files!");
-	    tmpdir = "/tmp";
-	}
-
-	return tmpdir;
-    }
-
-
     global define boolean CreateExt2Image(string image, integer image_mb) {
 	// create sparse image file
 	if (!VM_Common::CreateDiskImage(image, image_mb, true))
@@ -661,6 +650,34 @@ to create the specified disk image.
 	    return false;
 	}
 	return true;
+    }
+
+    global define string GetTmpDir() {
+        if (yast_tmp_dir == nil || yast_tmp_dir == "") {
+                // get temporary directory
+		map output = (map)SCR::Execute(.target.bash_output, "mktemp -d"); // Let bash create a tmp dir
+		yast_tmp_dir = deletechars(output["stdout"]:"", "\n\t ");
+                if (yast_tmp_dir == "" || yast_tmp_dir == nil)
+                {
+                    y2warning("Using /tmp directory for temporary files!");
+                    yast_tmp_dir = "/tmp";
+                }
+        }
+        y2milestone("Using tmp directory: %1", yast_tmp_dir);
+        return yast_tmp_dir;
+    }
+
+    global boolean RemoveTmpDir() {
+        boolean ret = false;
+        if (yast_tmp_dir != nil && yast_tmp_dir != "" && yast_tmp_dir != "/tmp") {
+                y2milestone("Removing tmp dir: %1", yast_tmp_dir);
+                integer bash_ret = (integer)SCR::Execute(.target.bash, sformat("rm -rf %1", yast_tmp_dir));
+                if (bash_ret == 0) {
+			yast_tmp_dir = "";
+                        ret = true;
+                }
+        }
+        return ret;
     }
 
     global define boolean CreateImageWithProfile(string image, string profile)
@@ -699,7 +716,7 @@ to create the specified disk image.
 
         if (! ret)
 	    SCR::Execute (.target.bash, "/bin/rm -- '" + image + "'");
-        
+
 	return ret;
     }
 
@@ -743,7 +760,7 @@ to create the specified disk image.
 	{
 	    // get local location
 	    ret = Pkg::SourceProvideFile(source_id, pkginfo["medianr"]:0, pkg_path);
-	    string tmpdir = (string)SCR::Read (.target.tmpdir);
+	    string tmpdir = VM_Common::GetTmpDir();
 	    string target = sformat ("%1/%2.rpm", tmpdir, package);
 	    SCR::Execute (.target.bash, sformat ("/bin/cp %1 %2", ret, target));
 	    ret = target;

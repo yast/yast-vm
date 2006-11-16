@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Nov 16 14:29:51 MST 2006 - carnold@novell.com
+
+- yast2-vm acquires package from the wrong install source when a
+  second source is specified for additional vm installs. (#217403)
+
+-------------------------------------------------------------------
 Fri Nov  3 16:47:57 MST 2006 - carnold@novell.com
 
 - yast2-vm inserts empty cdrom line when booting from an already

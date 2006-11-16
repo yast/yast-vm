@@ -54,7 +54,9 @@
     define symbol start() {
 
 	if (!Mode::config()) {
-		return (symbol)WFM::CallFunction("inst_vm_kickoff", [false, false]);
+		symbol retval = (symbol)WFM::CallFunction("inst_vm_kickoff", [false, false]);
+		VM_Common::RemoveTmpDir(); // Remove all bogus tmp directories (bugzilla #217403)
+		return retval;
 	}
 	else {
 		// save the current settings into the AutoYaST profile settings
