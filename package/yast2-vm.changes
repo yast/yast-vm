@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Wed Dec  6 15:42:15 MST 2006 - carnold@novell.com
+
+- Yast2-vm does not remove the directory that contains the vm disk
+  image when deleting a vm. (#221258)
+- Yast2-vm doesn't recognize an installation source set up as an
+  ISO file over NFS. (#224798)
+
+-------------------------------------------------------------------
 Thu Nov 16 14:29:51 MST 2006 - carnold@novell.com
 
 - yast2-vm acquires package from the wrong install source when a

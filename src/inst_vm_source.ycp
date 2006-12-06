@@ -36,7 +36,13 @@
         map general_data = Pkg::SourceGeneralData (id);
 	string srcurl = general_data["url"]:"";
 	map parsed_url = URL::Parse(srcurl);
-	if (!URL::Check(srcurl) || parsed_url["host"]:"" == "")	{
+	boolean isurl = false;
+
+	if ( parsed_url["scheme"]:"" == "iso" ) {
+	    isurl = regexpmatch(parsed_url["query"]:"", "&url=");
+	}
+
+	if (!URL::Check(srcurl) || (parsed_url["host"]:"" == "" && isurl == false)) {
 		return nil;
 	}
 	else {
@@ -654,8 +660,13 @@ define symbol Network_SourceDialog() {
 	    }
 
 	    map parsed_url = URL::Parse(srcurl);
+	    boolean isurl = false;
 
-	    if (!URL::Check(srcurl) || parsed_url["host"]:"" == "")
+	    if ( parsed_url["scheme"]:"" == "iso" ) {
+		isurl = regexpmatch(parsed_url["query"]:"", "&url=");
+	    }
+
+	    if (!URL::Check(srcurl) || (parsed_url["host"]:"" == "" && isurl == false))
 	    {
 		// popup error message
 		Report::Error(_("Entered URL value is not valid."));
