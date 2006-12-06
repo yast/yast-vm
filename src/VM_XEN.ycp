@@ -9,6 +9,7 @@
     module "VM_XEN";
 
     import "VM_Common";
+    import "URL";
     import "Popup";
     import "Report";
     import "HTML";
@@ -128,6 +129,9 @@
 	if (VM_Common::GetCustomKernel()) {
 		isNetWare = VM_Common::IsNetWareKernel(VM_Common::GetKernelImage());
         }
+	if ( Arch::x86_64() ) {
+		VM_Common::memory_size = 512; // Default to 512 on 64 bit
+	}
 	if (isNetWare && VM_Common::proposal_type != "install") {
 		if (VM_Common::memory_size < 512) {
 			VM_Common::memory_size = 512; // if NetWare, increase the memory_size=512
@@ -1871,6 +1875,28 @@
 	    {
 		map general_data = Pkg::SourceGeneralData (VM_Common::source_id);
 		url = general_data["url"]:"";
+		map parsed_url = URL::Parse(url);
+
+		// For when an ISO is mapped as an installation source via nfs
+		if ( parsed_url["scheme"]:"" == "iso" ) {
+		    if (regexpmatch(parsed_url["query"]:"", "&url=")) {
+			integer pos1 = search(url, "iso=");
+			integer pos2 = search(url, "url=");
+			if ( pos1 > 0 && pos2 > 0 ) {
+			    pos2 = pos2 + 4;	// Move past url=
+			    string new_url = substring (url, pos2);
+			    pos1 = pos1 + 4;	// Move past iso=
+			    pos2 = (pos2 - 5) - pos1;	// Calculate length of iso name
+			    string new_iso = substring (url, pos1, pos2);
+			    if (findlastof(new_url, "/") < size(new_url)-1) {
+				url = new_url + "/" + new_iso;
+			    }
+			    else {
+				url = new_url + new_iso;
+			    }
+			}
+		    }
+		}
 	    }
 	    else if (VM_Common::inst_type == `network_custom) {
 		url = VM_Common::custom_source;

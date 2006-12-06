@@ -83,7 +83,7 @@ boolean DeleteVirtualMachine(integer table_item) {
 		});
 
 		// remove any autoyast.img files from the vm image directory
-		string img_dir = VM::GetImgPrefix() + VM_Common::config_name;
+		string img_dir = VM::GetImgPrefix() + item["cfg_file"]:"";
 		SCR::Execute(.target.remove, img_dir + "/autoyast.img");
 
 		// try to remove the vm image directory (if it is not empty, it should not be deleted).
