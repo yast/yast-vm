@@ -1,4 +1,31 @@
 -------------------------------------------------------------------
+Thu Dec  7 11:38:51 MST 2006 - carnold@novell.com
+
+- Yast2-vm needs support for blktap. (#215387)
+- Yast2-vm does not remove the directory that contains the vm disk
+  image when deleting a vm. (#221258)
+- Yast2-vm doesn't recognize an installation source set up as an
+  ISO file over NFS. (#224798)
+- yast2-vm acquires package from the wrong install source when a
+  second source is specified for additional vm installs. (#217403)
+- yast2-vm inserts empty cdrom line when booting from an already
+  installed disk causing the guest to fail because it can't attach
+  to the non-existent CDROM. (#210099)
+- yast2-vm does not remove link in /etc/xen/auto when deleting a
+  VM causing error messages from xendomains when it tries to auto
+  start it. (#207082)
+- Eliminate a "no GUI" warning message that is displayed in the pv
+  guest during install because textmode=1 was removed for the
+  framebuffer feature that did not make it in. (#215990)
+- Replace the 'cdrom=' entry in fully virtualized config files with
+  a corresponding disk line entry (necessary for xen 3.0.3).
+- If para virtualized, kernel is extracted from a SUSE installation
+  source, and domU kernel version >= 2.6.18, add "sdl=1" to config
+  file.
+- Remove the 'extra' option with 'vnc=0 textmode=1' for framebuffer
+  support (necessary for xen 3.0.3 and above).
+
+-------------------------------------------------------------------
 Mon Oct 30 09:46:41 CET 2006 - lslezak@suse.cz
 
 - command line mode support: 'install' command handler (install

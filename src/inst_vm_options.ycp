@@ -90,7 +90,7 @@
 	// virtual machine options (boot) - help text 1/1
 	help_text = help_text + _("<p>Each virtual machine must have a unique name. The <b>name of virtual machine</b> entered here will be used as the name of the VM configuration file.</p>");
 
-	// in the autoyast config mode the name can be empty
+        // in the autoyast config mode the name can be empty
 	if (Mode::config())
 	{
 	    // virtual machine options (boot) - help text - displayed in the autoyast config mode only

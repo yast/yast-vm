@@ -21,6 +21,7 @@
 
     include "vm/cmdline.ycp";
 
+    // check whether VM can be started
     boolean StartHandler()
     {
 	// check whether VM can be started
@@ -119,23 +120,23 @@ Configure the VM Server now?")))
 	"actions"   : $[
 	    "install" : $[
 		// command description
-		"help"	: _("Create and install a new virtual machine"),
+		"help"  : _("Create and install a new virtual machine"),
 		"handler": start_installation
 	    ],
 	],
 	"options" : $[
 	    "autoyast" : $[
 		// option description
-		"help"	: _("Path to the autoyast profile (xml file)"),
-		"type"	: "string"
+		"help"  : _("Path to the autoyast profile (xml file)"),
+		"type"  : "string"
 	    ],
 	    "display" : $[
 		// option description
-		"help"	: _("Display the VM console during installation"),
+		"help"  : _("Display the VM console during installation"),
 	    ],
 	],
 	"mappings" : $[
-	    "install"	: ["autoyast", "display"],
+	    "install"   : ["autoyast", "display"],
 	]
     ];
 

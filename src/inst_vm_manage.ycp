@@ -83,7 +83,7 @@ boolean DeleteVirtualMachine(integer table_item) {
 		});
 
 		// remove any autoyast.img files from the vm image directory
-		string img_dir = VM::GetImgPrefix() + VM_Common::config_name;
+		string img_dir = VM::GetImgPrefix() + item["cfg_file"]:"";
 		SCR::Execute(.target.remove, img_dir + "/autoyast.img");
 
 		// try to remove the vm image directory (if it is not empty, it should not be deleted).
@@ -91,6 +91,9 @@ boolean DeleteVirtualMachine(integer table_item) {
 		y2milestone("Executing: %1", cmd);
 		map retmap = (map)SCR::Execute(.target.bash_output, cmd);
 		y2milestone("retmap=%1", retmap);
+
+		// remove the config file link from the auto directory
+		SCR::Execute(.target.remove, sformat("%1%2", "/etc/xen/auto/", item["cfg_file"]:""));
 
 		// remove the config file
 		boolean isremoved = (boolean) SCR::Execute(.target.remove, sformat("%1%2", VM::GetConfigFilePath(), item["cfg_file"]:""));

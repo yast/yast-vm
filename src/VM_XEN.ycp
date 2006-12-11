@@ -9,6 +9,7 @@
     module "VM_XEN";
 
     import "VM_Common";
+    import "URL";
     import "Popup";
     import "Report";
     import "HTML";
@@ -47,16 +48,20 @@
     string default_cdrom_image = "";
     string cdrom_image = default_cdrom_image;
 
+    string default_cdrom_image_type = "phy";
+    string cdrom_image_type = default_cdrom_image_type;
+
     global map SubExport() {
 	map ret = $[
-		"Common" 	: VM_Common::Export(),
-		"disks"		: disks,
-		"network"	: network,
-		"kernel_path"	: kernel_path,
-		"initrd_path"	: initrd_path,
-		"restart"	: restart,
-		"boot_device"	: boot_device,
-		"cdrom_image"	: cdrom_image
+		"Common"		: VM_Common::Export(),
+		"disks"			: disks,
+		"network"		: network,
+		"kernel_path"		: kernel_path,
+		"initrd_path"		: initrd_path,
+		"restart"		: restart,
+		"boot_device"		: boot_device,
+		"cdrom_image"		: cdrom_image,
+		"cdrom_image_type"	: cdrom_image_type
 	];
 
 	y2milestone("SubExport() returned: %1", ret);
@@ -89,13 +94,14 @@
 	// import the VM_Common AutoYaST settings
 	VM_Common::Import(input["Common"]:$[]);
 
-	disks =		input["disks"]:disks;
-	network =	input["network"]:network;
-	kernel_path = 	input["kernel_path"]:kernel_path;
-	initrd_path = 	input["initrd_path"]:initrd_path;
-	restart =	input["restart"]:restart; //FIXME: config file option 'restart' is depreciated!!!
-	boot_device = 	input["boot_device"]:boot_device;
-	cdrom_image = 	input["cdrom_image"]:cdrom_image;
+	disks =			input["disks"]:disks;
+	network =		input["network"]:network;
+	kernel_path =		input["kernel_path"]:kernel_path;
+	initrd_path =		input["initrd_path"]:initrd_path;
+	restart =		input["restart"]:restart; //FIXME: config file option 'restart' is depreciated!!!
+	boot_device =		input["boot_device"]:boot_device;
+	cdrom_image =		input["cdrom_image"]:cdrom_image;
+	cdrom_image_type =	input["cdrom_image_type"]:cdrom_image_type;
 
 	return true;
     }
@@ -124,6 +130,9 @@
 	if (VM_Common::GetCustomKernel()) {
 		isNetWare = VM_Common::IsNetWareKernel(VM_Common::GetKernelImage());
         }
+	if ( Arch::x86_64() ) {
+		VM_Common::memory_size = 512; // Default to 512 on 64 bit
+	}
 	if (isNetWare && VM_Common::proposal_type != "install") {
 		if (VM_Common::memory_size < 512) {
 			VM_Common::memory_size = 512; // if NetWare, increase the memory_size=512
@@ -850,9 +859,9 @@
 	else if (VM_Common::GetVirtualizationType() == "para") {
 		map<string,any> ret = $[];
 
-		// do not show the warning in the autoyast config mode,
-		// if the boot parition is empty it will be probed automatically
-		if (!Mode::config() && (VM_Common::root_device == nil || VM_Common::root_device == "")) {
+                // do not show the warning in the autoyast config mode,
+                // if the boot parition is empty it will be probed automatically
+                if (!Mode::config() && (VM_Common::root_device == nil || VM_Common::root_device == "")) {
 			// error in the installation proposal - do not allow to continue
 			ret = add(ret, "warning", _("Partition Containing Boot Files not specified."));
 			ret = add(ret, "warning_level", `blocker);
@@ -876,11 +885,13 @@
 		//default to the first cdrom device...
 		list<map> cd_hwinfo = (list<map>)SCR::Read(.probe.cdrom);
 		if (cd_hwinfo != nil) {
-			map dev = cd_hwinfo[0]:$[];	
+			map dev = cd_hwinfo[0]:$[];
 			cdrom_image = dev["dev_name"]:"/dev/hdc";
+			cdrom_image_type = "phy";
 		}
 		else {
 			cdrom_image = default_cdrom_image;
+			cdrom_image_type = default_cdrom_image_type;
 		}
 
 	}
@@ -888,6 +899,7 @@
 		boot_device = "c";
 		if (VM_Common::proposal_type != "boot") {// allow the cdrom_image setting to persist when moving from proposal_type 'install' to proposal_type 'boot'. See bugzilla #174616.
 			cdrom_image = default_cdrom_image;
+			cdrom_image_type = default_cdrom_image_type;
 		}
 	}
 
@@ -904,7 +916,13 @@
 
 	if (cdrom_image == nil)
 	{
-	    cdrom_image = "";
+	    cdrom_image = default_cdrom_image;
+	}
+
+	cdrom_image_type = opts["cdrom_image_type"]:"phy";
+	if (cdrom_image_type == nil || cdrom_image_type == "")
+	{
+	    cdrom_image_type = default_cdrom_image_type;
 	}
 
 	string bd = opts["boot_device"]:"c";
@@ -924,7 +942,7 @@
 
     global define map<string,string> GetFullOptions()
     {
-	return $["cdrom_image":cdrom_image, "boot_device":boot_device];
+	return $["cdrom_image":cdrom_image, "cdrom_image_type":cdrom_image_type, "boot_device":boot_device];
     }
 
     global define boolean isPAEKernel() {
@@ -1329,14 +1347,25 @@
 		    else {
 			source = sformat("%1%2/%3", d["prefix"]:img_prefix, VM_Common::config_name, d["source"]:"");
 		    }
-		    ret = ret + sformat("'file:%1,%2%3,%4'", source, ioemu_option, d["target"]:"", rw_mode);
+		    ret = ret + sformat("'tap:aio:%1,%2%3,%4'", source, ioemu_option, d["target"]:"", rw_mode);
 		}
 		else if (d["type"]:"" == "loop-use")
 		{
-		    ret = ret + sformat("'file:%1,%2%3,%4'", d["source"]:"", ioemu_option, d["target"]:"", rw_mode);
+		    ret = ret + sformat("'tap:aio:%1,%2%3,%4'", d["source"]:"", ioemu_option, d["target"]:"", rw_mode);
 		}
 	    }
 	);
+
+	if (ioemu) { // fully virtualized guest
+	    if ( VM_Common::proposal_type != "existing" ) {
+		if (size(ret) > 0)
+		{
+		    ret = ret + ", ";
+		}
+		// Replace the 'cdrom=' line in config files for hvm guests with a disk line entry for the cdrom
+		ret = ret + sformat("'%1:%2,hdc:cdrom,r'", cdrom_image_type, cdrom_image);
+	    }
+	}
 
 	ret = "[ " + ret + " ]";
 
@@ -1522,16 +1551,16 @@
 	if (optvalue != nil)
 	{
 	    if (regexpmatch(optvalue, "'.*'")) {
-		    // remove the single quotes
-		    string tmpoptvalue = regexpsub(optvalue, "'(.*)'", "\\1");
-		    if (optvalue != nil || optvalue != "")
-			    optvalue = tmpoptvalue;
+		// remove the single quotes
+		string tmpoptvalue = regexpsub(optvalue, "'(.*)'", "\\1");
+		if (optvalue != nil || optvalue != "")
+		    optvalue = tmpoptvalue;
 	    }
 	    else if (regexpmatch(optvalue, "\".*\"")) {
-		    // remove the double quotes
-		    string tmpoptvalue = regexpsub(optvalue, "\"(.*)\"", "\\1");
-		    if (optvalue != nil || optvalue != "")
-			    optvalue = tmpoptvalue;
+		// remove the double quotes
+		string tmpoptvalue = regexpsub(optvalue, "\"(.*)\"", "\\1");
+		if (optvalue != nil || optvalue != "")
+		    optvalue = tmpoptvalue;
 	    }
 	}
 
@@ -1832,6 +1861,16 @@
 	    ret = ret && WriteOption(configpath, "vncviewer", tostring((VM_Common::sdl == 1) ? 0 : 1));
 	    ret = ret && WriteOption(configpath, "ne2000", tostring(VM_Common::ne2000));
 	}
+	else {
+	    if (VM_Common::GetCustomKernel() == false) { // kernel extracted from SUSE install source
+		string kernel_ver = regexpsub(kernel_path, ".*vmlinuz-(.*)-xen", "\\1");
+		y2milestone("Kernel version is: %1", kernel_ver);
+		list<string> kernel_ver_list = splitstring(kernel_ver, ".-");
+		if (tointeger(kernel_ver_list[0]:"0") >= 2 && tointeger(kernel_ver_list[1]:"0") >= 6 && tointeger(kernel_ver_list[2]:"0") >= 18) { // if kernel version is >= 2.6.18, add "sdl=1" to the vm config file
+			ret = ret && WriteOption(configpath, "sdl", "1");
+		}
+	    }
+	}
 
 	ret = ret && WriteOption(configpath, "localtime", tostring(VM_Common::localtime));
 
@@ -1844,12 +1883,6 @@
 	{
 	    // write boot device option
 	    ret = ret && WriteStringOption(configpath, "boot", boot_device);
-
-	    // write CD-ROM configuration if booting from a CD
-//	    if (boot_device == "d") {
-	    if (VM_Common::proposal_type != "existing") {
-		ret = ret && WriteStringOption(configpath, "cdrom", cdrom_image);
-	    }
 	}
 
 	if (VM_Common::GetVirtualizationType() != "full")
@@ -1862,6 +1895,28 @@
 	    {
 		map general_data = Pkg::SourceGeneralData (VM_Common::source_id);
 		url = general_data["url"]:"";
+		map parsed_url = URL::Parse(url);
+
+		// For when an ISO is mapped as an installation source via nfs
+		if ( parsed_url["scheme"]:"" == "iso" ) {
+		    if (regexpmatch(parsed_url["query"]:"", "&url=")) {
+			integer pos1 = search(url, "iso=");
+			integer pos2 = search(url, "url=");
+			if ( pos1 > 0 && pos2 > 0 ) {
+			    pos2 = pos2 + 4;	// Move past url=
+			    string new_url = substring (url, pos2);
+			    pos1 = pos1 + 4;	// Move past iso=
+			    pos2 = (pos2 - 5) - pos1;	// Calculate length of iso name
+			    string new_iso = substring (url, pos1, pos2);
+			    if (findlastof(new_url, "/") < size(new_url)-1) {
+				url = new_url + "/" + new_iso;
+			    }
+			    else {
+				url = new_url + new_iso;
+			    }
+			}
+		    }
+		}
 	    }
 	    else if (VM_Common::inst_type == `network_custom) {
 		url = VM_Common::custom_source;
@@ -1984,7 +2039,8 @@
     }
 
     global define boolean resetExtraArgs() {
-	string arg = (VM_Common::proposal_type == "install") ? "TERM=xterm textmode=1 vnc=0" : "TERM=xterm";
+//	string arg = (VM_Common::proposal_type == "install") ? "TERM=xterm textmode=1 vnc=0" : "TERM=xterm";
+	string arg = "TERM=xterm";
 	VM_Common::extra_args = arg;
 	return true;
     }
