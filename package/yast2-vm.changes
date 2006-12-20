@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Wed Dec 20 13:23:57 MST 2006 - carnold@novell.com
+
+- blktap should only be enabled for pv guests. (#215387)
+
+-------------------------------------------------------------------
 Thu Dec  7 11:38:51 MST 2006 - carnold@novell.com
 
 - Yast2-vm needs support for blktap. (#215387)

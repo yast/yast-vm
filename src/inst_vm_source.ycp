@@ -933,7 +933,7 @@ define symbol FullOptionsDialog()
 	    }
 	    else
 	    {
-		map<string,string> opts = $["boot_device":bootdev, "cdrom_image":cdimg, "cdrom_image_type": ((bootdev_symbol == `cdrom) ? "phy" : "tap:aio")];
+		map<string,string> opts = $["boot_device":bootdev, "cdrom_image":cdimg, "cdrom_image_type": ((bootdev_symbol == `cdrom) ? "phy" : "file")];
 		y2milestone("Full virtualization options: %1", opts);
 		VM_XEN::SetFullOptions( opts );
 		break;
