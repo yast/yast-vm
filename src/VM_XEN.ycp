@@ -1348,7 +1348,7 @@
 			source = sformat("%1%2/%3", d["prefix"]:img_prefix, VM_Common::config_name, d["source"]:"");
 		    }
 		    if (VM_Common::GetVirtualizationType() == "para") {
-			ret = ret + sformat("'tap:aio:%1,%2%3,%4'", source, ioemu_option, d["target"]:"", rw_mode);
+			ret = ret + sformat("'file:%1,%2%3,%4'", source, ioemu_option, d["target"]:"", rw_mode);
 		    }
 		    else {
 			ret = ret + sformat("'file:%1,%2%3,%4'", source, ioemu_option, d["target"]:"", rw_mode);
@@ -1357,7 +1357,7 @@
 		else if (d["type"]:"" == "loop-use")
 		{
 		    if (VM_Common::GetVirtualizationType() == "para") {
-			ret = ret + sformat("'tap:aio:%1,%2%3,%4'", d["source"]:"", ioemu_option, d["target"]:"", rw_mode);
+			ret = ret + sformat("'file:%1,%2%3,%4'", d["source"]:"", ioemu_option, d["target"]:"", rw_mode);
 		    }
 		    else {
 			ret = ret + sformat("'file:%1,%2%3,%4'", d["source"]:"", ioemu_option, d["target"]:"", rw_mode);
