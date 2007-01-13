@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Jan 12 17:41:40 MST 2007 - carnold@novell.com
+
+- Yast2-vm now only installs the hypervisor and tools on the host
+  server.  All other tasks have been moved to xen-vm-install and
+  virt-manager.
+
+-------------------------------------------------------------------
 Fri Jan  5 16:58:11 MST 2007 - carnold@novell.com
 
 - Turn off blktap for preview2.  It's still very slow and needs to

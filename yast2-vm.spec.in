@@ -24,13 +24,9 @@ Summary:	Start installation in a Virtual Machine
 @clientdir@/vm*.ycp
 @clientdir@/xen*.ycp
 @clientdir@/dom0_setup.ycp
-@clientdir@/inst_vm*.ycp
-@clientdir@/inst_xen*.ycp
 @moduledir@/VM*.ycp
 @moduledir@/VM*.ybc
 @desktopdir@/xen.desktop
-%dir @yncludedir@/vm
-@yncludedir@/vm/*
 @scrconfdir@/*.scr
 %dir /usr/share/YaST2/control
 /usr/share/YaST2/control/vm_install.xml

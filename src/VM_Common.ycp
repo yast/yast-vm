@@ -1056,7 +1056,4 @@ to create the specified disk image.
         y2milestone("X check (isGraphicalDisplay): %1", ret);
 	return ret;
     }
-
-
-/* EOF */
 }
