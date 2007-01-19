@@ -1,7 +1,7 @@
 [Desktop Entry]
 X-SuSE-DocTeamID=ycc_xen
 Type=Application
-Categories=Qt;X-SuSE-YaST;
+Categories=Qt;X-SuSE-YaST;X-SuSE-YaST-Virtualization;
 
 X-KDE-ModuleType=Library
 X-KDE-RootOnly=true
