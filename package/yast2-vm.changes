@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Jan 30 10:59:25 MST 2007 - carnold@novell.com
+
+- Check for virt-manager and install in running GUI (#238974)
+- 2.13.71
+
+-------------------------------------------------------------------
 Fri Jan 26 10:08:30 MST 2007 - mgfritch@novell.com
 
 - Removed X-SuSE-YaST-AutoInst tag from the .desktop file (#239275)

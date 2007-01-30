@@ -184,6 +184,8 @@ Configure the VM Server now?")))
         // Assume python gtk is installed. If in text mode we don't care
         if (UI::GetDisplayInfo()["TextMode"]:true == false) {
             packages = add(packages, "python-gtk");
+            // Also make sure virt-manager is there - runs GUI only
+            packages = add(packages, "virt-manager");
         }
 
         boolean success = true;
