@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Fri Feb 16 14:38:00 MST 2007 - carnold@novell.com
+
+- Use a default system icon in the virtualization desktop file.
+
+-------------------------------------------------------------------
 Tue Jan 30 10:59:25 MST 2007 - carnold@novell.com
 
 - Check for virt-manager and install in running GUI (#238974)

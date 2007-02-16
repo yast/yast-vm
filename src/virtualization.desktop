@@ -12,7 +12,7 @@ X-SuSE-YaST-Group=Virtualization
 X-SuSE-YaST-SortKey=60
 
 OnlyShowIn=X-SuSE-YaST;
-Icon=virtualization
+Icon=yast-host
 
 Name=Virtualization
 
