@@ -1,101 +1,110 @@
+/* ------------------------------------------------------------------------------
+ * Copyright (c) 2007 Novell, Inc. All Rights Reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of version 2 of the GNU General Public License as published by the
+ * Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, contact Novell, Inc.
+ *
+ * To contact Novell about this file by physical or electronic mail, you may find
+ * current contact information at www.novell.com.
+ * ------------------------------------------------------------------------------
+ */
+
 /**
  * File:	clients/xen.ycp
- * Module:	Installation/management in a virtual machine
+ * Package:	Installation/management in a virtual machine
  * Summary:	Main virtual machine installation/management
- * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ * Authors:	Michael G. Fritch <mgfritch@novell.com>
  *
  * $Id$
  */
 
 {
+
+    /***
+     * <h3>Configuration of novell-xad</h3>
+     */
+
     textdomain "vm";
 
-    import "Report";
+    /* The main () */
+    y2milestone ("----------------------------------------");
+    y2milestone ("Xen (yast2-vm) module started");
+
+
     import "Arch";
-    import "CommandLine";
-    import "Popup";
-    import "Label";
-    import "Package";
-    import "PackageLock";
     import "Mode";
+    import "Package";
+    import "Popup";
+    import "Report";
+    import "VM_XEN";
 
-    include "vm/cmdline.ycp";
-
-    /**
-     * Definition of command line mode options
-     */
-    map cmdline = $[
-	// help text
-	"id"        : "vm",
-	"guihandler": GUIhandler,
-    ];
 
     // check whether VM can be started
-    if (Arch::is_uml () == true)
-    {
-	// we are already in UML, nested virtual machine is not supported
-	Report::Error(_("Virtual machine installation cannot be started inside the UML machine.
-Start installation in the host system.
-"));
+    boolean CheckConfiguration() {
 
-	return `abort;
+        boolean ret = true;
+
+        // check whether VM can be started (cannot start a vm using UML)
+        if ( VM_XEN::isUML() ) return false;
+
+        y2milestone("Checking for Xen installation");
+
+        // check the dom0 configuration...
+        ret = ret && VM_XEN::ConfigureDom0();
+        if (ret == false) return false;
+
+        y2milestone("CheckConfiguration returned: %1", ret);
+        return ret;
     }
 
-    if (!Arch::is_xen() && !Mode::config())
-    {
-	// error - xen kernel must be running to start a new Xen domain,
-	// ask user to configure the first (management) Xen domain
-	if (Popup::YesNo(_("A Xen virtual machine can be started only
-from the VM Server (domain 0),
-which is not running now.
 
-Configure the VM Server now?")))
-	{
-	    y2milestone("Starting domain0 configuration...");
-	    return (symbol) WFM::CallFunction("dom0_setup", []);
-	}
-	else
-	{
-	    y2milestone("Skipping domain0 configuration");
-	}
+/*    boolean GUIHandler() {
 
-	return `abort;
+        // Assume python gtk is installed. If in text mode we don't care
+        if (UI::GetDisplayInfo()["TextMode"]:true == false) {
+            // FIXME: do we want to launch the GUI???
+            // start the Xen VM install GUI
+            //string cmd = "/usr/sbin/xen-vm-install";
+            //y2milestone("Executing: %1", cmd);
+	    //integer ret = (integer)SCR::Execute(.target.bash_background, cmd);
+	    //y2milestone("GUIHandler returned: %1", (ret == 0));
+            //return (ret == 0);
+        }
+
+        return true;
     }
+*/
 
-    // abort if the package manager is not available
-    // note: Check() displays an error popup
-    boolean manager_available = PackageLock::Check();
-    if (!manager_available)
-    {
-	return `abort;
+
+    /* Main */
+
+    // Always check the dom0 configuration
+    boolean ret = CheckConfiguration();
+    if (ret == false) return `abort;
+
+    // only start the GUI if we are running Xen kernel
+  /*  if (Arch::is_xen()) {
+        ret = GUIHandler();
+        if (ret == false) return `abort;
     }
+*/
 
-    // initialize the target system
-    Pkg::TargetInit("/", true);
 
-    // install required packages if they are missing
-    if (!Mode::config() && !Package::InstallAll(["xen-tools"]))
-    {
-	// installation failed
-	return `abort;
-    }
-
-    // initialize the package manager library
-    list sources = Pkg::SourceStartCache(true);
-    y2milestone("Source init: %1", sources);
-
-    // initialize to xen VM type
-    import "VM";
-    // set virtualization type here
-    VM::SetVMMtype("xen");
-
-    // initialize ProductControl module (load custom control file)
-    import "VM_Common";
-    VM_Common::InitProductControl();
-
-    Pkg::TargetFinish();
-
-    any ret = CommandLine::Run(cmdline);
+    /* Finish */
+    y2milestone("Xen (yast-vm) module finished");
+    y2milestone("----------------------------------------");
 
     return `next;
+
+/* EOF */
 }
+

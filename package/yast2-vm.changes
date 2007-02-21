@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Feb 21 15:49:43 MST 2007 - carnold@novell.com
+
+- Yast2-vm now only installs the hypervisor and tools on the host
+  server.  All other tasks have been moved to vm-install and
+  virt-manager.
+
+-------------------------------------------------------------------
 Wed Dec  6 15:16:51 MST 2006 - carnold@novell.com
 
 - Yast2-vm does not remove the directory that contains the vm disk

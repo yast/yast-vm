@@ -1,6 +1,7 @@
 [Desktop Entry]
+X-SuSE-DocTeamID=ycc_xen
 Type=Application
-Categories=Qt;X-SuSE-YaST;X-SuSE-YaST-System;
+Categories=Qt;X-SuSE-YaST;X-SuSE-YaST-Virtualization;
 
 X-KDE-ModuleType=Library
 X-KDE-RootOnly=true
@@ -8,10 +9,9 @@ X-KDE-HasReadOnlyMode=true
 X-KDE-Library=yast2
 X-SuSE-YaST-Call=xen
 
-X-SuSE-YaST-Group=System
+X-SuSE-YaST-Group=Virtualization
 X-SuSE-YaST-Argument=
 X-SuSE-YaST-RootOnly=true
-X-SuSE-YaST-AutoInst=configure
 X-SuSE-YaST-Geometry=
 X-SuSE-YaST-SortKey=
 X-SuSE-YaST-AutoinstResource=
@@ -19,6 +19,8 @@ X-SuSE-YaST-AutoinstResource=
 Icon=yast-uml
 Exec=/sbin/yast2 xen
 
-Name=Virtual Machine Management (Xen)
-GenericName=Install and Manage Xen virtual machines
+Name=Install Hypervisor and Tools
+GenericName=Install Hypervisor and Tools
 X-KDE-SubstituteUID=true
+
+X-SuSE-translate=true
