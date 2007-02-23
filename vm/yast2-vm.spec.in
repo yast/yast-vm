@@ -1,0 +1,32 @@
+@HEADER-COMMENT@
+
+
+@HEADER@
+BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite
+Requires:	yast2 yast2-installation
+
+Summary:	Start installation in a Virtual Machine
+
+%description
+-
+
+@PREP@
+
+@BUILD@
+
+@INSTALL@
+for f in `find $RPM_BUILD_ROOT/usr/share/applications/YaST2/groups/*.desktop` ; do
+    d=${f##*/}
+    %suse_update_desktop_file -d ycc_${d%.desktop} ${d%.desktop}
+done
+
+@CLEAN@
+
+%files
+%defattr(-,root,root)
+@clientdir@/vm_finish.ycp
+@clientdir@/xen.ycp
+@moduledir@/VM_XEN.y*
+@desktopdir@/groups/virtualization.desktop
+@desktopdir@/xen.desktop
+%doc @docdir@
