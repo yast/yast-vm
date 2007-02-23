@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Feb 23 14:59:17 MST 2007 - carnold@novell.com
+
+- A fix to allow the xm console command to work again with
+  PV guests. (#244097)
+
+-------------------------------------------------------------------
 Wed Feb 21 15:49:43 MST 2007 - carnold@novell.com
 
 - Yast2-vm now only installs the hypervisor and tools on the host

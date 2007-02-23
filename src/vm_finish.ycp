@@ -98,8 +98,18 @@ else if (func == "Write")
 	    }
 	);
 
-	// domU has only one console
-	SCR::Execute(.target.bash, "/bin/sed -i 's/.*mingetty tty[2-9]$//' /etc/inittab");
+	// We no longer need to do remove these entries now that we use xvc
+	//SCR::Execute(.target.bash, "/bin/sed -i 's/.*mingetty tty[2-9]$//' /etc/inittab");
+
+	// Allow a console in addition to VNC with the PV framebuffer
+	y2milestone("check for xvc0 in inittab and securetty");
+	if ( !contains(SCR::Dir(.etc.inittab), "x0") )
+	{
+		SCR::Write (.etc.inittab.x0, sformat ("12345:respawn:/sbin/agetty -L 9600 xvc0 xterm"));
+		SCR::Write (.etc.inittab, nil);
+	}
+	SCR::Execute(.target.bash,"/usr/bin/grep -q xvc0 /etc/securetty || echo xvc0 >> /etc/securetty");
+
 	// Although console appears to be a tty, do not do character translations
 	SCR::Execute(.target.bash, "/bin/sed -i 's/^CONSOLE_MAGIC=.*$/CONSOLE_MAGIC=\"\"/' /etc/sysconfig/console");
     }
