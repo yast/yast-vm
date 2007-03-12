@@ -50,18 +50,18 @@
         // check whether the firewall option exists
         boolean firewall_configured = false;
         if (contains(SCR::Dir(.sysconfig.SuSEfirewall2), "FW_FORWARD_ALWAYS_INOUT_DEV")) {
-            string xen_bridge = "xenbr0";
+            string xen_bridge = "xenbr+";
             // read the current value
             string forward = (string) SCR::Read(.sysconfig.SuSEfirewall2.FW_FORWARD_ALWAYS_INOUT_DEV);
             y2milestone("FW_FORWARD_ALWAYS_INOUT_DEV=%1", forward);
             if (contains(splitstring(forward, " "), xen_bridge)) {
                 y2milestone("Firewall already configured!");
-                firewall_configured = true; // xenbr0 already exists
+                firewall_configured = true; // xenbr+ already exists
             }
         }
 
         if (firewall_configured == false) {
-            // add xenbr0 to the firewall configuration
+            // add xenbr+ to the firewall configuration
             y2milestone("Configuring firewall to allow Xen bridge...");
             boolean progress_orig = Progress::set(false);
             SuSEFirewall::Read();
@@ -206,7 +206,7 @@ Configure the VM Server now?")))
         // Firewall stage - modify the firewall setting, add the xen bridge to FW_FORWARD_ALWAYS_INOUT_DEV
         Progress::NextStage();
 
-        // Configure firewall to allow xenbr0
+        // Configure firewall to allow xenbr+
         success = success && ConfigureFirewall();
         if ( success == false ) {
             // error popup

@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Mar 12 10:16:40 MDT 2007 - carnold@novell.com
+
+- Change the check for xenbr0 to xenbr+. (#233934)
+- Remove requires rule on yast2-installation. (#252932)
+
+-------------------------------------------------------------------
 Fri Feb 23 14:59:17 MST 2007 - carnold@novell.com
 
 - A fix to allow the xm console command to work again with
