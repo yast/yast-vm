@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Mar 12 08:42:35 MDT 2007 - carnold@novell.com
+
+- Change the check for xenbr0 to xenbr+. (#233934)
+- Remove requires rule on yast2-installation. (#252932)
+
+-------------------------------------------------------------------
 Fri Mar  2 11:08:55 MST 2007 - carnold@novell.com
 
 - Remove command_line.txt.  This information no longer
