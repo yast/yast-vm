@@ -16,7 +16,7 @@ X-SuSE-YaST-Geometry=
 X-SuSE-YaST-SortKey=
 X-SuSE-YaST-AutoinstResource=
 
-Icon=yast-uml
+Icon=yast-vm-install
 Exec=/sbin/yast2 xen
 
 Name=Install Hypervisor and Tools

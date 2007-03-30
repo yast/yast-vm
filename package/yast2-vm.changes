@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Fri Mar 30 13:39:21 MDT 2007 - carnold@novell.com
+
+- Update icon name in yast2-vm (#258519)
+
+-------------------------------------------------------------------
 Mon Mar 12 08:42:35 MDT 2007 - carnold@novell.com
 
 - Change the check for xenbr0 to xenbr+. (#233934)
