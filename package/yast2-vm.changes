@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed May  9 16:19:53 MDT 2007 - carnold@novell.com
+
+- The 'Virtualization' category is missing and the virtualization 
+  icons are in the other category. (#258600)
+
+-------------------------------------------------------------------
 Fri Mar 30 13:39:21 MDT 2007 - carnold@novell.com
 
 - Update icon name in yast2-vm (#258519)

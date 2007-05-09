@@ -19,6 +19,7 @@ for f in `find $RPM_BUILD_ROOT/usr/share/applications/YaST2/groups/*.desktop` ; 
     d=${f##*/}
     %suse_update_desktop_file -d ycc_${d%.desktop} ${d%.desktop}
 done
+%suse_update_desktop_file xen X-SuSE-YaST-Virtualization
 
 @CLEAN@
 
