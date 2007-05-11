@@ -1,0 +1,240 @@
+/* ------------------------------------------------------------------------------
+ * Copyright (c) 2007 Novell, Inc. All Rights Reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of version 2 of the GNU General Public License as published by the
+ * Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, contact Novell, Inc.
+ *
+ * To contact Novell about this file by physical or electronic mail, you may find
+ * current contact information at www.novell.com.
+ * ------------------------------------------------------------------------------
+ */
+
+/**
+ * File:	modules/VM_XEN.ycp
+ * Package:	VM_XEN configuration - generic module
+ * Authors:	Ladislav Slezak <lslezak@suse.cz>
+ *		Michael G. Fritch <mgfritch@novell.com>
+ *
+ * $Id$
+ */
+
+{
+
+    module "VM_XEN";
+
+    textdomain "vm";
+
+
+    import "Arch";
+    import "Package";
+    import "Progress";
+    import "Popup";
+    import "Report";
+    import "SuSEFirewall";
+    import "Wizard";
+
+
+    global boolean ConfigureFirewall() {
+	y2milestone("VM_XEN::ConfigureFirewall() started");
+        boolean ret = true;
+
+        // check whether the firewall option exists
+        boolean firewall_configured = false;
+        if (contains(SCR::Dir(.sysconfig.SuSEfirewall2), "FW_FORWARD_ALWAYS_INOUT_DEV")) {
+            string xen_bridge = "xenbr+";
+            // read the current value
+            string forward = (string) SCR::Read(.sysconfig.SuSEfirewall2.FW_FORWARD_ALWAYS_INOUT_DEV);
+            y2milestone("FW_FORWARD_ALWAYS_INOUT_DEV=%1", forward);
+            if (contains(splitstring(forward, " "), xen_bridge)) {
+                y2milestone("Firewall already configured!");
+                firewall_configured = true; // xenbr+ already exists
+            }
+        }
+
+        if (firewall_configured == false) {
+            // add xenbr+ to the firewall configuration
+            y2milestone("Configuring firewall to allow Xen bridge...");
+            boolean progress_orig = Progress::set(false);
+            SuSEFirewall::Read();
+            SuSEFirewall::AddXenSupport();
+            ret = ret && SuSEFirewall::Write();
+            Progress::set(progress_orig);
+        }
+
+        y2milestone("VM_XEN::ConfigureFirewall returned: %1", ret);
+        return ret;
+    }
+
+
+    global boolean isPAEKernel() {
+        // check is we're running on 32 bit pae.
+        y2milestone("Checking for PAE kernel...");
+        boolean isPAE = false;
+        string cmd = "uname -r";
+        y2milestone("Executing: %1", cmd);
+        map retmap = (map) SCR::Execute(.target.bash_output, cmd);
+        retmap["stdout"] = deletechars(retmap["stdout"]:"", "\n\t "); // remove whitespace
+        y2milestone("retmap=%1", retmap);
+        if (retmap["stdout"]:"" != nil && retmap["stdout"]:"" != "") {
+                if (regexpmatch(retmap["stdout"]:"", ".*xenpae$")) // check for kernel-xenpae
+                        isPAE = true;
+                else if (regexpmatch(retmap["stdout"]:"", ".*bigsmp$")) // check for kernel-bigsmp
+                        isPAE = true;
+                else
+                        isPAE = false;
+        }
+        y2milestone("VM_XEN::isPAEKernel returned: %1", isPAE);
+        return isPAE;
+    }
+
+
+    global boolean isUML() {
+        boolean ret = false;
+
+        if (Arch::is_uml () == true) {
+            // we are already in UML, nested virtual machine is not supported
+            Report::Error(_("Virtual machine installation cannot be started inside the UML machine.
+Start installation in the host system.
+"));
+            ret = true;
+        }
+        else {
+            ret = false;
+        }
+
+        y2milestone("VM_XEN::isUML returned: %1", ret);
+        return false;
+    }
+
+
+    global boolean ConfigureDom0() {
+
+/*        if (Arch::is_xen() == false) {
+            // error - xen kernel must be running to start a new Xen domain,
+            // ask user to configure the first (management) Xen domain
+            if (Popup::YesNo(_("A Xen virtual machine can be started only
+from the VM Server (domain 0),
+which is not running now.
+
+Configure the VM Server now?")))
+            {
+                y2milestone("Starting domain0 configuration...");
+            }
+            else
+            {
+                y2milestone("Skipping domain0 configuration");
+                return false;
+            }
+        }
+*/
+        list <string> progress_stages = [
+                    // progress stage 1/2
+                    _("Verify Installed Packages"),
+                    // progress stage 2/2
+                    _("Firewall Configuration")
+        ];
+
+        list progress_descriptions = [];
+
+        integer progress_length = size(progress_stages);
+
+        // Headline for management domain installation
+        string headline = _("Configuring the VM Server (domain 0)");
+
+        // xen domain0 installation help text - 1/4
+        string help_text = _("<p><big><b>VM Server Configuration</b></big></p><p>Configuration of the VM Server (domain 0) has two parts.</p>") +
+        // xen domain0 installation help text - 2/4
+        _("<p>The required packages are installed into the system first. Then the boot loader is switched to GRUB if it is not already used and the Xen section is added to the boot loader menu if it is missing.</p>") +
+        // xen domain0 installation help text - 3/4
+        _("<p>GRUB is needed because it supports the multiboot standard required to boot Xen and Linux kernel.</p>") +
+        // xen domain0 installation help text - 4/4
+        _("<p>When the configuration is successfully finished, it is possible to boot the VM Server from the boot loader menu.</p>");
+
+        // error popup
+        string abortmsg = _("The installation will be aborted.");
+
+        Wizard::OpenNextBackDialog();
+
+        // enable progress
+        boolean progress = Progress::set(true);
+
+        // Headline for virtual machine installation
+        Progress::New(headline, "", progress_length, progress_stages, progress_descriptions, help_text);
+
+        // package stage
+        Progress::NextStage();
+
+        // Decide if dom0 should use the pae kernel (#175117)
+        string kernel_pkg = "kernel-xen";
+        if ( isPAEKernel() )
+            kernel_pkg = "kernel-xenpae";
+
+        list<string> packages = ["xen", "xen-libs", "xen-tools", "xen-tools-ioemu"];
+        packages = add(packages, kernel_pkg);
+
+        // Assume python gtk is installed. If in text mode we don't care
+        if (UI::GetDisplayInfo()["TextMode"]:true == false) {
+            packages = add(packages, "python-gtk");
+            // Also make sure virt-manager is there - runs GUI only
+            packages = add(packages, "virt-manager");
+        }
+
+        boolean success = true;
+
+        // progressbar title - check whether Xen packages are installed
+        Progress::Title(_("Checking packages..."));
+        if (Package::InstalledAll(packages) == false) {
+            // progressbar title - install the required packages
+            Progress::Title(_("Installing packages..."));
+            success = Package::InstallAll(packages);
+            if ( success == false ) {
+                // error popup
+                Report::Error(_("Cannot install required packages.") + "\n" + abortmsg);
+                return false;
+            }
+        }
+
+        // Firewall stage - modify the firewall setting, add the xen bridge to FW_FORWARD_ALWAYS_INOUT_DEV
+        Progress::NextStage();
+
+        // Configure firewall to allow xenbr+
+        success = success && ConfigureFirewall();
+        if ( success == false ) {
+            // error popup
+            Report::Error(_("Failed to configure the firewall to allow the Xen bridge") + "\n" + abortmsg);
+            return false;
+        }
+
+        Progress::Finish();
+
+        if ( Arch::is_xen() == false ) {
+            // popup message - ask user to reboot the machine into Xen kernel
+            Popup::LongMessage(_("The machine is ready to start the VM Server.
+
+Reboot the machine and select the Xen section in the boot loader menu to start it.
+"));
+        }
+        else {
+            // popup message - Notify user of successful completion (or already installed).
+            Popup::Message(_("Hypervisor and tools are installed."));
+        }
+
+
+        Wizard::CloseDialog();
+
+        y2milestone("VM_XEN::ConfigureDom0 returned: %1", success);
+        return success;
+    }
+
+
+/* EOF */
+}
