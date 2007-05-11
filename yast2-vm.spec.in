@@ -20,6 +20,7 @@ for f in `find $RPM_BUILD_ROOT/usr/share/applications/YaST2/groups/*.desktop` ; 
     %suse_update_desktop_file -d ycc_${d%.desktop} ${d%.desktop}
 done
 %suse_update_desktop_file xen X-SuSE-YaST-Virtualization
+sed -i -e 's/Categories=.*/Categories=Qt;X-SuSE-YaST;X-SuSE-YaST-Virtualization;/g' $RPM_BUILD_ROOT/@desktopdir@/xen.desktop
 
 @CLEAN@
 
