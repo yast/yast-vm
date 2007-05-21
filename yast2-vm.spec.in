@@ -15,10 +15,6 @@ Summary:	Start installation in a Virtual Machine
 @BUILD@
 
 @INSTALL@
-for f in `find $RPM_BUILD_ROOT/usr/share/applications/YaST2/groups/*.desktop` ; do
-    d=${f##*/}
-    %suse_update_desktop_file -d ycc_${d%.desktop} ${d%.desktop}
-done
 
 @CLEAN@
 

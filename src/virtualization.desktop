@@ -1,5 +1,4 @@
 [Desktop Entry]
-# X-SuSE-DocTeamID=ycc_Virtualization
 Type=Application
 Categories=Qt;X-SuSE-YaST-Virtualization;
 
@@ -15,5 +14,3 @@ OnlyShowIn=X-SuSE-YaST;
 Icon=yast-host
 
 Name=Virtualization
-
-X-SuSE-translate=true

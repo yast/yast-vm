@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon May 21 08:29:37 MDT 2007 - carnold@novell.com
+
+- The 'Virtualization' category is missing and the virtualization
+  icons are in the other category. (#258600)
+- Update icon name in yast2-vm (#258519)
+
+-------------------------------------------------------------------
 Mon Mar 12 10:16:40 MDT 2007 - carnold@novell.com
 
 - Change the check for xenbr0 to xenbr+. (#233934)
