@@ -181,8 +181,13 @@ Configure the VM Server now?")))
         list<string> packages = ["xen", "xen-libs", "xen-tools", "xen-tools-ioemu"];
         packages = add(packages, kernel_pkg);
 
+        boolean inst_gui = true;
+
         // Assume python gtk is installed. If in text mode we don't care
-        if (UI::GetDisplayInfo()["TextMode"]:true == false) {
+        if (UI::GetDisplayInfo()["TextMode"]:true == true) {
+            inst_gui = Popup::YesNo (_("Running in text mode. Install graphical components anyway?"));
+        }
+        if ( inst_gui == true ) {
             packages = add(packages, "python-gtk");
             // Also make sure virt-manager is there - runs GUI only
             packages = add(packages, "virt-manager");

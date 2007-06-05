@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Jun  5 09:57:06 MDT 2007 - carnold@novell.com
+
+- Respond when "help" is requested at the command line. (#269913)
+- Prompt for installing graphical tools when running in text mode.
+  (#268510)
+
+-------------------------------------------------------------------
 Mon May 21 08:29:37 MDT 2007 - carnold@novell.com
 
 - The 'Virtualization' category is missing and the virtualization

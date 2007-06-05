@@ -41,6 +41,7 @@
 
 
     import "Arch";
+    import "CommandLine";
     import "Mode";
     import "Package";
     import "Popup";
@@ -66,38 +67,24 @@
         return ret;
     }
 
-
-/*    boolean GUIHandler() {
-
-        // Assume python gtk is installed. If in text mode we don't care
-        if (UI::GetDisplayInfo()["TextMode"]:true == false) {
-            // FIXME: do we want to launch the GUI???
-            // start the Xen VM install GUI
-            //string cmd = "/usr/sbin/xen-vm-install";
-            //y2milestone("Executing: %1", cmd);
-	    //integer ret = (integer)SCR::Execute(.target.bash_background, cmd);
-	    //y2milestone("GUIHandler returned: %1", (ret == 0));
-            //return (ret == 0);
-        }
-
-        return true;
-    }
-*/
-
-
     /* Main */
 
+    /**
+     * Definition of command line mode options
+     */
+    map cmdline = $[
+        "id"         : "vm",
+        "help"       : _("Install Hypervisor and Tools"),
+        "guihandler" : CheckConfiguration
+    ];
+
+
+    any rc = CommandLine::Run(cmdline);
+    y2milestone("YAST2-VM: rc = %1", rc);
+
     // Always check the dom0 configuration
-    boolean ret = CheckConfiguration();
-    if (ret == false) return `abort;
-
-    // only start the GUI if we are running Xen kernel
-  /*  if (Arch::is_xen()) {
-        ret = GUIHandler();
-        if (ret == false) return `abort;
-    }
-*/
-
+//    boolean ret = CheckConfiguration();
+//    if (ret == false) return `abort;
 
     /* Finish */
     y2milestone("Xen (yast-vm) module finished");
