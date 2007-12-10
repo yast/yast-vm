@@ -153,7 +153,7 @@ Configure the VM Server now?")))
         // xen domain0 installation help text - 1/4
         string help_text = _("<p><big><b>VM Server Configuration</b></big></p><p>Configuration of the VM Server (domain 0) has two parts.</p>") +
         // xen domain0 installation help text - 2/4
-        _("<p>The required packages are installed into the system first. Then the boot loader is switched to GRUB if it is not already used and the Xen section is added to the boot loader menu if it is missing.</p>") +
+        _("<p>The required packages are installed into the system first. Then the boot loader is switched to GRUB (if not already used) and the Xen section is added to the boot loader menu if it is missing.</p>") +
         // xen domain0 installation help text - 3/4
         _("<p>GRUB is needed because it supports the multiboot standard required to boot Xen and Linux kernel.</p>") +
         // xen domain0 installation help text - 4/4
