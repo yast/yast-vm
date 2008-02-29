@@ -178,7 +178,7 @@ Configure the VM Server now?")))
         if ( isPAEKernel() )
             kernel_pkg = "kernel-xenpae";
 
-        list<string> packages = ["xen", "xen-libs", "xen-tools", "xen-tools-ioemu"];
+        list<string> packages = ["xen", "xen-libs", "xen-tools"];
         packages = add(packages, kernel_pkg);
 
         boolean inst_gui = true;

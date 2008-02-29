@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Fri Feb 29 13:33:20 MST 2008 - carnold@novell.com
+
+- Remove tools-ioemu dependency.  This package no longer exists.
+
+-------------------------------------------------------------------
 Mon Dec 10 15:58:16 CET 2007 - lslezak@suse.cz
 
 - merged proofread texts (2007-18-23)
