@@ -21,3 +21,4 @@ Exec=/sbin/yast2 xen
 Name=Install Hypervisor and Tools
 GenericName=Install Hypervisor and Tools
 X-KDE-SubstituteUID=true
+StartupNotify=true

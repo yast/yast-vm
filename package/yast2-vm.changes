@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Mon Mar 17 12:43:32 CET 2008 - jsrain@suse.cz
+
+- added 'StartupNotify=true' to the desktop file (bnc #304964)
+
+-------------------------------------------------------------------
 Fri Feb 29 13:33:20 MST 2008 - carnold@novell.com
 
 - Remove tools-ioemu dependency.  This package no longer exists.
