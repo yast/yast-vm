@@ -173,10 +173,7 @@ Configure the VM Server now?")))
         // package stage
         Progress::NextStage();
 
-        // Decide if dom0 should use the pae kernel (#175117)
         string kernel_pkg = "kernel-xen";
-        if ( isPAEKernel() )
-            kernel_pkg = "kernel-xenpae";
 
         list<string> packages = ["xen", "xen-libs", "xen-tools"];
         packages = add(packages, kernel_pkg);
