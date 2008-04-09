@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Wed Apr  9 16:38:03 MDT 2008 - carnold@novell.com
+
+- Disable code that modifies SuSEfirewall2.
+
+-------------------------------------------------------------------
 Wed Mar 26 13:39:06 MDT 2008 - carnold@novell.com
 
 - In 11.0, kernel-xenpae is just kernel-xen.  There is no nonpae

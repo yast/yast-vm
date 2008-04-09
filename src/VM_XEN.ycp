@@ -140,7 +140,7 @@ Configure the VM Server now?")))
                     // progress stage 1/2
                     _("Verify Installed Packages"),
                     // progress stage 2/2
-                    _("Firewall Configuration")
+                    // _("Firewall Configuration")
         ];
 
         list progress_descriptions = [];
@@ -206,15 +206,15 @@ Configure the VM Server now?")))
         }
 
         // Firewall stage - modify the firewall setting, add the xen bridge to FW_FORWARD_ALWAYS_INOUT_DEV
-        Progress::NextStage();
+        // Progress::NextStage();
 
         // Configure firewall to allow xenbr+
-        success = success && ConfigureFirewall();
-        if ( success == false ) {
-            // error popup
-            Report::Error(_("Failed to configure the firewall to allow the Xen bridge") + "\n" + abortmsg);
-            return false;
-        }
+        // success = success && ConfigureFirewall();
+        // if ( success == false ) {
+        //     // error popup
+        //     Report::Error(_("Failed to configure the firewall to allow the Xen bridge") + "\n" + abortmsg);
+        //     return false;
+        // }
 
         Progress::Finish();
 
