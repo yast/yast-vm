@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Tue May 13 14:49:10 MDT 2008 - carnold@novell.com
+
+- yast2-vm needs to install vm-install.
+
+-------------------------------------------------------------------
 Wed Apr  9 16:38:03 MDT 2008 - carnold@novell.com
 
 - Disable code that modifies SuSEfirewall2.

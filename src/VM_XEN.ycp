@@ -175,7 +175,7 @@ Configure the VM Server now?")))
 
         string kernel_pkg = "kernel-xen";
 
-        list<string> packages = ["xen", "xen-libs", "xen-tools"];
+        list<string> packages = ["xen", "xen-libs", "xen-tools", "vm-install"];
         packages = add(packages, kernel_pkg);
 
         boolean inst_gui = true;
