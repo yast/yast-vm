@@ -74,6 +74,15 @@
         return ret;
     }
 
+    global boolean isOpenSuse() {
+        y2milestone("Checking to see if this is openSUSE ...");
+        list<string> distro = (list<string>)SCR::Read(.target.dir, "/etc/SuSE-release");
+        if (contains(distro, "openSUSE")) {
+            y2milestone("Platform is openSUSE");
+            return true;
+        }
+        return false;
+    }
 
     global boolean isPAEKernel() {
         // check is we're running on 32 bit pae.
@@ -186,8 +195,9 @@ Configure the VM Server now?")))
         }
         if ( inst_gui == true ) {
             packages = add(packages, "python-gtk");
-            // Also make sure virt-manager is there - runs GUI only
+            // Also make sure virt-manager and virt-viewer is there - runs GUI only
             packages = add(packages, "virt-manager");
+            packages = add(packages, "virt-viewer");
         }
 
         boolean success = true;
