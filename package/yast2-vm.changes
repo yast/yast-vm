@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Oct 22 16:34:20 MDT 2008 - carnold@novell.com
+
+- bnc#436987 - yast2-vm: Cannot create VMs if XEN installation 
+  happens via the yast2-vm module 
+
+-------------------------------------------------------------------
 Thu Oct  9 13:04:01 MDT 2008 - carnold@novell.com
 
 - Install virt-viewer as one of the GUI packages needed by xen.

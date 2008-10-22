@@ -149,7 +149,7 @@ Configure the VM Server now?")))
                     // progress stage 1/2
                     _("Verify Installed Packages"),
                     // progress stage 2/2
-                    // _("Firewall Configuration")
+                    _("Bridge Configuration")
         ];
 
         list progress_descriptions = [];
@@ -213,6 +213,16 @@ Configure the VM Server now?")))
                 Report::Error(_("Cannot install required packages.") + "\n" + abortmsg);
                 return false;
             }
+        }
+
+        // Default Bridge stage
+        Progress::NextStage();
+
+        {
+            WFM::call("lan_proposal", ["MakeProposal"]);
+            UI::OpenDialog(`VBox());
+            WFM::call("lan_proposal", ["Write"]);
+            UI::CloseDialog();
         }
 
         // Firewall stage - modify the firewall setting, add the xen bridge to FW_FORWARD_ALWAYS_INOUT_DEV
