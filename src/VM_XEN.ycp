@@ -149,7 +149,7 @@ Configure the VM Server now?")))
                     // progress stage 1/2
                     _("Verify Installed Packages"),
                     // progress stage 2/2
-                    _("Bridge Configuration")
+                    _("Network Bridge Configuration")
         ];
 
         list progress_descriptions = [];
@@ -218,7 +218,9 @@ Configure the VM Server now?")))
         // Default Bridge stage
         Progress::NextStage();
 
+        Progress::Title(_("Configuring Default Network Bridge..."));
         {
+            y2milestone("Configuring default bridge for Xen...");
             WFM::call("lan_proposal", ["MakeProposal"]);
             UI::OpenDialog(`VBox());
             WFM::call("lan_proposal", ["Write"]);
