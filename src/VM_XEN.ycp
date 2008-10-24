@@ -41,7 +41,10 @@
     import "Report";
     import "SuSEFirewall";
     import "Wizard";
+    import "Label";
 
+
+    string net_path = "/sys/class/net/";
 
     global boolean ConfigureFirewall() {
 	y2milestone("VM_XEN::ConfigureFirewall() started");
@@ -154,6 +157,9 @@ Configure the VM Server now?")))
 
         list progress_descriptions = [];
 
+        boolean bridge_exists = false;
+        string bridge_path = "";
+
         integer progress_length = size(progress_stages);
 
         // Headline for management domain installation
@@ -189,6 +195,8 @@ Configure the VM Server now?")))
 
         boolean inst_gui = true;
 
+        y2milestone("VM_XEN::ConfigureDom0 Checking for packages...");
+
         // Assume python gtk is installed. If in text mode we don't care
         if (UI::GetDisplayInfo()["TextMode"]:true == true) {
             inst_gui = Popup::YesNo (_("Running in text mode. Install graphical components anyway?"));
@@ -219,12 +227,31 @@ Configure the VM Server now?")))
         Progress::NextStage();
 
         Progress::Title(_("Configuring Default Network Bridge..."));
-        {
-            y2milestone("Configuring default bridge for Xen...");
-            WFM::call("lan_proposal", ["MakeProposal"]);
-            UI::OpenDialog(`VBox());
-            WFM::call("lan_proposal", ["Write"]);
-            UI::CloseDialog();
+
+	// Check for the existance of /sys/class/net/*/bridge
+	list<string> interfaces = (list<string>)SCR::Read(.target.dir, net_path);
+	// foreach (map<string,any> i, interfaces, ``{
+	foreach (string i, interfaces, ``{
+                y2milestone("Checking for bridges...");
+                bridge_path = net_path + "/" + i + "/bridge";
+                if (SCR::Read(.target.dir, bridge_path) >= 0) {
+                    y2milestone("Dom0 already has a configured bridge.");
+                    bridge_exists = true;
+                    break;
+                }
+	});
+
+        // Popup yes/no dialog
+	if ( bridge_exists == false ) {
+            if ( Popup::AnyQuestionRichText(_("Xen Network Bridge."),
+                _("<p>For normal network configurations, xen needs a network bridge.</p><p>Configure a default network bridge?</p>"),
+                45, 5, Label::YesButton(), Label::NoButton(), `focus_yes) ) {
+                y2milestone("Configuring default bridge for Xen...");
+                WFM::call("lan_proposal", ["MakeProposal"]);
+                UI::OpenDialog(`VBox());
+                WFM::call("lan_proposal", ["Write"]);
+                UI::CloseDialog();
+            }
         }
 
         // Firewall stage - modify the firewall setting, add the xen bridge to FW_FORWARD_ALWAYS_INOUT_DEV
