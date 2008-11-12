@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Nov 12 13:37:57 MST 2008 - carnold@novell.com
+
+- bnc#431907 - inst_finish.ycp:233 Client vm_finish returned 
+  invalid data 
+
+-------------------------------------------------------------------
 Wed Oct 22 16:34:20 MDT 2008 - carnold@novell.com
 
 - bnc#436987 - yast2-vm: Cannot create VMs if XEN installation 

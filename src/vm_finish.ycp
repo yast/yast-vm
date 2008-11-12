@@ -61,7 +61,7 @@ if (func == "Info")
     if (Arch::is_xenU())
     {
 	y2milestone("Detected Xen DomainU");
-	ret = $[
+	ret = (any)$[
 	    "steps" : 1,
 	    // progress step title
 	    "title" : _("Configuring the virtual machine..."),
@@ -71,7 +71,7 @@ if (func == "Info")
     else
     {
 	y2milestone("Xen DomainU not detected, skipping domain configuration");
-	ret = nil;
+	ret = $[];
     }
 }
 else if (func == "Write")
