@@ -1,4 +1,20 @@
 -------------------------------------------------------------------
+Wed Apr  1 13:43:37 MDT 2009 - carnold@novell.com
+
+- bnc#488598 - chkconfig and insserv fail on init scripts that
+  depend on /etc/init.d/boot.clock in Xen domU
+
+-------------------------------------------------------------------
+Thu Feb 12 13:04:27 CET 2009 - coolo@suse.de
+
+- add dummy Exec line to the group desktop file to make it validate
+
+-------------------------------------------------------------------
+Fri Jan  9 08:41:58 CET 2009 - olh@suse.de
+
+- use ExclusiveArch as in /SRC/arch/
+
+-------------------------------------------------------------------
 Wed Nov 12 13:37:57 MST 2008 - carnold@novell.com
 
 - bnc#431907 - inst_finish.ycp:233 Client vm_finish returned 
