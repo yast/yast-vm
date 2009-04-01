@@ -89,15 +89,6 @@ else if (func == "Write")
 	    }
 	);
 
-	// these services need force option to disable them
-	list<string> disable_services_force = ["boot.clock"];
-	y2milestone("disabling services (forced): %1", disable_services_force);
-	foreach(string s, disable_services_force, {
-		integer disabled = (integer) SCR::Execute(.target.bash, sformat("/sbin/insserv -r -f %1", s));
-		y2milestone("insserv-force: service %1 disabled: %2", s, (disabled == 0) ? true : false);
-	    }
-	);
-
 	// We no longer need to do remove these entries now that we use xvc
 	//SCR::Execute(.target.bash, "/bin/sed -i 's/.*mingetty tty[2-9]$//' /etc/inittab");
 

@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Apr  1 09:18:46 MDT 2009 - carnold@novell.com
+
+- bnc#488598 - chkconfig and insserv fail on init scripts that 
+  depend on /etc/init.d/boot.clock in Xen domU 
+
+-------------------------------------------------------------------
 Wed Nov 12 13:37:57 MST 2008 - carnold@novell.com
 
 - bnc#431907 - inst_finish.ycp:233 Client vm_finish returned 
