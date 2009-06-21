@@ -9,7 +9,7 @@ Requires:	yast2
 Summary:	YaST2 - Virtual Machine Installer
 
 %description
--
+This YaST module configures and installs a virtual machine.
 
 @PREP@
 
