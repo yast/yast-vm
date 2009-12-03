@@ -12,10 +12,10 @@ Tue Jun 16 14:29:32 CEST 2009 - mvidner@suse.cz
 - Using autodocs-ycp.ami, which contains a fix for automake 1.11.
 
 -------------------------------------------------------------------
-Wed Apr  1 13:43:37 MDT 2009 - carnold@novell.com
+Wed Apr  1 09:18:46 MDT 2009 - carnold@novell.com
 
-- bnc#488598 - chkconfig and insserv fail on init scripts that
-  depend on /etc/init.d/boot.clock in Xen domU
+- bnc#488598 - chkconfig and insserv fail on init scripts that 
+  depend on /etc/init.d/boot.clock in Xen domU 
 
 -------------------------------------------------------------------
 Thu Feb 12 13:04:27 CET 2009 - coolo@suse.de
