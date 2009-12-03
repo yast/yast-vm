@@ -3,7 +3,6 @@
 
 @HEADER@
 Group:	System/YaST
-License: GPL v2 or later
 ExclusiveArch:  %ix86 x86_64
 BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite
 Requires:	yast2

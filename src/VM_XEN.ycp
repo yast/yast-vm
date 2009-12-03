@@ -130,24 +130,6 @@ Start installation in the host system.
 
     global boolean ConfigureDom0() {
 
-/*        if (Arch::is_xen() == false) {
-            // error - xen kernel must be running to start a new Xen domain,
-            // ask user to configure the first (management) Xen domain
-            if (Popup::YesNo(_("A Xen virtual machine can be started only
-from the VM Server (domain 0),
-which is not running now.
-
-Configure the VM Server now?")))
-            {
-                y2milestone("Starting domain0 configuration...");
-            }
-            else
-            {
-                y2milestone("Skipping domain0 configuration");
-                return false;
-            }
-        }
-*/
         list <string> progress_stages = [
                     // progress stage 1/2
                     _("Verify Installed Packages"),
@@ -158,6 +140,10 @@ Configure the VM Server now?")))
         list progress_descriptions = [];
 
         boolean bridge_exists = false;
+        boolean install_xen = false;
+        boolean install_kvm = false;
+        any widget_id = nil;
+
         string bridge_path = "";
 
         integer progress_length = size(progress_stages);
@@ -177,6 +163,31 @@ Configure the VM Server now?")))
         // error popup
         string abortmsg = _("The installation will be aborted.");
 
+        // Generate a pop dialog to allow user selection of Xen or KVM
+        UI::OpenDialog(
+        `VBox(
+            `Label(_("Please select the virtualization platform to install")),
+            `Left(`CheckBox(`id(`xen), "Xen")),
+            `Left(`CheckBox(`id(`kvm), "KVM")),
+            `HBox(
+                `PushButton(`id(`accept), "&Accept" ),
+                `PushButton(`id(`cancel), "&Cancel" )
+                )
+            )
+        );
+
+        widget_id = UI::UserInput();
+        if ( widget_id == `accept ) {
+            install_xen = (boolean) UI::QueryWidget(`id(`xen), `Value);
+            install_kvm = (boolean) UI::QueryWidget(`id(`kvm), `Value);
+        }
+        if ( widget_id == `cancel || (install_xen == false && install_kvm == false) ) {
+            y2milestone("VM_XEN::ConfigureDom0 Cancel Selected or no platform selected.");
+            return false;
+        }
+
+        UI::CloseDialog();
+
         Wizard::OpenNextBackDialog();
 
         // enable progress
@@ -188,10 +199,17 @@ Configure the VM Server now?")))
         // package stage
         Progress::NextStage();
 
-        string kernel_pkg = "kernel-xen";
+        // Common packages to both Xen and KVM (hard dependency in libvirt for xen-libs even if kvm only)
+        list<string> packages = ["libvirt", "libvirt-python", "xen-libs", "vm-install"];
 
-        list<string> packages = ["xen", "xen-libs", "xen-tools", "vm-install"];
-        packages = add(packages, kernel_pkg);
+        if ( install_xen ) {
+            packages = add(packages, "xen");
+            packages = add(packages, "xen-tools");
+            packages = add(packages, "kernel-xen");
+        }
+        if ( install_kvm ) {
+            packages = add(packages, "kvm");
+        }
 
         boolean inst_gui = true;
 
@@ -243,10 +261,10 @@ Configure the VM Server now?")))
 
         // Popup yes/no dialog
 	if ( bridge_exists == false ) {
-            if ( Popup::AnyQuestionRichText(_("Xen Network Bridge."),
-                _("<p>For normal network configurations, xen needs a network bridge.</p><p>Configure a default network bridge?</p>"),
+            if ( Popup::AnyQuestionRichText(_("Network Bridge."),
+                _("<p>For normal network configurations hosting virtual machines, a network bridge is recommended.</p><p>Configure a default network bridge?</p>"),
                 45, 5, Label::YesButton(), Label::NoButton(), `focus_yes) ) {
-                y2milestone("Configuring default bridge for Xen...");
+                y2milestone("Configuring default bridge for Xen or KVM...");
                 WFM::call("lan_proposal", ["MakeProposal"]);
                 UI::OpenDialog(`VBox());
                 WFM::call("lan_proposal", ["Write"]);
@@ -267,18 +285,37 @@ Configure the VM Server now?")))
 
         Progress::Finish();
 
-        if ( Arch::is_xen() == false ) {
-            // popup message - ask user to reboot the machine into Xen kernel
-            Popup::LongMessage(_("The machine is ready to start the VM Server.
+        string message_kvm = _("For installing KVM guests, reboot the machine to load the necessary drivers.");
+        string message_xen_reboot = _("For installing Xen guests, reboot the machine and select the Xen section in the boot loader menu.
+");
+        string message_xen_ready = _("Hypervisor and tools are installed.");
+        string message = nil;
 
-Reboot the machine and select the Xen section in the boot loader menu to start it.
-"));
+        if ( install_xen == false ) {
+            Popup::LongMessage(message_kvm);
         }
         else {
-            // popup message - Notify user of successful completion (or already installed).
-            Popup::Message(_("Hypervisor and tools are installed."));
+            if ( Arch::is_xen() == false ) {
+                if ( install_kvm == true ) {
+                    message = sformat("%1\n\n%2", message_kvm, message_xen_reboot);
+                }
+                else {
+                    message = message_xen_reboot;
+                }
+                // popup message - ask user to reboot the machine
+                Popup::LongMessage(message);
+            }
+            else {
+                // popup message - Notify user of successful completion (or already installed).
+                if ( install_kvm == true ) {
+                    message = sformat("%1\n\n%2", message_kvm, message_xen_ready);
+                }
+                else {
+                    message = message_xen_ready;
+                }
+                Popup::Message(message);
+            }
         }
-
 
         Wizard::CloseDialog();
 
