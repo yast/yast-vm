@@ -1,3 +1,9 @@
+-------------------------------------------------------------------
+Thu Oct 21 11:20:32 MDT 2010 - carnold@novell.com
+
+- bnc#647261 - Get lot's of error in .xsession-errors when lauching
+  yast 
+
 ------------------------------------------------------------------
 Wed Jan 13 18:56:03 CET 2010 - kmachalkova@suse.cz
 
