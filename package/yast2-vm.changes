@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Wed Nov 10 15:20:12 MST 2010 - carnold@novell.com
+
+- bnc#628256 - sysvinit: Id "x0" respawning too fast 
+
+-------------------------------------------------------------------
 Thu Oct 21 11:20:32 MDT 2010 - carnold@novell.com
 
 - bnc#647261 - Get lot's of error in .xsession-errors when lauching
