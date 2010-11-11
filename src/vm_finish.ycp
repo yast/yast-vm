@@ -38,6 +38,7 @@ textdomain "vm";
 
 import "Arch";
 import "Report";
+import "FileUtils";
 
 any ret = nil;
 string func = "";
@@ -96,8 +97,15 @@ else if (func == "Write")
 	y2milestone("check for xvc0 in inittab and securetty");
 	if ( !contains(SCR::Dir(.etc.inittab), "x0") )
 	{
+		y2milestone("Adding the x0 entry in the inittab file");
 		SCR::Write (.etc.inittab.x0, sformat ("12345:respawn:/sbin/agetty -L 9600 xvc0 xterm"));
 		SCR::Write (.etc.inittab, nil);
+		string dev_xvc0 = "/dev/xvc0";
+		if ( ! FileUtils::Exists(dev_xvc0) )
+		{
+			y2milestone("%1 not found, commenting out the x0 entry in the inittab", dev_xvc0);
+			SCR::Execute(.target.bash,"/bin/sed --in-place 's/^x0:/#x0:/g' /etc/inittab");
+		}
 	}
 	SCR::Execute(.target.bash,"/usr/bin/grep -q xvc0 /etc/securetty || echo xvc0 >> /etc/securetty");
 
