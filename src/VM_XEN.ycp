@@ -239,6 +239,11 @@ Start installation in the host system.
                 Report::Error(_("Cannot install required packages.") + "\n" + abortmsg);
                 return false;
             }
+            // Now see if they really were installed (bnc#508347)
+            if (Package::InstalledAll(packages) == false) {
+                Report::Error(_("Cannot install required packages.") + "\n" + abortmsg);
+                return false;
+            }
         }
 
         // Default Bridge stage

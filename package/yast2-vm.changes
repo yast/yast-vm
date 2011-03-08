@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Mar  8 16:17:23 MST 2011 - carnold@novell.com
+
+- bnc#508347 - Yast2 virtualization installation error but success
+  message
+
+-------------------------------------------------------------------
 Wed Nov 10 15:20:12 MST 2010 - carnold@novell.com
 
 - bnc#628256 - sysvinit: Id "x0" respawning too fast 
