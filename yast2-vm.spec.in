@@ -23,8 +23,6 @@ This YaST module configures and installs a virtual machine.
 %files
 %defattr(-,root,root)
 @clientdir@/vm_finish.ycp
-@clientdir@/xen.ycp
 @moduledir@/VM_XEN.y*
 @desktopdir@/groups/virtualization.desktop
-@desktopdir@/xen.desktop
 %doc @docdir@
