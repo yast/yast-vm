@@ -1,0 +1,479 @@
+/* ------------------------------------------------------------------------------
+ * Copyright (c) 2006 Novell, Inc. All Rights Reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of version 2 of the GNU General Public License as published by the
+ * Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, contact Novell, Inc.
+ *
+ * To contact Novell about this file by physical or electronic mail, you may find
+ * current contact information at www.novell.com.
+ * ------------------------------------------------------------------------------
+ */
+
+/**
+ * File:	modules/RelocationServer.ycp
+ * Package:	Configuration of relocation-server
+ * Summary:	RelocationServer settings, input and output functions
+ * Authors:	Li Dongyang <lidongyang@novell.com>
+ *
+ * $Id: RelocationServer.ycp 41350 2007-10-10 16:59:00Z dfiser $
+ *
+ * Representation of the configuration of relocation-server.
+ * Input and output routines.
+ */
+
+{
+
+module "RelocationServer";
+textdomain "relocation-server";
+
+import "Arch";
+import "SCR";
+import "Progress";
+import "Report";
+import "Popup";
+import "Summary";
+import "Message";
+import "Service";
+import "SuSEFirewall";
+import "SuSEFirewallServices";
+
+/**
+ * Data was modified?
+ */
+boolean modified = false;
+
+/**
+ * Returns whether the configuration has been modified.
+ */
+global boolean GetModified() {
+    return modified;
+}
+
+/**
+ * Sets that the configuration has been modified.
+ */
+global void SetModified() {
+    modified = true;
+}
+
+/**
+  Returns a confirmation popup dialog whether user wants to really abort.
+ */
+global boolean Abort() {
+    return Popup::ReallyAbort(GetModified());
+}
+
+/**
+ * Checks whether an Abort button has been pressed.
+ * If so, calls function to confirm the abort call.
+ *
+ * @return boolean true if abort confirmed
+ */
+global boolean PollAbort() {
+    if (UI::PollInput() == `abort)
+    return Abort();
+
+    return false;
+}
+
+/**
+* map of xend settings
+*/
+    map <string, string > SETTINGS = $[];
+
+    map <string, string > DEFAULT_CONFIG = $[
+    "xend-relocation-server"              : "no",
+    "xend-relocation-ssl-server"        : "no",
+    "xend-relocation-port"         : "8002",
+    "xend-relocation-ssl-port"           : "8003",
+    "xend-relocation-server-ssl-key-file"         : "xmlrpc.key",
+    "xend-relocation-server-ssl-cert-file"       : "xmlrpc.cert",
+    "xend-relocation-ssl"      : "no",
+    "xend-relocation-address"          : "",
+    "xend-relocation-hosts-allow"     : "^localhost$ ^localhost\\.localdomain$",
+    ];
+
+/**
+ * Returns the Xend Option as a list of strings.
+ *
+ * @param string option_key of the xend configuration
+ * @return string with option_values
+ */
+global string GetXendOption (string option_key) {
+    return SETTINGS[option_key]:DEFAULT_CONFIG[option_key]:"";
+}
+
+/**
+ * Returns default Xend Option as a list of strings.
+ *
+ * @param string option_key of the Xend configuration
+ * @return string with option_values
+ */
+
+global string GetDefaultXendOption (string option_key) {
+    return DEFAULT_CONFIG[option_key]:"";
+}
+
+/**
+ * Sets values for an option.
+ *
+ * @param string option_key with the Xend configuration key
+ * @param string option_values with the Xend configuration values
+ */
+global void SetXendOption (string option_key, string option_vals) {
+    SETTINGS[option_key] = option_vals;
+}
+
+/**
+ * Reads current xend configuration
+ */
+boolean ReadXendSettings () {
+    foreach (string key, (list <string>) SCR::Dir(.etc.xen.xend-config), {
+    string val = (string) SCR::Read(add(.etc.xen.xend-config, key));
+        if (val != nil) SETTINGS[key] = val;
+    });
+
+    y2milestone("Xend configuration has been read: %1", SETTINGS);
+    return true;
+}
+
+/**
+ * Writes current xend configuration
+ */
+boolean WriteXendSettings () {
+    y2milestone("Writing Xend configuration: %1", SETTINGS);
+
+    foreach (string option_key, string option_val, SETTINGS, {
+    SCR::Write(add(.etc.xen.xend-config, option_key), option_val);
+    });
+    // This is very important
+    // it flushes the cache, and stores the configuration on the disk
+    SCR::Write(.etc.xen.xend-config, nil);
+
+    string port = GetXendOption("xend-relocation-port");
+    string ssl_port = GetXendOption("xend-relocation-ssl-port");
+    list <string> ports_list = [port, ssl_port];
+    SuSEFirewallServices::SetNeededPortsAndProtocols(
+        "service:xend-relocation-server",
+        $[ "tcp_ports" : ports_list,]
+    );
+
+    return true;
+}
+
+/**
+ * Describes whether the daemon is running
+ */
+boolean xend_is_running = false;
+
+/**
+ * Reads current xend status
+ */
+boolean ReadXendService () {
+    if (Service::Status("xend") == 0) {
+    xend_is_running = true;
+    } else {
+    xend_is_running = false;
+    }
+
+    y2milestone((xend_is_running ? "Xend is running":"Xend is not running"));
+
+    return true;
+}
+
+/**
+ * Restarts the xend when the daemon was running when starting the configuration
+ */
+boolean WriteXendService () {
+    boolean all_ok = true;
+
+    if (xend_is_running) {
+    y2milestone("Restarting xend daemon");
+    all_ok = Service::Restart("xend");
+    } else {
+    y2milestone("Xend is not running - leaving...");
+    }
+
+    return all_ok;
+}
+
+string libvirtd_default_ports = "49152:49215";
+list <string> libvirtd_ports = [];
+
+global list <string> GetLibVirtdPorts() {
+    return libvirtd_ports;
+}
+
+global void SetLibvirtdPorts(list <string> ports) {
+    libvirtd_ports = ports;
+}
+
+boolean libvirtd_enabled = false;
+boolean sshd_enabled = false;
+boolean libvirtd_is_running = false;
+boolean sshd_is_running = false;
+
+map <string, boolean> LibvirtdOptions = $[
+    "tunneled_migration" : false,
+    "plain_migration"    : false,
+    "default_port_range" : false,
+];
+
+global boolean GetLibvirtdOption(string key) {
+    return LibvirtdOptions[key]:false;
+}
+
+global void SetLibvirtdOption(string key, boolean val) {
+    LibvirtdOptions[key] = val;
+}
+
+boolean ReadKVMServices () {
+    libvirtd_enabled = Service::Enabled("libvirtd");
+    sshd_enabled = Service::Enabled("sshd");
+
+    if (Service::Status("libvirtd") == 0) {
+        libvirtd_is_running = true;
+    } else {
+        libvirtd_is_running = false;
+    }
+    if (Service::Status("sshd") == 0) {
+        sshd_is_running = true;
+    } else {
+        sshd_is_running = false;
+    }
+
+    list <string> ports = SuSEFirewallServices::GetNeededTCPPorts("service:libvirtd-relocation-server");
+    libvirtd_ports = filter(string s, ports, {return (s != libvirtd_default_ports);});
+
+    y2milestone((libvirtd_is_running ? "libvirtd is running":"libvirtd is not running"));
+    y2milestone((sshd_is_running ? "sshd is running":"sshd is not running"));
+
+    return true;
+}
+
+boolean WriteKVMServices () {
+    boolean all_ok = true;
+
+    if (GetLibvirtdOption("tunneled_migration") || GetLibvirtdOption("plain_migration")) {
+        if (!libvirtd_is_running)
+            all_ok = Service::Start("libvirtd") && all_ok;
+        if (!libvirtd_enabled)
+            all_ok = Service::Enable("libvirtd") && all_ok;
+    }
+    if (GetLibvirtdOption("tunneled_migration")) {
+        if (!sshd_is_running)
+            all_ok = Service::Start("sshd") && all_ok;
+        if (!sshd_enabled)
+            all_ok = Service::Enable("sshd") && all_ok;
+    }
+    if (GetLibvirtdOption("plain_migration")) {
+        if (GetLibvirtdOption("default_port_range"))
+            if (!contains(libvirtd_ports, libvirtd_default_ports))
+                libvirtd_ports = add(libvirtd_ports, libvirtd_default_ports);
+        SuSEFirewallServices::SetNeededPortsAndProtocols(
+            "service:libvirtd-relocation-server",
+            $[ "tcp_ports" : libvirtd_ports,]
+        );
+    }
+
+    return all_ok;
+}
+
+/**
+ * Read all relocation-server settings
+ * @return true on success
+ */
+global boolean Read() {
+
+    /* RelocationServer read dialog caption */
+    string caption = _("Initializing relocation-server Configuration");
+
+    integer xen_steps = 3;
+    integer kvm_steps = 2;
+
+    integer sl = 500;
+    sleep(sl);
+
+    list<string> xen_stg = [
+        /* Progress stage 1/3 */
+        _("Read the current xend configuration"),
+        /* Progress stage 2/3 */
+        _("Read the current xend state"),
+        /* Progress stage 3/3 */
+        _("Read firewall settings")
+    ];
+
+    list<string> xen_tits = [
+        /* Progress step 1/3 */
+        _("Reading the current xend configuration..."),
+        /* Progress step 2/3 */
+        _("Reading the current xend state..."),
+        /* Progress step 3/3 */
+        _("Reading firewall settings..."),
+        /* Progress finished */
+        Message::Finished()
+    ];
+
+    list<string> kvm_stg = [
+        /* Progress stage 1/2 */
+        _("Read firewall settings"),
+        /* Progress stage 2/2 */
+        _("Read the current libvirtd/sshd state")
+    ];
+
+    list<string> kvm_tits = [
+        /* Progress step 1/2 */
+        _("Reading firewall settings..."),
+        /* Progress stage 2/2 */
+        _("Reading the current libvirtd/sshd state..."),
+        /* Progress finished */
+        Message::Finished()
+    ];
+
+    if (Arch::is_xen0())
+        Progress::New( caption, " ", xen_steps, xen_stg, xen_tits,"");
+    else
+        Progress::New( caption, " ", kvm_steps, kvm_stg, kvm_tits,"");
+
+    if (Arch::is_xen0()) {
+        if(PollAbort()) return false;
+        Progress::NextStage();
+        /* Error message */
+        if(!ReadXendSettings()) Report::Error(Message::CannotReadCurrentSettings());
+        sleep(sl);
+
+        if(PollAbort()) return false;
+        Progress::NextStage();
+        /* Error message */
+        if(!ReadXendService()) Report::Error(_("Cannot read the current Xend state."));
+        sleep(sl);
+    }
+
+    if(PollAbort()) return false;
+    Progress::NextStage();
+    boolean progress_state = Progress::set (false);
+    /* Error message */
+    if(!SuSEFirewall::Read()) Report::Warning(_("Cannot read firewall settings."));
+    Progress::set (progress_state);
+    sleep(sl);
+
+    if (Arch::is_kvm()) {
+        if(PollAbort()) return false;
+        Progress::NextStage();
+        /* Error message */
+        if(!ReadKVMServices()) Report::Error(_("Cannot read the current libvirtd/sshd state."));
+        sleep(sl);
+    }
+
+    if(PollAbort()) return false;
+    /* Progress finished */
+    Progress::NextStage();
+    sleep(sl);
+
+    if(PollAbort()) return false;
+    modified = false;
+    return true;
+}
+
+/**
+ * Write all relocation-server settings
+ * @return true on success
+ */
+global boolean Write() {
+
+    /* RelocationServer read dialog caption */
+    string caption = _("Saving relocation-server Configuration");
+
+    integer xen_steps = 3;
+    integer kvm_steps = 2;
+
+    integer sl = 500;
+    sleep(sl);
+
+    list<string> xen_stg = [
+        /* Progress stage 1 */
+        _("Write the Xend settings"),
+        /* Progress stage 2 */
+        _("Adjust the Xend service"),
+        /* Progress stage 3 */
+        _("Write firewall settings")
+    ];
+
+    list<string> xen_tits = [
+        /* Progress step 1 */
+        _("Writing the Xend settings..."),
+        /* Progress step 2 */
+        _("Adjusting the Xend service..."),
+        /* Progress step 3 */
+        _("Writing firewall settings..."),
+        Message::Finished()
+    ];
+
+    list<string> kvm_stg = [
+        /* Progress stage 1 */
+        _("Adjust the libvirtd/sshd service"),
+        /* Progress stage 2 */
+        _("Write firewall settings")
+    ];
+
+    list<string> kvm_tits = [
+        /* Progress step 1 */
+        _("Adjusting the libvirtd/sshd service"),
+        /* Progress stage 2 */
+        _("Writing firewall settings..."),
+        Message::Finished()
+    ];
+
+    if (Arch::is_xen0())
+        Progress::New(caption, " ", xen_steps, xen_stg, xen_tits ,"");
+    else
+        Progress::New(caption, " ", kvm_steps, kvm_stg, kvm_tits ,"");
+
+    if (Arch::is_xen0()) {
+        if(PollAbort()) return false;
+        Progress::NextStage();
+        /* Error message */
+        if(!WriteXendSettings()) Report::Error (_("Cannot write the xend settings."));
+        sleep(sl);
+
+        if(PollAbort()) return false;
+        Progress::NextStage();
+        /* Error message */
+        if(!WriteXendService()) Report::Error (Message::CannotAdjustService("xend"));
+        sleep(sl);
+    } else {
+        if(PollAbort()) return false;
+        Progress::NextStage();
+        /* Error message */
+        if(!WriteKVMServices()) Report::Error (Message::CannotAdjustService("xend"));
+        sleep(sl);
+    }
+
+    if(PollAbort()) return false;
+    Progress::NextStage ();
+    boolean progress_state = Progress::set (false);
+    /* Error message */
+    if(!SuSEFirewall::Write()) Report::Error (_("Cannot write firewall settings."));
+    Progress::set (progress_state);
+    sleep(sl);
+
+    if(PollAbort()) return false;
+    /* Progress finished */
+    Progress::NextStage();
+    sleep(sl);
+
+    if(PollAbort()) return false;
+    return true;
+}
+
+/* EOF */
+}

@@ -22,7 +22,12 @@ This YaST module configures and installs a virtual machine.
 
 %files
 %defattr(-,root,root)
+%dir @yncludedir@/relocation-server
+@yncludedir@/relocation-server/*
+@clientdir@/relocation-server.ycp
 @clientdir@/vm_finish.ycp
 @moduledir@/VM_XEN.y*
+@moduledir@/RelocationServer.*
 @desktopdir@/groups/virtualization.desktop
+@desktopdir@/relocation-server.desktop
 %doc @docdir@

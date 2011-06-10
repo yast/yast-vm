@@ -1,0 +1,25 @@
+[Desktop Entry]
+Type=Application
+Categories=Settings;System;Qt;X-SuSE-YaST;X-SuSE-YaST-Virtualization;
+
+X-KDE-ModuleType=Library
+X-KDE-RootOnly=true
+X-KDE-HasReadOnlyMode=true
+X-KDE-Library=yast2
+X-SuSE-YaST-Call=relocation-server
+
+X-SuSE-YaST-Group=Virtualization
+X-SuSE-YaST-Argument=
+X-SuSE-YaST-RootOnly=true
+X-SuSE-YaST-AutoInst=
+X-SuSE-YaST-Geometry=
+X-SuSE-YaST-SortKey=
+X-SuSE-YaST-AutoInstResource=
+
+Icon=yast-vm-install
+Exec=/sbin/yast2 relocation-server 
+
+Name=Relocation Server Configuration
+GenericName=relocation-server
+X-KDE-SubstituteUID=true
+StartupNotify=true
