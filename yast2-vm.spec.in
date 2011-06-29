@@ -3,7 +3,7 @@
 
 @HEADER@
 Group:	System/YaST
-ExclusiveArch:  %ix86 x86_64
+ExclusiveArch:  x86_64
 BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite
 Requires:	yast2
 
