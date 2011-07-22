@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Jul 22 15:21:54 CEST 2011 - locilka@suse.cz
+
+- Removed obsoleted X-KDE-SubstituteUID from desktop file
+  (bnc#540627)
+
+-------------------------------------------------------------------
 Wed Jun 29 13:55:52 CST 2011 - lidongyang@novell.com
 
 - bnc#702106 - Remove 32-bit "Install Hypervisor and Tools" from

@@ -21,5 +21,4 @@ Exec=/sbin/yast2 relocation-server
 
 Name=Relocation Server Configuration
 GenericName=relocation-server
-X-KDE-SubstituteUID=true
 StartupNotify=true
