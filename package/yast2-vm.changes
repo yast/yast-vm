@@ -3,6 +3,7 @@ Fri Jul 22 15:21:54 CEST 2011 - locilka@suse.cz
 
 - Removed obsoleted X-KDE-SubstituteUID from desktop file
   (bnc#540627) and replaced with xdg-su call in the Exec entry.
+- 2.21.0
 
 -------------------------------------------------------------------
 Wed Jun 29 13:55:52 CST 2011 - lidongyang@novell.com
