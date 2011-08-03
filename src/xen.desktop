@@ -1,4 +1,6 @@
 [Desktop Entry]
+X-SuSE-translate=true
+X-SuSE-DocTeamID=ycc_xen
 Type=Application
 Categories=Settings;System;Qt;X-SuSE-YaST;X-SuSE-YaST-Virtualization;
 
@@ -22,3 +24,4 @@ Name=Install Hypervisor and Tools
 GenericName=Install Hypervisor and Tools
 X-KDE-SubstituteUID=true
 StartupNotify=true
+
