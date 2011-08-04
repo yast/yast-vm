@@ -9,21 +9,34 @@ Requires:	yast2
 Summary:	Configure Hypervisor and Tools for Xen and KVM
 
 %description
--
+This YaST module configures and installs a virtual machine.
 
 @PREP@
 
 @BUILD@
 
 @INSTALL@
+%ifarch %ix86
+rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/xen.desktop
+rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
+%endif
 
 @CLEAN@
 
 %files
 %defattr(-,root,root)
-@clientdir@/vm_finish.ycp
+%dir @scrconfdir@
+%dir @yncludedir@
+@clientdir@/relocation-server.ycp
 @clientdir@/xen.ycp
+@clientdir@/vm_finish.ycp
 @moduledir@/VM_XEN.y*
+@moduledir@/RelocationServer.*
+@yncludedir@/*
+@scrconfdir@/*
 @desktopdir@/groups/virtualization.desktop
+%ifarch x86_64
+@desktopdir@/relocation-server.desktop
 @desktopdir@/xen.desktop
+%endif
 %doc @docdir@

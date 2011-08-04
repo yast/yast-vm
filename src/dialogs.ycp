@@ -1,0 +1,130 @@
+/* ------------------------------------------------------------------------------
+ * Copyright (c) 2006 Novell, Inc. All Rights Reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of version 2 of the GNU General Public License as published by the
+ * Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, contact Novell, Inc.
+ *
+ * To contact Novell about this file by physical or electronic mail, you may find
+ * current contact information at www.novell.com.
+ * ------------------------------------------------------------------------------
+ */
+
+/**
+ * File:	include/relocation-server/dialogs.ycp
+ * Package:	Configuration of relocation-server
+ * Summary:	Dialogs definitions
+ * Authors:	Li Dongyang <lidongyang@novell.com>
+ *
+ * $Id: dialogs.ycp 27914 2006-02-13 14:32:08Z locilka $
+ */
+
+{
+
+textdomain "relocation-server";
+
+import "Label";
+import "Wizard";
+import "RelocationServer";
+
+include "relocation-server/helps.ycp";
+
+term XendConfigurationDialogContent () {
+    return `VBox(
+        `Frame(_("Global Settings"),
+            `VBox(
+                `Left(`InputField(`id("xend-relocation-address"), `opt(`hstretch), _("Relocation Address:"))),
+                `Left(`InputField(`id("xend-relocation-hosts-allow"), `opt(`hstretch), _("Allowed Hosts:"))),
+                `Left(`CheckBox(`id("xend-relocation-ssl"), _("Use SSL as Default"))),
+                `HStretch(),
+                `VStretch()
+            )
+        ),
+        `Frame(_("non-SSL Server"),
+            `VBox(
+                `Left(`HSquash(`IntField(`id("xend-relocation-port"), _("Port:"), 1, 65535, 1))),
+                `Left(`CheckBox(`id("xend-relocation-server"), `opt(`notify), _("Enable"))),
+                `VStretch()
+            )
+        ),
+        `Frame(_("SSL Server"),
+            `VBox(
+                `Left(`HSquash(`IntField(`id("xend-relocation-ssl-port"), _("Port:"), 1, 65535, 1))),
+                `Left(
+                    `HBox(
+                        `InputField(`id("xend-relocation-server-ssl-key-file"), `opt(`hstretch), _("SSL Key File:")),
+                        `HSpacing(1),
+                        `VBox(
+                            `Label(""),
+                            `PushButton(`id("browse_ssl_key_file"), Label::BrowseButton())
+                        )
+                    )
+                ),
+                `Left(
+                    `HBox(
+                        `InputField(`id("xend-relocation-server-ssl-cert-file"), `opt(`hstretch), _("SSL Cert File:")),
+                        `HSpacing(1),
+                        `VBox(
+                            `Label(""),
+                            `PushButton(`id("browse_ssl_cert_file"), Label::BrowseButton())
+                        )
+                    )
+                ),
+                `Left(`CheckBox(`id("xend-relocation-ssl-server"), `opt(`notify), _("Enable"))),
+                `VStretch()
+            )
+        ),
+        `Frame(_("Firewall"),
+            `VBox(
+                "fw-xend",
+                `VStretch()
+            )
+        )
+    );
+}
+
+term KVMConfigurationDialogContent () {
+    return `VBox(
+        `Frame(_("Tunneled migration"),
+            `VBox(
+                `Left(`CheckBox(`id("tunneled_migration"),`opt(`notify), _("Make sure tunneled migration works")))
+            )
+        ),
+        `Frame(_("Plain migration"),
+            `VBox(
+                `Left(`CheckBox(`id("plain_migration"), `opt(`notify), _("Make sure plain migration works"))),
+                `VSpacing(),
+                `Left(`Label(_("TCP Ports"))),
+                `Left(
+                    `MinSize( 40, 5,
+                        /* A table header */
+                        `Table(`id("Port"), `header(_("Port")), [])
+                    )),
+                `Left (`HBox (
+                    /* a push button */
+                    `PushButton(`id("add_port"), _("&Add...")),
+                    /* a push button */
+                    `PushButton(`id("edit_port"), _("&Edit...")),
+                    /* a push button */
+                    `PushButton(`id("delete_port"), _("&Delete"))
+                )),
+                `Left(`CheckBox(`id("default_port_range"), `opt(`notify), _("Include default port range")))
+            )
+        ),
+        `Frame(_("Firewall"),
+            `VBox(
+                "fw-kvm"
+            )
+        )
+    );
+}
+/* EOF */
+}

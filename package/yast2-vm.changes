@@ -1,4 +1,24 @@
 -------------------------------------------------------------------
+Thu Aug  4 16:26:54 MDT 2011 - carnold@novell.com
+
+- Cleanups for building and installing on sles11sp2. 
+
+-------------------------------------------------------------------
+Wed Jun 29 13:55:52 CST 2011 - lidongyang@novell.com
+
+- bnc#702106 - Remove 32-bit "Install Hypervisor and Tools" from
+  YaST Control Center - FATE#308532
+  remove %ix86 from exclusive arch so that yast2-vm is available
+  only for the 64-bit x86 architecture.
+
+-------------------------------------------------------------------
+Mon Jun 13 14:14:40 CST 2011 - lidongyang@novell.com
+
+- fate#311371 - Enhance yast to configure live migration for Xen
+  and KVM
+  replace xen.ycp with relocation-server.ycp
+
+-------------------------------------------------------------------
 Tue Mar  8 16:17:23 MST 2011 - carnold@novell.com
 
 - bnc#508347 - Yast2 virtualization installation error but success

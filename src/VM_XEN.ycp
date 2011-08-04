@@ -253,7 +253,6 @@ Start installation in the host system.
 
 	// Check for the existance of /sys/class/net/*/bridge
 	list<string> interfaces = (list<string>)SCR::Read(.target.dir, net_path);
-	// foreach (map<string,any> i, interfaces, ``{
 	foreach (string i, interfaces, ``{
                 y2milestone("Checking for bridges...");
                 bridge_path = net_path + "/" + i + "/bridge";

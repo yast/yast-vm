@@ -1,0 +1,27 @@
+/**
+ * File:
+ *   xend.scr
+ * Summary:
+ *   SCR Agent for reading/writing /etc/xen/xend-config.sxp
+ *   using the ini-agent
+ * Access:
+ *   read/write
+ * Authors:
+ *   Li Dongyang <lidongyang@novell.com>
+ */
+
+.etc.xen.xend-config
+
+`ag_ini (
+    `IniAgent ( "/etc/xen/xend-config.sxp",
+        $[
+            "options"   : [ "global_values", "flat" ],
+            "comments"  : [ "^[ \t]*#.*$", "^[ \t]*$" ],
+            "params"    : [
+                $[ "match" : [ "\\(([^ ]+) +([^']*)\\)", "(%s %s)" ]],
+                $[ "match" : [ "\\(([^ ]+) +'?([^']*)'?\\)", "(%s '%s')" ]],
+            ],
+        ]
+    )
+)
+
