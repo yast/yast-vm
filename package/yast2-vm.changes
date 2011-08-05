@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Fri Aug  5 13:15:17 MDT 2011 - carnold@novell.com
+
+- Update desktop files with more descriptive information in the
+  GenericName field.
+- Restore xen.desktop and xen.ycp
+- 2.21.1
+
+-------------------------------------------------------------------
 Fri Aug  5 12:35:48 CEST 2011 - tgoettlicher@suse.de
 
 - fixed .desktop file (bnc #681249)

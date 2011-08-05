@@ -5,19 +5,20 @@ Categories=Settings;System;Qt;X-SuSE-YaST;X-SuSE-YaST-Virtualization;
 X-KDE-ModuleType=Library
 X-KDE-HasReadOnlyMode=true
 X-KDE-Library=yast2
-X-SuSE-YaST-Call=relocation-server
+X-SuSE-YaST-Call=xen
 
 X-SuSE-YaST-Group=Virtualization
 X-SuSE-YaST-Argument=
 X-SuSE-YaST-RootOnly=true
-X-SuSE-YaST-AutoInst=
 X-SuSE-YaST-Geometry=
 X-SuSE-YaST-SortKey=
-X-SuSE-YaST-AutoInstResource=
+X-SuSE-YaST-AutoinstResource=
 
 Icon=yast-vm-install
-Exec=/usr/bin/xdg-su -c "/sbin/yast2 relocation-server"
+Exec=/usr/bin/xdg-su -c "/sbin/yast2 xen"
 
-Name=Relocation Server Configuration
-GenericName=Configure Host for Virtual Machine Migration
+Name=Install Hypervisor and Tools
+GenericName=Install Xen or KVM with Management Tools
+X-KDE-SubstituteUID=true
 StartupNotify=true
+

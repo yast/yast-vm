@@ -2,12 +2,11 @@
 
 
 @HEADER@
-Group:	System/YaST
-ExclusiveArch:  x86_64
+ExclusiveArch:  %ix86 x86_64
 BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite
 Requires:	yast2
 
-Summary:	YaST2 - Virtual Machine Installer
+Summary:	Configure Hypervisor and Tools for Xen and KVM
 
 %description
 This YaST module configures and installs a virtual machine.
@@ -17,17 +16,27 @@ This YaST module configures and installs a virtual machine.
 @BUILD@
 
 @INSTALL@
+%ifarch %ix86
+rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/xen.desktop
+rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
+%endif
 
 @CLEAN@
 
 %files
 %defattr(-,root,root)
-%dir @yncludedir@/relocation-server
-@yncludedir@/relocation-server/*
+%dir @scrconfdir@
+%dir @yncludedir@
 @clientdir@/relocation-server.ycp
+@clientdir@/xen.ycp
 @clientdir@/vm_finish.ycp
 @moduledir@/VM_XEN.y*
 @moduledir@/RelocationServer.*
+@yncludedir@/*
+@scrconfdir@/*
 @desktopdir@/groups/virtualization.desktop
+%ifarch x86_64
 @desktopdir@/relocation-server.desktop
+@desktopdir@/xen.desktop
+%endif
 %doc @docdir@
