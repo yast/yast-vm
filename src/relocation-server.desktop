@@ -20,5 +20,5 @@ Icon=yast-vm-install
 Exec=/usr/bin/xdg-su -c "/sbin/yast2 relocation-server"
 
 Name=Relocation Server Configuration
-GenericName=relocation-server
+GenericName=Configure Host for Virtual Machine Migration
 StartupNotify=true

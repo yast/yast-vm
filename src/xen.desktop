@@ -19,7 +19,7 @@ Icon=yast-vm-install
 Exec=/sbin/yast2 xen
 
 Name=Install Hypervisor and Tools
-GenericName=Install Hypervisor and Tools
+GenericName=Install Xen or KVM with Management Tools
 X-KDE-SubstituteUID=true
 StartupNotify=true
 
