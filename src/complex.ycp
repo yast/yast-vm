@@ -237,9 +237,8 @@ void AddEditPortDialog (string current_port) {
         )
     ),
     `VSpacing(1),
-    `HBox(
+    `ButtonBox(
         `PushButton(`id(`ok), Label::OKButton()),
-        `HSpacing(1),
         `PushButton(`id(`cancel), Label::CancelButton())
     )
     ));
