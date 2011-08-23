@@ -6,7 +6,7 @@ ExclusiveArch:  %ix86 x86_64
 BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite
 Requires:	yast2
 # Arch::is_kvm()
-Requires: ysat2 >= 2.17.107
+Requires: yast2 >= 2.17.107
 BuildRequires: yast2 >= 2.17.107
 
 Summary:	Configure Hypervisor and Tools for Xen and KVM
