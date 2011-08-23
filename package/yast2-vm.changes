@@ -1,8 +1,7 @@
 -------------------------------------------------------------------
-Tue Aug 23 11:52:21 MDT 2011 - carnold@novell.com
+Tue Aug 23 19:31:49 CEST 2011 - behlert@suse.de
 
-- 713797 - yast2-vm: typo in requires 
-  yast2-vm.spec.in
+- Fix typo in specfile.
 
 -------------------------------------------------------------------
 Tue Aug 16 08:41:31 MDT 2011 - carnold@novell.com
