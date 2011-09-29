@@ -189,6 +189,7 @@ Start installation in the host system.
         UI::CloseDialog();
 
         Wizard::OpenNextBackDialog();
+        Wizard::SetDesktopTitleAndIcon("xen");
 
         // enable progress
         boolean progress = Progress::set(true);

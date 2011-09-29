@@ -125,7 +125,7 @@ any MainSequence() {
     );
     Wizard::HideBackButton ();
     Wizard::SetAbortButton(`abort, Label::CancelButton());
-    Wizard::SetTitleIcon("yast-vm-install");
+    Wizard::SetDesktopTitleAndIcon("relocation-server");
 
     return CWM::Run (w, $[`abort : ReallyExit]);
 }
@@ -159,7 +159,7 @@ any RelocationServerSequence() {
     ];
 
     Wizard::CreateDialog();
-    Wizard::SetTitleIcon("yast-vm-install");
+    Wizard::SetDesktopTitleAndIcon("relocation-server");
 
     any ret = Sequencer::Run(aliases, sequence);
 
