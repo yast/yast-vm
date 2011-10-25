@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Oct 25 10:02:24 UTC 2011 - lslezak@suse.cz
+
+- fixed translation of button labels (bnc#723657)
+- 2.17.7
+
+-------------------------------------------------------------------
 Tue Aug 23 19:31:49 CEST 2011 - behlert@suse.de
 
 - Fix typo in specfile.
