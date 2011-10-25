@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Oct 25 10:02:24 UTC 2011 - lslezak@suse.cz
+
+- fixed translation of button labels (bnc#723657)
+- 2.21.4
+
+-------------------------------------------------------------------
 Thu Sep 29 14:11:36 CEST 2011 - visnov@suse.cz
 
 - set dialog title
