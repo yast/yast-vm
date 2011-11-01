@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Nov  1 12:04:05 MDT 2011 - carnold@novell.com
+
+- bnc#727523 - yast2 xen should be modified for 32bit
+- 2.17.8 
+
+-------------------------------------------------------------------
 Tue Oct 25 10:02:24 UTC 2011 - lslezak@suse.cz
 
 - fixed translation of button labels (bnc#723657)
