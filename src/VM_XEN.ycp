@@ -108,6 +108,18 @@
         return isPAE;
     }
 
+    global boolean isX86_64() {
+        boolean ret = true;
+
+        if (Arch::x86_64 () == false) {
+            string arch = Arch::architecture();
+            Report::Error(_("x86_64 is the only supported architecture for hosting virtual machines. Your architecture is ") + arch);
+            ret = false;
+        }
+
+        y2milestone("VM_XEN::isX86_64 returned: %1", ret);
+        return ret;
+    }
 
     global boolean isUML() {
         boolean ret = false;
