@@ -168,9 +168,9 @@ Start installation in the host system.
         // xen domain0 installation help text - 2/4
         _("<p>The required packages are installed into the system first. Then the boot loader is switched to GRUB (if not already used) and the Xen section is added to the boot loader menu if it is missing.</p>") +
         // xen domain0 installation help text - 3/4
-        _("<p>GRUB is needed because it supports the multiboot standard required to boot Xen and Linux kernel.</p>") +
+        _("<p>GRUB is needed because it supports the multiboot standard required to boot Xen and the Linux kernel.</p>") +
         // xen domain0 installation help text - 4/4
-        _("<p>When the configuration is successfully finished, it is possible to boot the VM Server from the boot loader menu.</p>");
+        _("<p>When the configuration has finished successfully, you can boot the VM Server from the boot loader menu.</p>");
 
         // error popup
         string abortmsg = _("The installation will be aborted.");
@@ -178,7 +178,7 @@ Start installation in the host system.
         // Generate a pop dialog to allow user selection of Xen or KVM
         UI::OpenDialog(
         `VBox(
-            `Label(_("Please select the virtualization platform to install")),
+            `Label(_("Select the virtualization platform to install.")),
             `Left(`CheckBox(`id(`xen), "Xen")),
             `Left(`CheckBox(`id(`kvm), "KVM")),
             `ButtonBox(
