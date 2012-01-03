@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Jan  3 10:53:10 MST 2012 - carnold@novell.com
+
+- bnc#733715 - SLES11_SP2_LOC : EN: Typo in relocation-server.pot -
+  'unencryptyed'
+- 2.21.6
+
+-------------------------------------------------------------------
 Tue Nov  1 12:04:05 MDT 2011 - carnold@novell.com
 
 - bnc#727523 - yast2 xen should be modified for 32bit
