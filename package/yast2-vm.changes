@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Mar 14 17:00:46 MDT 2012 - carnold@novell.com
+
+- bnc#720929 - OES11LH: Upgrade from OES 2 SP2 to OES 11 RC3
+  re-adds "x0..respawn..xterm" to inittab 
+
+-------------------------------------------------------------------
 Mon Jan 16 14:54:33 UTC 2012 - coolo@suse.com
 
 - confirm license
