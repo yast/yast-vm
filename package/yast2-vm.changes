@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Mar 14 17:00:46 MDT 2012 - carnold@novell.com
+
+- bnc#720929 - OES11LH: Upgrade from OES 2 SP2 to OES 11 RC3
+  re-adds "x0..respawn..xterm" to inittab 
+
+-------------------------------------------------------------------
 Tue Jan  3 10:53:10 MST 2012 - carnold@novell.com
 
 - bnc#733715 - SLES11_SP2_LOC : EN: Typo in relocation-server.pot -
