@@ -42,6 +42,7 @@
     import "SuSEFirewall";
     import "Wizard";
     import "Label";
+    import "Bootloader";
 
 
     string net_path = "/sys/class/net/";
@@ -257,6 +258,17 @@ Start installation in the host system.
             if (Package::InstalledAll(packages) == false) {
                 Report::Error(_("Cannot install required packages.") + "\n" + abortmsg);
                 return false;
+            }
+        }
+
+        // If grub2 is the bootloader and we succesfully installed Xen, update the grub2 files
+        if ( install_xen ) {
+            y2milestone("Checking for bootloader type");
+            if (Bootloader::getLoaderType() == "grub2") {
+                Progress::Title(_("Updating grub2 configuration files..."));
+                string cmd = "/usr/sbin/grub2-mkconfig -o /boot/grub2/grub.cfg";
+                y2milestone("Executing: %1", cmd);
+                SCR::Execute(.target.bash, cmd);
             }
         }
 

@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Thu Sep 20 06:35:12 MDT 2012 - carnold@novell.com
+
+- bnc#780660 - Yast does not offer "Virtualization" section by 
+  default, and no "Install Hypervisor" option, after loading
+  yast-vm. 
+- 2.22.3
+
+-------------------------------------------------------------------
 Wed Mar 14 17:00:46 MDT 2012 - carnold@novell.com
 
 - bnc#720929 - OES11LH: Upgrade from OES 2 SP2 to OES 11 RC3
