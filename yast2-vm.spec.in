@@ -3,7 +3,7 @@
 
 @HEADER@
 ExclusiveArch:  %ix86 x86_64
-BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite
+BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite yast2-bootloader
 License:        GPL-2.0
 Requires:	yast2 >= 2.21.22
 
