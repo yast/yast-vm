@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Wed Jan  2 14:12:13 MST 2013 - carnold@novell.com
+
+- Enable vm-install to be built for s390x
+
+-------------------------------------------------------------------
 Thu Sep 20 06:35:12 MDT 2012 - carnold@novell.com
 
 - bnc#780660 - Yast does not offer "Virtualization" section by 

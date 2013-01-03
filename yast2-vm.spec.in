@@ -2,7 +2,7 @@
 
 
 @HEADER@
-ExclusiveArch:  %ix86 x86_64
+ExclusiveArch:  %ix86 x86_64 s390x
 BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite yast2-bootloader
 License:        GPL-2.0
 Requires:	yast2 >= 2.21.22
@@ -17,7 +17,7 @@ This YaST module configures and installs a virtual machine.
 @BUILD@
 
 @INSTALL@
-%ifarch %ix86
+%ifarch %ix86 s390x
 rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/xen.desktop
 rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
 %endif
