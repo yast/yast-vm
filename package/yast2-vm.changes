@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Feb  8 10:02:53 MST 2013 - carnold@suse.com
+
+- bnc#802612 - Libvirtd does not start automatically after kvm is
+  installed via "yast install Hypervisor and tools" 
+- 2.22.4
+
+-------------------------------------------------------------------
 Wed Jan  2 14:12:13 MST 2013 - carnold@novell.com
 
 - Enable vm-install to be built for s390x

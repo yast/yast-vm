@@ -80,9 +80,9 @@
 
     global boolean isOpenSuse() {
         y2milestone("Checking to see if this is openSUSE ...");
-        list<string> distro = (list<string>)SCR::Read(.target.dir, "/etc/SuSE-release");
-        if (contains(distro, "openSUSE")) {
-            y2milestone("Platform is openSUSE");
+        string distro = (string) SCR::Read(.target.string, "/etc/SuSE-release");
+        if (issubstring(distro, "openSUSE")) {
+            y2milestone("Platform is %1", distro);
             return true;
         }
         return false;
@@ -301,6 +301,13 @@ Start installation in the host system.
                 WFM::call("lan_proposal", ["Write"]);
                 UI::CloseDialog();
             }
+        }
+
+        // Enable the libvirtd daemon if openSUSE
+	if ( isOpenSuse() == true ) {
+            string cmd = "systemctl enable libvirtd.service";
+            y2milestone("Executing: %1", cmd);
+            SCR::Execute(.target.bash, cmd);
         }
 
         // Firewall stage - modify the firewall setting, add the xen bridge to FW_FORWARD_ALWAYS_INOUT_DEV
