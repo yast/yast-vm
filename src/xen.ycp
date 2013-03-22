@@ -53,17 +53,23 @@
     boolean CheckConfiguration() {
 
         boolean ret = true;
+        boolean is_s390 = false;
 
         // check whether VM can be started (cannot start a vm using UML)
         if ( VM_XEN::isUML() ) return false;
 
-        // we now only support 64 bit hosts
-        if ( VM_XEN::isX86_64() == false ) return false;
+        // s390 is technical preview and we only fully support x86_64
+        if ( Arch::s390_64() == true ) {
+            is_s390 = true;
+        }
+        else if ( VM_XEN::isX86_64() == false ) {
+            return false;
+        }
 
         y2milestone("Checking for Xen installation");
 
         // check the dom0 configuration...
-        ret = ret && VM_XEN::ConfigureDom0();
+        ret = ret && VM_XEN::ConfigureDom0(is_s390);
         if (ret == false) return false;
 
         y2milestone("CheckConfiguration returned: %1", ret);

@@ -61,7 +61,7 @@ boolean CheckConfiguration() {
     y2milestone("Checking for Xen installation");
 
     // check the dom0 configuration...
-    ret = ret && VM_XEN::ConfigureDom0();
+    ret = ret && VM_XEN::ConfigureDom0(Arch::s390_64());
     if (ret == false) return false;
 
     y2milestone("CheckConfiguration returned: %1", ret);

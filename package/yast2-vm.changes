@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Mar 22 15:55:57 MDT 2013 - carnold@suse.com
+
+- bnc#810535 - YaST2 is lacking hypervisor installation support on
+  s390x 
+- 2.22.5
+
+-------------------------------------------------------------------
 Fri Feb  8 10:02:53 MST 2013 - carnold@suse.com
 
 - bnc#802612 - Libvirtd does not start automatically after kvm is

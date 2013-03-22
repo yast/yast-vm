@@ -141,7 +141,7 @@ Start installation in the host system.
     }
 
 
-    global boolean ConfigureDom0() {
+    global boolean ConfigureDom0(boolean is_s390) {
 
         list <string> progress_stages = [
                     // progress stage 1/2
@@ -177,17 +177,32 @@ Start installation in the host system.
         string abortmsg = _("The installation will be aborted.");
 
         // Generate a pop dialog to allow user selection of Xen or KVM
-        UI::OpenDialog(
-        `VBox(
-            `Label(_("Select the virtualization platform to install.")),
-            `Left(`CheckBox(`id(`xen), "Xen")),
-            `Left(`CheckBox(`id(`kvm), "KVM")),
-            `ButtonBox(
-                `PushButton(`id(`accept), Label::AcceptButton() ),
-                `PushButton(`id(`cancel), Label::CancelButton() )
+        if ( is_s390 == true ) {
+            UI::OpenDialog(
+            `VBox(
+                `Label(_("Select the virtualization platform to install.")),
+                `Left(`CheckBox(`id(`xen), `opt(`disabled), "Xen")),
+                `Left(`CheckBox(`id(`kvm), "KVM")),
+                `ButtonBox(
+                    `PushButton(`id(`accept), Label::AcceptButton() ),
+                    `PushButton(`id(`cancel), Label::CancelButton() )
+                    )
                 )
-            )
-        );
+            );
+        }
+        else {
+            UI::OpenDialog(
+            `VBox(
+                `Label(_("Select the virtualization platform to install.")),
+                `Left(`CheckBox(`id(`xen), "Xen")),
+                `Left(`CheckBox(`id(`kvm), "KVM")),
+                `ButtonBox(
+                    `PushButton(`id(`accept), Label::AcceptButton() ),
+                    `PushButton(`id(`cancel), Label::CancelButton() )
+                    )
+                )
+            );
+        }
 
         widget_id = UI::UserInput();
         if ( widget_id == `accept ) {
@@ -304,7 +319,7 @@ Start installation in the host system.
         }
 
         // Enable the libvirtd daemon if openSUSE
-	if ( isOpenSuse() == true ) {
+        if ( isOpenSuse() == true ) {
             string cmd = "systemctl enable libvirtd.service";
             y2milestone("Executing: %1", cmd);
             SCR::Execute(.target.bash, cmd);

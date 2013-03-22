@@ -17,7 +17,7 @@ This YaST module configures and installs a virtual machine.
 @BUILD@
 
 @INSTALL@
-%ifarch %ix86 s390x
+%ifarch %ix86
 rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/xen.desktop
 rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
 %endif
