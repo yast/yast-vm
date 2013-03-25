@@ -36,7 +36,7 @@ rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
 @yncludedir@/*
 @scrconfdir@/*
 @desktopdir@/groups/virtualization.desktop
-%ifarch x86_64
+%ifnarch %ix86
 @desktopdir@/relocation-server.desktop
 @desktopdir@/xen.desktop
 %endif
