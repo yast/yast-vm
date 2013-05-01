@@ -3,9 +3,10 @@
 
 @HEADER@
 ExclusiveArch:  %ix86 x86_64 s390x
-BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite yast2-bootloader
+BuildRequires:  perl-XML-Writer update-desktop-files yast2 yast2-bootloader yast2-devtools yast2-testsuite
 License:        GPL-2.0
-Requires:	yast2 >= 2.21.22
+Requires:       yast2 >= 2.17.107
+BuildRequires:  yast2 >= 2.17.107
 
 Summary:	Configure Hypervisor and Tools for Xen and KVM
 

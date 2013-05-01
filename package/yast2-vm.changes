@@ -3,26 +3,21 @@ Tue Apr 30 16:56:50 MDT 2013 - carnold@suse.com
 
 - bnc#817790 - SLES11 SP3 - unable to install KVM Hypervisor and
   tools via YaST2 on s390x
-- 2.22.6
+- 2.17.14
 
 -------------------------------------------------------------------
 Fri Mar 22 15:55:57 MDT 2013 - carnold@suse.com
 
 - bnc#810535 - YaST2 is lacking hypervisor installation support on
-  s390x 
-- 2.22.5
+  s390x
+- 2.17.13
 
 -------------------------------------------------------------------
-Fri Feb  8 10:02:53 MST 2013 - carnold@suse.com
+Wed Mar  6 11:02:36 MST 2013 - carnold@suse.com
 
-- bnc#802612 - Libvirtd does not start automatically after kvm is
-  installed via "yast install Hypervisor and tools" 
-- 2.22.4
-
--------------------------------------------------------------------
-Wed Jan  2 14:12:13 MST 2013 - carnold@novell.com
-
-- Enable vm-install to be built for s390x
+- bnc#806801 - Relocation Server Configuration (in
+  Yast->Virtualization) fails to launch 
+- 2.17.12
 
 -------------------------------------------------------------------
 Thu Sep 20 06:35:12 MDT 2012 - carnold@novell.com
@@ -30,7 +25,7 @@ Thu Sep 20 06:35:12 MDT 2012 - carnold@novell.com
 - bnc#780660 - Yast does not offer "Virtualization" section by 
   default, and no "Install Hypervisor" option, after loading
   yast-vm. 
-- 2.22.3
+- 2.17.11
 
 -------------------------------------------------------------------
 Wed Mar 14 17:00:46 MDT 2012 - carnold@novell.com
@@ -39,71 +34,46 @@ Wed Mar 14 17:00:46 MDT 2012 - carnold@novell.com
   re-adds "x0..respawn..xterm" to inittab 
 
 -------------------------------------------------------------------
-Mon Jan 16 14:54:33 UTC 2012 - coolo@suse.com
-
-- confirm license
-
--------------------------------------------------------------------
 Tue Jan  3 10:53:10 MST 2012 - carnold@novell.com
 
 - bnc#733715 - SLES11_SP2_LOC : EN: Typo in relocation-server.pot -
-  'unencryptyed'
-- 2.22.1
-
--------------------------------------------------------------------
-Wed Nov 16 12:49:08 CET 2011 - jsuchome@suse.cz
-
-- merged texts from proofreading
-- 2.22.0
+  'unencryptyed' 
+- 2.17.9
 
 -------------------------------------------------------------------
 Tue Nov  1 12:04:05 MDT 2011 - carnold@novell.com
 
 - bnc#727523 - yast2 xen should be modified for 32bit
-- 2.21.5
+- 2.17.8 
 
 -------------------------------------------------------------------
 Tue Oct 25 10:02:24 UTC 2011 - lslezak@suse.cz
 
 - fixed translation of button labels (bnc#723657)
-- 2.21.4
+- 2.17.7
 
 -------------------------------------------------------------------
-Thu Sep 29 14:11:36 CEST 2011 - visnov@suse.cz
+Tue Aug 23 19:31:49 CEST 2011 - behlert@suse.de
 
-- set dialog title
-- 2.21.3 
-
--------------------------------------------------------------------
-Mon Sep 19 14:40:14 CEST 2011 - visnov@suse.cz
-
-- remove dependency on Wizard_hw
-- 2.21.2 
+- Fix typo in specfile.
 
 -------------------------------------------------------------------
-Mon Aug  8 12:20:55 UTC 2011 - lslezak@suse.cz
+Tue Aug 16 08:41:31 MDT 2011 - carnold@novell.com
 
-- use ButtonBox for push button widgets (bnc#701273)
+- Add BuildRequires: yast2 >= 2.17.107 to the spec file for the 
+  requred 'Arch::is_kvm()' method from the yast2 package 
 
 -------------------------------------------------------------------
-Fri Aug  5 13:15:17 MDT 2011 - carnold@novell.com
+Thu Aug  5 11:26:54 MDT 2011 - carnold@novell.com
 
 - Update desktop files with more descriptive information in the
-  GenericName field.
-- Restore xen.desktop and xen.ycp
-- 2.21.1
+  GenericName.
+- 2.17.5
 
 -------------------------------------------------------------------
-Fri Aug  5 12:35:48 CEST 2011 - tgoettlicher@suse.de
+Thu Aug  4 16:26:54 MDT 2011 - carnold@novell.com
 
-- fixed .desktop file (bnc #681249)
-
--------------------------------------------------------------------
-Fri Jul 22 15:21:54 CEST 2011 - locilka@suse.cz
-
-- Removed obsoleted X-KDE-SubstituteUID from desktop file
-  (bnc#540627) and replaced with xdg-su call in the Exec entry.
-- 2.21.0
+- Cleanups for building and installing on sles11sp2. 
 
 -------------------------------------------------------------------
 Wed Jun 29 13:55:52 CST 2011 - lidongyang@novell.com
@@ -120,7 +90,7 @@ Mon Jun 13 14:14:40 CST 2011 - lidongyang@novell.com
   and KVM
   replace xen.ycp with relocation-server.ycp
 
-------------------------------------------------------------------
+-------------------------------------------------------------------
 Tue Mar  8 16:17:23 MST 2011 - carnold@novell.com
 
 - bnc#508347 - Yast2 virtualization installation error but success
@@ -137,13 +107,6 @@ Thu Oct 21 11:20:32 MDT 2010 - carnold@novell.com
 - bnc#647261 - Get lot's of error in .xsession-errors when lauching
   yast 
 
-------------------------------------------------------------------
-Wed Jan 13 18:56:03 CET 2010 - kmachalkova@suse.cz
-
-- Adjusted .desktop file(s) to wrap /sbin/yast2/ calls in xdg-su
-  where root privileges are needed, removed X-KDE-SubstituteUID key 
-  (bnc#540627)
-
 -------------------------------------------------------------------
 Wed Dec  2 16:23:55 MST 2009 - carnold@novell.com
 
@@ -151,11 +114,6 @@ Wed Dec  2 16:23:55 MST 2009 - carnold@novell.com
   fate#306665 - KVM reaches supported status
   bnc#557233 - YaST needs to include kvm in virtualization support
   functionality 
-
--------------------------------------------------------------------
-Tue Jun 16 14:29:32 CEST 2009 - mvidner@suse.cz
-
-- Using autodocs-ycp.ami, which contains a fix for automake 1.11.
 
 -------------------------------------------------------------------
 Wed Apr  1 09:18:46 MDT 2009 - carnold@novell.com
