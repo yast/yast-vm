@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Apr 30 16:56:50 MDT 2013 - carnold@suse.com
+
+- bnc#817790 - SLES11 SP3 - unable to install KVM Hypervisor and
+  tools via YaST2 on s390x
+- 2.22.6
+
+-------------------------------------------------------------------
 Fri Mar 22 15:55:57 MDT 2013 - carnold@suse.com
 
 - bnc#810535 - YaST2 is lacking hypervisor installation support on

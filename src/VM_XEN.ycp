@@ -229,8 +229,8 @@ Start installation in the host system.
         // package stage
         Progress::NextStage();
 
-        // Common packages to both Xen and KVM (hard dependency in libvirt for xen-libs even if kvm only)
-        list<string> packages = ["libvirt", "libvirt-python", "xen-libs", "vm-install"];
+        // Common packages to both Xen and KVM
+        list<string> packages = ["libvirt", "libvirt-python", "vm-install"];
 
         if ( install_xen ) {
             packages = add(packages, "xen");
@@ -239,6 +239,10 @@ Start installation in the host system.
         }
         if ( install_kvm ) {
             packages = add(packages, "kvm");
+        }
+        if ( is_s390 == false ) {
+            // There is a hard dependency in libvirt for xen-libs even if kvm only except on s390
+            packages = add(packages, "xen-libs");
         }
 
         boolean inst_gui = true;
