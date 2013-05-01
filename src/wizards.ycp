@@ -125,7 +125,8 @@ any MainSequence() {
     );
     Wizard::HideBackButton ();
     Wizard::SetAbortButton(`abort, Label::CancelButton());
-    Wizard::SetDesktopTitleAndIcon("relocation-server");
+    Wizard::SetDesktopTitle("relocation-server");
+    Wizard::SetDesktopIcon("relocation-server");
 
     return CWM::Run (w, $[`abort : ReallyExit]);
 }
@@ -159,7 +160,8 @@ any RelocationServerSequence() {
     ];
 
     Wizard::CreateDialog();
-    Wizard::SetDesktopTitleAndIcon("relocation-server");
+    Wizard::SetDesktopTitle("relocation-server");
+    Wizard::SetDesktopIcon("relocation-server");
 
     any ret = Sequencer::Run(aliases, sequence);
 

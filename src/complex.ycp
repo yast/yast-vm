@@ -35,6 +35,7 @@ import "Label";
 import "Popup";
 import "Wizard";
 import "Confirm";
+import "Report";
 import "CWMFirewallInterfaces";
 import "RelocationServer";
 
