@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu May  2 12:55:18 MDT 2013 - carnold@suse.com
+
+- bnc#817943 - Selecting some virtualization packages during
+  install is causing bridged networking to be set up (s390x)
+- 2.17.15
+
+-------------------------------------------------------------------
 Tue Apr 30 16:56:50 MDT 2013 - carnold@suse.com
 
 - bnc#817790 - SLES11 SP3 - unable to install KVM Hypervisor and

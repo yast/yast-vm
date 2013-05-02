@@ -177,7 +177,6 @@ Start installation in the host system.
         string abortmsg = _("The installation will be aborted.");
 
         // Generate a pop dialog to allow user selection of Xen or KVM
-        // Generate a pop dialog to allow user selection of Xen or KVM
         if ( is_s390 == true ) {
             UI::OpenDialog(
             `VBox(
@@ -291,34 +290,35 @@ Start installation in the host system.
             }
         }
 
-        // Default Bridge stage
-        Progress::NextStage();
+        if ( is_s390 == false ) {
+            // Default Bridge stage
+            Progress::NextStage();
 
-        Progress::Title(_("Configuring Default Network Bridge..."));
+            Progress::Title(_("Configuring Default Network Bridge..."));
 
-	// Check for the existance of /sys/class/net/*/bridge
-	list<string> interfaces = (list<string>)SCR::Read(.target.dir, net_path);
-	// foreach (map<string,any> i, interfaces, ``{
-	foreach (string i, interfaces, ``{
-                y2milestone("Checking for bridges...");
-                bridge_path = net_path + "/" + i + "/bridge";
-                if (SCR::Read(.target.dir, bridge_path) >= 0) {
-                    y2milestone("Dom0 already has a configured bridge.");
-                    bridge_exists = true;
-                    break;
+	    // Check for the existance of /sys/class/net/*/bridge
+	    list<string> interfaces = (list<string>)SCR::Read(.target.dir, net_path);
+	    foreach (string i, interfaces, ``{
+                    y2milestone("Checking for bridges...");
+                    bridge_path = net_path + "/" + i + "/bridge";
+                    if (SCR::Read(.target.dir, bridge_path) >= 0) {
+                        y2milestone("Dom0 already has a configured bridge.");
+                        bridge_exists = true;
+                        break;
+                    }
+	    });
+
+            // Popup yes/no dialog
+	    if ( bridge_exists == false ) {
+                if ( Popup::AnyQuestionRichText(_("Network Bridge."),
+                    _("<p>For normal network configurations hosting virtual machines, a network bridge is recommended.</p><p>Configure a default network bridge?</p>"),
+                    45, 5, Label::YesButton(), Label::NoButton(), `focus_yes) ) {
+                    y2milestone("Configuring default bridge for Xen or KVM...");
+                    WFM::call("lan_proposal", ["MakeProposal"]);
+                    UI::OpenDialog(`VBox());
+                    WFM::call("lan_proposal", ["Write"]);
+                    UI::CloseDialog();
                 }
-	});
-
-        // Popup yes/no dialog
-	if ( bridge_exists == false ) {
-            if ( Popup::AnyQuestionRichText(_("Network Bridge."),
-                _("<p>For normal network configurations hosting virtual machines, a network bridge is recommended.</p><p>Configure a default network bridge?</p>"),
-                45, 5, Label::YesButton(), Label::NoButton(), `focus_yes) ) {
-                y2milestone("Configuring default bridge for Xen or KVM...");
-                WFM::call("lan_proposal", ["MakeProposal"]);
-                UI::OpenDialog(`VBox());
-                WFM::call("lan_proposal", ["Write"]);
-                UI::CloseDialog();
             }
         }
 
