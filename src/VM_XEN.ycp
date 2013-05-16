@@ -290,7 +290,9 @@ Start installation in the host system.
             }
         }
 
+        y2milestone("Checking is_s390: is_s390 = %1", is_s390);
         if ( is_s390 == false ) {
+            y2milestone("is_s390 is false, Check for bridge");
             // Default Bridge stage
             Progress::NextStage();
 
@@ -318,6 +320,28 @@ Start installation in the host system.
                     UI::OpenDialog(`VBox());
                     WFM::call("lan_proposal", ["Write"]);
                     UI::CloseDialog();
+                }
+            }
+        }
+        else {
+            // For s390, make sure /etc/zipl.conf contain switch_amode
+            string def_section = Bootloader::getDefaultSection();
+            string switch_amode = Bootloader::getKernelParam(def_section, "switch_amode");
+            if ( switch_amode == "false" )
+            {
+                boolean zipl_updated = false;
+                y2milestone("No switch_amode kernel boot parameter in /etc/zipl.conf, adding ...");
+                if (Bootloader::setKernelParam(def_section, "switch_amode", "true") == true) {
+                    if (Bootloader::Write() == true) {
+                        zipl_updated = true;
+                        string cmd = "/sbin/zipl";
+                        y2milestone("Executing: %1", cmd);
+                        SCR::Execute(.target.bash, cmd);
+                        y2milestone("Successful update of /etc/zipl.conf with the switch_amode kernel boot parameter");
+                    }
+                }
+                if (zipl_updated == false) {
+                    y2milestone("Failed to correctly update /etc/zipl.conf with switch_amode kernel boot parameter");
                 }
             }
         }

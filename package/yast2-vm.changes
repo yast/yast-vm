@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu May 16 10:03:27 MDT 2013 - carnold@suse.com
+
+- bnc#820057 - Install Hypervisor and Tools doesn't add
+  "switch_amode" to kernel parameters in /etc/zipl.conf 
+- 2.17.16
+
+-------------------------------------------------------------------
 Thu May  2 12:55:18 MDT 2013 - carnold@suse.com
 
 - bnc#817943 - Selecting some virtualization packages during
