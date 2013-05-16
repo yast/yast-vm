@@ -290,9 +290,7 @@ Start installation in the host system.
             }
         }
 
-        y2milestone("Checking is_s390: is_s390 = %1", is_s390);
         if ( is_s390 == false ) {
-            y2milestone("is_s390 is false, Check for bridge");
             // Default Bridge stage
             Progress::NextStage();
 
