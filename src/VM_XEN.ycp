@@ -290,42 +290,65 @@ Start installation in the host system.
             }
         }
 
-        // Default Bridge stage
-        Progress::NextStage();
+        if ( is_s390 == false ) {
+            // Default Bridge stage
+            Progress::NextStage();
 
-        Progress::Title(_("Configuring Default Network Bridge..."));
+            Progress::Title(_("Configuring Default Network Bridge..."));
 
-	// Check for the existance of /sys/class/net/*/bridge
-	list<string> interfaces = (list<string>)SCR::Read(.target.dir, net_path);
-	// foreach (map<string,any> i, interfaces, ``{
-	foreach (string i, interfaces, ``{
-                y2milestone("Checking for bridges...");
-                bridge_path = net_path + "/" + i + "/bridge";
-                if (SCR::Read(.target.dir, bridge_path) >= 0) {
-                    y2milestone("Dom0 already has a configured bridge.");
-                    bridge_exists = true;
-                    break;
+	    // Check for the existance of /sys/class/net/*/bridge
+	    list<string> interfaces = (list<string>)SCR::Read(.target.dir, net_path);
+	    foreach (string i, interfaces, ``{
+                    y2milestone("Checking for bridges...");
+                    bridge_path = net_path + "/" + i + "/bridge";
+                    if (SCR::Read(.target.dir, bridge_path) >= 0) {
+                        y2milestone("Dom0 already has a configured bridge.");
+                        bridge_exists = true;
+                        break;
+                    }
+	    });
+
+            // Popup yes/no dialog
+	    if ( bridge_exists == false ) {
+                if ( Popup::AnyQuestionRichText(_("Network Bridge."),
+                    _("<p>For normal network configurations hosting virtual machines, a network bridge is recommended.</p><p>Configure a default network bridge?</p>"),
+                    45, 5, Label::YesButton(), Label::NoButton(), `focus_yes) ) {
+                    y2milestone("Configuring default bridge for Xen or KVM...");
+                    WFM::call("lan_proposal", ["MakeProposal"]);
+                    UI::OpenDialog(`VBox());
+                    WFM::call("lan_proposal", ["Write"]);
+                    UI::CloseDialog();
                 }
-	});
+            }
 
-        // Popup yes/no dialog
-	if ( bridge_exists == false ) {
-            if ( Popup::AnyQuestionRichText(_("Network Bridge."),
-                _("<p>For normal network configurations hosting virtual machines, a network bridge is recommended.</p><p>Configure a default network bridge?</p>"),
-                45, 5, Label::YesButton(), Label::NoButton(), `focus_yes) ) {
-                y2milestone("Configuring default bridge for Xen or KVM...");
-                WFM::call("lan_proposal", ["MakeProposal"]);
-                UI::OpenDialog(`VBox());
-                WFM::call("lan_proposal", ["Write"]);
-                UI::CloseDialog();
+            // Enable the libvirtd daemon if openSUSE
+            if ( isOpenSuse() == true ) {
+                string cmd = "systemctl enable libvirtd.service";
+                y2milestone("Executing: %1", cmd);
+                SCR::Execute(.target.bash, cmd);
             }
         }
-
-        // Enable the libvirtd daemon if openSUSE
-        if ( isOpenSuse() == true ) {
-            string cmd = "systemctl enable libvirtd.service";
-            y2milestone("Executing: %1", cmd);
-            SCR::Execute(.target.bash, cmd);
+        else {
+            // For s390, make sure /etc/zipl.conf contain switch_amode
+            string def_section = Bootloader::getDefaultSection();
+            string switch_amode = Bootloader::getKernelParam(def_section, "switch_amode");
+            if ( switch_amode == "false" )
+            {
+                boolean zipl_updated = false;
+                y2milestone("No switch_amode kernel boot parameter in /etc/zipl.conf, adding ...");
+                if (Bootloader::setKernelParam(def_section, "switch_amode", "true") == true) {
+                    if (Bootloader::Write() == true) {
+                        zipl_updated = true;
+                        string cmd = "/sbin/zipl";
+                        y2milestone("Executing: %1", cmd);
+                        SCR::Execute(.target.bash, cmd);
+                        y2milestone("Successful update of /etc/zipl.conf with the switch_amode kernel boot parameter");
+                    }
+                }
+                if (zipl_updated == false) {
+                    y2milestone("Failed to correctly update /etc/zipl.conf with switch_amode kernel boot parameter");
+                }
+            }
         }
 
         // Firewall stage - modify the firewall setting, add the xen bridge to FW_FORWARD_ALWAYS_INOUT_DEV
