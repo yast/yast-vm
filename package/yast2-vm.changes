@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Jun  6 13:18:55 MDT 2013 - carnold@suse.com
+
+- Update packages to be installed based on libvirt package changes.
+- 2.23.0
+
+-------------------------------------------------------------------
 Tue Apr 30 16:56:50 MDT 2013 - carnold@suse.com
 
 - bnc#817790 - SLES11 SP3 - unable to install KVM Hypervisor and

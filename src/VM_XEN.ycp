@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------------------
- * Copyright (c) 2007 Novell, Inc. All Rights Reserved.
+ * Copyright (c) 2013 Novell, Inc. All Rights Reserved.
  *
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -230,19 +230,18 @@ Start installation in the host system.
         Progress::NextStage();
 
         // Common packages to both Xen and KVM
-        list<string> packages = ["libvirt", "libvirt-python", "vm-install"];
+        list<string> packages = ["libvirt-python", "vm-install"];
 
         if ( install_xen ) {
+            packages = add(packages, "libvirt-daemon-xen");
             packages = add(packages, "xen");
+            packages = add(packages, "xen-libs");
             packages = add(packages, "xen-tools");
             packages = add(packages, "kernel-xen");
         }
         if ( install_kvm ) {
+            packages = add(packages, "libvirt-daemon-qemu");
             packages = add(packages, "kvm");
-        }
-        if ( is_s390 == false ) {
-            // There is a hard dependency in libvirt for xen-libs even if kvm only except on s390
-            packages = add(packages, "xen-libs");
         }
 
         boolean inst_gui = true;
