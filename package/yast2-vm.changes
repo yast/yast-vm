@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Jul 31 08:45:03 UTC 2013 - yast-devel@opensuse.org
+
+- converted from YCP to Ruby by YCP Killer
+  (https://github.com/yast/ycp-killer)
+- version 3.0.0
+
+-------------------------------------------------------------------
 Thu Jun  6 13:18:55 MDT 2013 - carnold@suse.com
 
 - Update packages to be installed based on libvirt package changes.
