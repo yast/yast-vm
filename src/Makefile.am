@@ -1,39 +1,32 @@
-#
-# Makefile.am for vm/src
-#
+# Sources for vm
+
+module_DATA = \
+  modules/RelocationServer.rb \
+  modules/VM_XEN.rb
+
+client_DATA = \
+  clients/xen.rb \
+  clients/vm_finish.rb \
+  clients/relocation-server.rb
 
 yncludedir = @yncludedir@/relocation-server
+ynclude_DATA = \
+  include/relocation-server/wizards.rb \
+  include/relocation-server/dialogs.rb \
+  include/relocation-server/complex.rb \
+  include/relocation-server/helps.rb
 
-groupdir = @desktopdir@/groups
+scrconf_DATA = \
+  scrconf/xend.scr
 
-client_DATA =			\
-	xen.ycp			\
-	vm_finish.ycp		\
-	relocation-server.ycp	
+desktop_DATA = \
+  desktop/relocation-server.desktop \
+  desktop/xen.desktop
 
-group_DATA =			\
-	virtualization.desktop
+desktop1dir = @desktopdir@/groups
+desktop1_DATA = \
+  desktop/groups/virtualization.desktop
 
-desktop_DATA =			\
-	xen.desktop		\
-	relocation-server.desktop
-
-module_DATA =			\
-	VM_XEN.ycp		\
-	RelocationServer.ycp
-
-ynclude_DATA =			\
-	helps.ycp		\
-	wizards.ycp		\
-	dialogs.ycp		\
-	complex.ycp
-
-
-EXTRA_DIST = $(client_DATA) $(module_DATA) $(group_DATA) $(desktop_DATA) $(ynclude_DATA)
-
-relocation-server:
-	test -l relocation-server || ln -s . relocation-server
-
-ycpchook = relocation-server
+EXTRA_DIST = $(module_DATA) $(client_DATA) $(ynclude_DATA) $(scrconf_DATA) $(desktop_DATA) $(desktop1_DATA)
 
 include $(top_srcdir)/Makefile.am.common
