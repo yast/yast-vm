@@ -1,5 +1,5 @@
 #
-# Makefile.am for devtools/devtools/skeletons/config/doc
+# Makefile.am for yast2-vm/doc
 #
 
 SUBDIRS = autodocs

@@ -12,7 +12,7 @@ Requires:       yast2-ruby-bindings >= 1.0.0
 Summary:	Configure Hypervisor and Tools for Xen and KVM
 
 %description
-This YaST module configures and installs a virtual machine.
+This YaST module installs the tools necessary for creating VMs with Xen or KVM.
 
 @PREP@
 
