@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Aug 22 08:43:29 CEST 2013 - jsuchome@suse.cz
+
+- use OSRelease instead of reading obsolete /etc/SuSE-release
+  (bnc#833955) 
+- 3.0.2
+
+-------------------------------------------------------------------
 Wed Aug 19 16:50:53 UTC 2013 - yast-devel@opensuse.org
 
 - Various build cleanups not related to actual code execution
