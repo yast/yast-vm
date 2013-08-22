@@ -36,6 +36,7 @@ module Yast
 
 
       Yast.import "Arch"
+      Yast.import "OSRelease"
       Yast.import "Package"
       Yast.import "Progress"
       Yast.import "Popup"
@@ -87,10 +88,8 @@ module Yast
 
     def isOpenSuse
       Builtins.y2milestone("Checking to see if this is openSUSE ...")
-      distro = Convert.to_string(
-        SCR.Read(path(".target.string"), "/etc/SuSE-release")
-      )
-      if Builtins.issubstring(distro, "openSUSE")
+      distro = OSRelease.ReleaseName
+      unless distro.index("openSUSE").nil?
         Builtins.y2milestone("Platform is %1", distro)
         return true
       end
