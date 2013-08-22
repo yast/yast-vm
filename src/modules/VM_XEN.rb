@@ -89,7 +89,7 @@ module Yast
     def isOpenSuse
       Builtins.y2milestone("Checking to see if this is openSUSE ...")
       distro = OSRelease.ReleaseName
-      unless distro.index("openSUSE").nil?
+      if distro.include? "openSUSE"
         Builtins.y2milestone("Platform is %1", distro)
         return true
       end
