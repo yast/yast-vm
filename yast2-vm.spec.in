@@ -5,7 +5,9 @@
 ExclusiveArch:  %ix86 x86_64 s390x
 BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite yast2-bootloader
 License:        GPL-2.0
-Requires:	yast2 >= 2.21.22
+
+# OSRelease
+Requires:	yast2 >= 3.0.4
 
 Requires:       yast2-ruby-bindings >= 1.0.0
 
