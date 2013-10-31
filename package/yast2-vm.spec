@@ -71,3 +71,4 @@ rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
 %{yast_desktopdir}/xen.desktop
 %endif
 %doc %{yast_docdir}
+%doc %{yast_docdir}/COPYING
