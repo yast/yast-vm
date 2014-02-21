@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Fri Feb 21 10:58:53 MST 2014 - carnold@suse.com
+
+- kvm is deprecated.  Use qemu-kvm.
+- After installing KVM, you no longer need to reboot the host.
+  Change the message dialog appropriately to reflect this. 
+- 3.1.2
+
+-------------------------------------------------------------------
 Thu Oct 31 11:31:25 MDT 2013 - carnold@suse.com
 
 - The spec file needs to handle the COPYING file. 

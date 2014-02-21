@@ -284,7 +284,7 @@ module Yast
       end
       if install_kvm
         packages = Builtins.add(packages, "libvirt-daemon-qemu")
-        packages = Builtins.add(packages, "kvm")
+        packages = Builtins.add(packages, "qemu-kvm")
       end
 
       inst_gui = true
@@ -429,23 +429,30 @@ module Yast
 
       Progress.Finish
 
-      message_kvm = _(
-        "For installing KVM guests, reboot the machine to load the necessary drivers."
+      message_kvm_ready = _(
+        "KVM components are installed. Your host is ready to install KVM guests."
+      )
+      message_kvm_reboot = _(
+        "KVM components are installed. Reboot the machine and select the native kernel in the boot loader menu to install KVM guests."
       )
       message_xen_reboot = _(
         "For installing Xen guests, reboot the machine and select the Xen section in the boot loader menu.\n"
       )
-      message_xen_ready = _("Hypervisor and tools are installed.")
+      message_xen_ready = _("Xen Hypervisor and tools are installed.")
       message = nil
 
       if install_xen == false
-        Popup.LongMessage(message_kvm)
+        if Arch.is_xen == false
+          Popup.LongMessage(message_kvm_ready)
+        else
+          Popup.LongMessage(message_kvm_reboot)
+        end
       else
         if Arch.is_xen == false
           if install_kvm == true
             message = Builtins.sformat(
               "%1\n\n%2",
-              message_kvm,
+              message_kvm_ready,
               message_xen_reboot
             )
           else
@@ -458,7 +465,7 @@ module Yast
           if install_kvm == true
             message = Builtins.sformat(
               "%1\n\n%2",
-              message_kvm,
+              message_kvm_reboot,
               message_xen_ready
             )
           else
