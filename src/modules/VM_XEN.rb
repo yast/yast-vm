@@ -382,12 +382,13 @@ module Yast
           end
         end
 
-        # Enable the libvirtd daemon if openSUSE
-        if isOpenSuse == true
-          cmd = "systemctl enable libvirtd.service"
-          Builtins.y2milestone("Executing: %1", cmd)
-          SCR.Execute(path(".target.bash"), cmd)
-        end
+        # Enable and start the libvirtd daemon for both KVM and Xen
+        cmd = "systemctl enable libvirtd.service"
+        Builtins.y2milestone("Enable libvirtd.service: %1", cmd)
+        SCR.Execute(path(".target.bash"), cmd)
+        cmd = "systemctl start libvirtd.service"
+        Builtins.y2milestone("Start libvirtd.service: %1", cmd)
+        SCR.Execute(path(".target.bash"), cmd)
       else
         # For s390, make sure /etc/zipl.conf contain switch_amode
         def_section = Bootloader.getDefaultSection
