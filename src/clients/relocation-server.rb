@@ -31,6 +31,7 @@ module Yast
   class RelocationServerClient < Client
     def main
       Yast.import "UI"
+      Yast.import "FileUtils"
 
       #**
       # <h3>Configuration of relocation-server</h3>

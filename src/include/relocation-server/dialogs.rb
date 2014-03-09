@@ -131,7 +131,7 @@ module Yast
       )
     end
 
-    def KVMConfigurationDialogContent
+    def LibvirtConfigurationDialogContent
       VBox(
         Frame(
           _("Tunneled migration"),
@@ -184,7 +184,7 @@ module Yast
             )
           )
         ),
-        Frame(_("Firewall"), VBox("fw-kvm"))
+        Frame(_("Firewall"), VBox("fw-libvirt"))
       )
     end
   end

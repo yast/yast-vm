@@ -43,6 +43,7 @@ module Yast
       Yast.import "Summary"
       Yast.import "Message"
       Yast.import "Service"
+      Yast.import "FileUtils"
       Yast.import "SuSEFirewall"
       Yast.import "SuSEFirewallServices"
 
@@ -92,6 +93,15 @@ module Yast
       @modified = true
 
       nil
+    end
+
+    # Determine if we are using the libxl toolstack
+    def is_xend
+      if !Arch.is_xen0 || !FileUtils.Exists("/etc/vm/xend-config.sxp") || !FileUtils.Exists("/usr/sbin/xend")
+        return false
+      end
+
+      true
     end
 
     #   Returns a confirmation popup dialog whether user wants to really abort.
@@ -176,7 +186,12 @@ module Yast
 
     # Reads current xend status
     def ReadXendService
-      if Service.Status("xend") == 0
+      xend = "/usr/sbin/xend"
+      retval = 1
+      if FileUtils.Exists(xend)
+        retval = Convert.to_integer(SCR.Execute(path(".target.bash_output"), Builtins.sformat("%1 status", xend)))
+      end
+      if retval == 0
         @xend_is_running = true
         Builtins.y2milestone("Xend is running")
       else
@@ -222,7 +237,7 @@ module Yast
       nil
     end
 
-    def ReadKVMServices
+    def ReadLibvirtServices
       @libvirtd_enabled = Service.Enabled("libvirtd")
       @sshd_enabled = Service.Enabled("sshd")
 
@@ -251,7 +266,7 @@ module Yast
       true
     end
 
-    def WriteKVMServices
+    def WriteLibvirtServices
       all_ok = true
 
       if GetLibvirtdOption("tunneled_migration") ||
@@ -288,7 +303,7 @@ module Yast
       caption = _("Initializing relocation-server Configuration")
 
       xen_steps = 3
-      kvm_steps = 2
+      libvirt_steps = 2
 
       sl = 500
       Builtins.sleep(sl)
@@ -313,14 +328,14 @@ module Yast
         Message.Finished
       ]
 
-      kvm_stg = [
+      libvirt_stg = [
         # Progress stage 1/2
         _("Read firewall settings"),
         # Progress stage 2/2
         _("Read the current libvirtd/sshd state")
       ]
 
-      kvm_tits = [
+      libvirt_tits = [
         # Progress step 1/2
         _("Reading firewall settings..."),
         # Progress stage 2/2
@@ -329,13 +344,13 @@ module Yast
         Message.Finished
       ]
 
-      if Arch.is_xen0
+      if is_xend()
         Progress.New(caption, " ", xen_steps, xen_stg, xen_tits, "")
       else
-        Progress.New(caption, " ", kvm_steps, kvm_stg, kvm_tits, "")
+        Progress.New(caption, " ", libvirt_steps, libvirt_stg, libvirt_tits, "")
       end
 
-      if Arch.is_xen0
+      if is_xend()
         return false if PollAbort()
         Progress.NextStage
         # Error message
@@ -359,11 +374,11 @@ module Yast
       Progress.set(progress_state)
       Builtins.sleep(sl)
 
-      if Arch.is_kvm
+      if Arch.is_kvm || !is_xend()
         return false if PollAbort()
         Progress.NextStage
         # Error message
-        if !ReadKVMServices()
+        if !ReadLibvirtServices()
           Report.Error(_("Cannot read the current libvirtd/sshd state."))
         end
         Builtins.sleep(sl)
@@ -386,7 +401,7 @@ module Yast
       caption = _("Saving relocation-server Configuration")
 
       xen_steps = 3
-      kvm_steps = 2
+      libvirt_steps = 2
 
       sl = 500
       Builtins.sleep(sl)
@@ -410,14 +425,14 @@ module Yast
         Message.Finished
       ]
 
-      kvm_stg = [
+      libvirt_stg = [
         # Progress stage 1
         _("Adjust the libvirtd/sshd service"),
         # Progress stage 2
         _("Write firewall settings")
       ]
 
-      kvm_tits = [
+      libvirt_tits = [
         # Progress step 1
         _("Adjusting the libvirtd/sshd service"),
         # Progress stage 2
@@ -425,13 +440,13 @@ module Yast
         Message.Finished
       ]
 
-      if Arch.is_xen0
+      if is_xend()
         Progress.New(caption, " ", xen_steps, xen_stg, xen_tits, "")
       else
-        Progress.New(caption, " ", kvm_steps, kvm_stg, kvm_tits, "")
+        Progress.New(caption, " ", libvirt_steps, libvirt_stg, libvirt_tits, "")
       end
 
-      if Arch.is_xen0
+      if is_xend()
         return false if PollAbort()
         Progress.NextStage
         # Error message
@@ -449,7 +464,7 @@ module Yast
         return false if PollAbort()
         Progress.NextStage
         # Error message
-        Report.Error(Message.CannotAdjustService("xend")) if !WriteKVMServices()
+        Report.Error(Message.CannotAdjustService("xend")) if !WriteLibvirtServices()
         Builtins.sleep(sl)
       end
 

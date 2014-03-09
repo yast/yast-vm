@@ -59,7 +59,7 @@ module Yast
             "<p><b>SSL Key File/SSL Cert File</b><br>\n" +
             "SSL key and certificate to use for the ssl relocation interface</p>"
         ),
-        "kvm_configuration"  => _(
+        "libvirt_configuration"  => _(
           "<p><b><big>Tunneled migration</big></b><br>\n" +
             "The source host libvirtd opens a direct connection to the destination host libvirtd for sending migration data. This allows the option of encrypting the data stream.</p>\n" +
             "<p><b><big>Plain migration</big></b><br>\n" +

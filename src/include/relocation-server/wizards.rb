@@ -71,24 +71,24 @@ module Yast
             "void (string, map)"
           )
         },
-        "kvm"     => {
+        "libvirt"     => {
           "widget"        => :custom,
-          "help"          => Ops.get_string(@HELPS, "kvm_configuration", ""),
-          "custom_widget" => KVMConfigurationDialogContent(),
+          "help"          => Ops.get_string(@HELPS, "libvirt_configuration", ""),
+          "custom_widget" => LibvirtConfigurationDialogContent(),
           "handle"        => fun_ref(
-            method(:HandleKVMConfigurationDialog),
+            method(:HandleLibvirtConfigurationDialog),
             "symbol (string, map)"
           ),
           "init"          => fun_ref(
-            method(:InitKVMConfigurationDialog),
+            method(:InitLibvirtConfigurationDialog),
             "void (string)"
           ),
           "store"         => fun_ref(
-            method(:StoreKVMConfigurationDialog),
+            method(:StoreLibvirtConfigurationDialog),
             "void (string, map)"
           )
         },
-        "fw-kvm"  => CWMFirewallInterfaces.CreateOpenFirewallWidget(
+        "fw-libvirt"  => CWMFirewallInterfaces.CreateOpenFirewallWidget(
           {
             "services"        => [
               "service:libvirtd-relocation-server",
@@ -107,13 +107,23 @@ module Yast
         },
         "kvm_configuration"  => {
           "header"       => _("&KVM"),
-          "widget_names" => ["kvm", "fw-kvm"],
-          "contents"     => KVMConfigurationDialogContent()
+          "widget_names" => ["libvirt", "fw-libvirt"],
+          "contents"     => LibvirtConfigurationDialogContent()
+        },
+        "libxl_configuration"  => {
+          "header"       => _("&Xen Libxl"),
+          "widget_names" => ["libvirt", "fw-libvirt"],
+          "contents"     => LibvirtConfigurationDialogContent()
         }
       }
 
-      if !Arch.is_xen0
+      if !RelocationServer.is_xend()
         Builtins.remove(tabs, "xend_configuration")
+        if !Arch.is_kvm
+          Builtins.remove(tabs, "kvm_configuration")
+        else
+          Builtins.remove(tabs, "libxl_configuration")
+        end
       else
         Builtins.remove(tabs, "kvm_configuration")
       end
@@ -125,9 +135,14 @@ module Yast
         "initial_tab"  => "xend_configuration"
       }
 
-      if !Arch.is_xen0
-        Ops.set(wd_arg, "tab_order", ["kvm_configuration"])
-        Ops.set(wd_arg, "initial_tab", "kvm_configuration")
+      if !RelocationServer.is_xend()
+        if Arch.is_kvm
+          Ops.set(wd_arg, "tab_order", ["kvm_configuration"])
+          Ops.set(wd_arg, "initial_tab", "kvm_configuration")
+        else
+          Ops.set(wd_arg, "tab_order", ["libxl_configuration"])
+          Ops.set(wd_arg, "initial_tab", "libxl_configuration")
+        end
       end
 
       wd = { "tab" => CWMTab.CreateWidget(wd_arg) }
@@ -184,5 +199,6 @@ module Yast
       UI.CloseDialog
       deep_copy(ret)
     end
+
   end
 end

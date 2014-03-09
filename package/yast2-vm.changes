@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Mar  7 17:01:44 MST 2014 - carnold@suse.com
+
+- The xend portion of the relocation server code is not applicable
+  to the libxl toolstack. Rework for libxl compatibility.
+- 3.1.4
+
+-------------------------------------------------------------------
 Tue Mar  4 11:44:24 MST 2014 - carnold@suse.com
 
 - Enable and start libvirtd. This is required for both KVM and Xen.

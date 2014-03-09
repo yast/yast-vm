@@ -227,7 +227,7 @@ module Yast
       nil
     end
 
-    def InitKVMFireWall
+    def InitLibvirtFireWall
       tunneled_migration = Convert.to_boolean(
         UI.QueryWidget(Id("tunneled_migration"), :Value)
       )
@@ -271,12 +271,12 @@ module Yast
       nil
     end
 
-    def InitKVMConfigurationDialog(id)
+    def InitLibvirtConfigurationDialog(id)
       UI.ChangeWidget(Id("tunneled_migration"), :Value, false)
       UI.ChangeWidget(Id("plain_migration"), :Value, false)
       UI.ChangeWidget(Id("default_port_range"), :Value, true)
       InitLibvirtdPortsTable()
-      InitKVMFireWall()
+      InitLibvirtFireWall()
 
       nil
     end
@@ -364,7 +364,7 @@ module Yast
       nil
     end
 
-    def HandleKVMConfigurationDialog(id, event)
+    def HandleLibvirtConfigurationDialog(id, event)
       event = deep_copy(event)
       action = Ops.get(event, "ID")
       selected_port = Convert.to_string(
@@ -381,7 +381,7 @@ module Yast
       elsif action == "delete_port"
         DeletePort(selected_port) if Confirm.DeleteSelected
       elsif action == "tunneled_migration" || action == "plain_migration"
-        InitKVMFireWall()
+        InitLibvirtFireWall()
       end
 
 
@@ -389,7 +389,7 @@ module Yast
       nil
     end
 
-    def StoreKVMConfigurationDialog(id, event)
+    def StoreLibvirtConfigurationDialog(id, event)
       event = deep_copy(event)
       RelocationServer.SetModified
 
