@@ -213,40 +213,82 @@ module Yast
 
       # Generate a pop dialog to allow user selection of Xen or KVM
       if is_s390 == true
+                 UI.OpenDialog(
+                      VBox(
+                           Frame(_("Choose Hypervisor(s) to install"),
+                                 HBox(
+                                      VBox(
+                                           Label("server: all minimal system to get a running Hypervisor"),
+                                           Label("tools: configure, manage and monitor virtual machines"),
+                                           ),
+                                      )
+                                 ),
+                           HSpacing(1),
+                           Frame(_("Xen Hypervisor"),
+                                 HBox(
+                                      HSpacing(1),
+                                      Left(CheckBox(Id(:xen_server), Opt(:disabled), "Xen server")),
+                                      Left(CheckBox(Id(:xen_tools), Opt(:disabled), "Xen tools")),
+                                      ),
+                                 ),
+                           Frame(_("KVM Hypervisor"),
+                                 HBox(
+                                      HSpacing(1),
+                                      Left(CheckBox(Id(:kvm_server), "KVM server")),
+                                      Left(CheckBox(Id(:kvm_tools), "KVM tools")),
+                                      ),
+                                 ),
+                           ButtonBox(
+                                     PushButton(Id(:accept), Label.AcceptButton),
+                                     PushButton(Id(:cancel), Label.CancelButton)
+                                     ),
+                           )
+                      )
+       else
         UI.OpenDialog(
-          VBox(
-            Label(_("Select the virtualization platform to install.")),
-            Left(CheckBox(Id(:xen), Opt(:disabled), "Xen")),
-            Left(CheckBox(Id(:kvm), "KVM")),
-            ButtonBox(
-              PushButton(Id(:accept), Label.AcceptButton),
-              PushButton(Id(:cancel), Label.CancelButton)
-            )
-          )
-        )
-      else
-        UI.OpenDialog(
-          VBox(
-            Label(_("Select the virtualization platform to install.")),
-            Left(CheckBox(Id(:xen), "Xen")),
-            Left(CheckBox(Id(:kvm), "KVM")),
-            ButtonBox(
-              PushButton(Id(:accept), Label.AcceptButton),
-              PushButton(Id(:cancel), Label.CancelButton)
-            )
-          )
-        )
+                      VBox(
+                           Frame(_("Choose Hypervisor(s) to install"),
+                                 HBox(
+                                      VBox(
+                                           Label("server: all minimal system to get a running Hypervisor"),
+                                           Label("tools: configure, manage and monitor virtual machines"),
+                                           ),
+                                      )
+                                 ),
+                           HSpacing(1),
+                           Frame(_("Xen Hypervisor"),
+                                 HBox(
+                                      HSpacing(1),
+                                      Left(CheckBox(Id(:xen_server), "Xen server")),
+                                      Left(CheckBox(Id(:xen_tools), "Xen tools")),
+                                      ),
+                                 ),
+                           Frame(_("KVM Hypervisor"),
+                                 HBox(
+                                      HSpacing(1),
+                                      Left(CheckBox(Id(:kvm_server), "KVM server")),
+                                      Left(CheckBox(Id(:kvm_tools), "KVM tools")),
+                                      ),
+                                 ),
+                           ButtonBox(
+                                     PushButton(Id(:accept), Label.AcceptButton),
+                                     PushButton(Id(:cancel), Label.CancelButton)
+                                     ),
+                           )
+                      )
       end
 
       widget_id = UI.UserInput
       if widget_id == :accept
-        install_xen = Convert.to_boolean(UI.QueryWidget(Id(:xen), :Value))
-        install_kvm = Convert.to_boolean(UI.QueryWidget(Id(:kvm), :Value))
+        install_xen_server = Convert.to_boolean(UI.QueryWidget(Id(:xen_server), :Value))
+        install_xen_tools = Convert.to_boolean(UI.QueryWidget(Id(:xen_tools), :Value))
+        install_kvm_server = Convert.to_boolean(UI.QueryWidget(Id(:kvm_server), :Value))
+        install_kvm_tools = Convert.to_boolean(UI.QueryWidget(Id(:kvm_tools), :Value))
       end
 
       UI.CloseDialog
 
-      if widget_id == :cancel || install_xen == false && install_kvm == false
+      if widget_id == :cancel || install_xen_server == false && install_kvm_server == false && install_kvm_tools == false && install_xen_tools == false
         Builtins.y2milestone(
           "VM_XEN::ConfigureDom0 Cancel Selected or no platform selected."
         )
@@ -272,19 +314,17 @@ module Yast
       # package stage
       Progress.NextStage
 
-      # Common packages to both Xen and KVM
-      packages = ["libvirt-python", "vm-install"]
-
-      if install_xen
-        packages = Builtins.add(packages, "libvirt-daemon-xen")
-        packages = Builtins.add(packages, "xen")
-        packages = Builtins.add(packages, "xen-libs")
-        packages = Builtins.add(packages, "xen-tools")
-        packages = Builtins.add(packages, "kernel-xen")
+      if install_xen_server
+        packages = Builtins.add(packages, "patterns-sles-xen_server")
       end
-      if install_kvm
-        packages = Builtins.add(packages, "libvirt-daemon-qemu")
-        packages = Builtins.add(packages, "qemu-kvm")
+      if install_xen_tools
+        packages = Builtins.add(packages, "patterns-sles-xen_tools")
+      end
+      if install_kvm_server
+        packages = Builtins.add(packages, "patterns-sles-kvm_server")
+      end
+      if install_kvm_tools
+        packages = Builtins.add(packages, "patterns-sles-kvm_tools")
       end
 
       inst_gui = true
