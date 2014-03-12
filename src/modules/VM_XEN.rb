@@ -260,7 +260,7 @@ module Yast
                                ),
                          Frame(_("LXC Containers"),
                                HBox(
-                                    Left(CheckBox(Id(:lxc), "LXC Containers")),
+                                    Left(CheckBox(Id(:lxc), "libvirt LXC")),
                                     ),
                                ),
                          ButtonBox(
@@ -323,14 +323,14 @@ module Yast
         packages = packages + ["xen-tools xen-libs libvirt-daemon-xen tigervnc"] if install_xen_tools
         packages = packages + ["patterns-openSUSE-kvm_server"] if install_kvm_server
         packages = packages + ["libvirt-daemon-qemu tigervnc"] if install_kvm_tools
-        packages = packages + ["libvirt-daemon-lxc"] if install_lxc
+        packages = packages + ["libvirt-daemon-lxc pm-utils"] if install_lxc
         Package.DoInstall(common_vm_packages + packages )
       else
         Package.DoInstall(["patterns-sles-xen_server"]) if install_xen_server
         Package.DoInstall(["patterns-sles-xen_tools"]) if install_xen_tools
         Package.DoInstall(["patterns-sles-kvm_server"]) if install_kvm_server
         Package.DoInstall(["patterns-sles-kvm_tools"]) if install_kvm_tools
-        Package.DoInstall(["libvirt-daemon-lxc"]) if install_lxc
+        Package.DoInstall(["libvirt-daemon-lxc pm-utils"]) if install_lxc
       end
 
       inst_gui = true
