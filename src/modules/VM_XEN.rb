@@ -211,84 +211,84 @@ module Yast
       # error popup
       abortmsg = _("The installation will be aborted.")
 
+    def Information
+      widgets= Frame(_("Choose Hypervisor(s) to install"),
+                     HBox(VBox(
+                               Label("server: all minimal system to get a running Hypervisor"),
+                               Label("tools: configure, manage and monitor virtual machines"),
+                               ),
+                          ),
+                     )
+    end
+
       # Generate a pop dialog to allow user selection of Xen or KVM
       if is_s390 == true
-                 UI.OpenDialog(
-                      VBox(
-                           Frame(_("Choose Hypervisor(s) to install"),
-                                 HBox(
-                                      VBox(
-                                           Label("server: all minimal system to get a running Hypervisor"),
-                                           Label("tools: configure, manage and monitor virtual machines"),
-                                           ),
-                                      )
-                                 ),
-                           HSpacing(1),
-                           Frame(_("Xen Hypervisor"),
-                                 HBox(
-                                      HSpacing(1),
-                                      Left(CheckBox(Id(:xen_server), Opt(:disabled), "Xen server")),
-                                      Left(CheckBox(Id(:xen_tools), Opt(:disabled), "Xen tools")),
-                                      ),
-                                 ),
-                           Frame(_("KVM Hypervisor"),
-                                 HBox(
-                                      HSpacing(1),
-                                      Left(CheckBox(Id(:kvm_server), "KVM server")),
-                                      Left(CheckBox(Id(:kvm_tools), "KVM tools")),
-                                      ),
-                                 ),
-                           ButtonBox(
-                                     PushButton(Id(:accept), Label.AcceptButton),
-                                     PushButton(Id(:cancel), Label.CancelButton)
-                                     ),
-                           )
-                      )
+      UI.OpenDialog(
+                    VBox(
+                         Information(),
+                         VSpacing(1),
+                         Frame(_("KVM Hypervisor"),
+                               HBox(
+                                    HSpacing(1),
+                                    Left(CheckBox(Id(:kvm_server), "KVM server")),
+                                    Left(CheckBox(Id(:kvm_tools), "KVM tools")),
+                                    ),
+                               ),
+                         ButtonBox(
+                                   PushButton(Id(:accept), Label.AcceptButton),
+                                   PushButton(Id(:cancel), Label.CancelButton)
+                                   ),
+                         ),
+                    )
        else
         UI.OpenDialog(
-                      VBox(
-                           Frame(_("Choose Hypervisor(s) to install"),
-                                 HBox(
-                                      VBox(
-                                           Label("server: all minimal system to get a running Hypervisor"),
-                                           Label("tools: configure, manage and monitor virtual machines"),
-                                           ),
-                                      )
-                                 ),
-                           HSpacing(1),
-                           Frame(_("Xen Hypervisor"),
-                                 HBox(
-                                      HSpacing(1),
-                                      Left(CheckBox(Id(:xen_server), "Xen server")),
-                                      Left(CheckBox(Id(:xen_tools), "Xen tools")),
-                                      ),
-                                 ),
-                           Frame(_("KVM Hypervisor"),
-                                 HBox(
-                                      HSpacing(1),
-                                      Left(CheckBox(Id(:kvm_server), "KVM server")),
-                                      Left(CheckBox(Id(:kvm_tools), "KVM tools")),
-                                      ),
-                                 ),
-                           ButtonBox(
-                                     PushButton(Id(:accept), Label.AcceptButton),
-                                     PushButton(Id(:cancel), Label.CancelButton)
-                                     ),
-                           )
-                      )
+      UI.OpenDialog(
+                    VBox(
+                         Information(),
+                         VSpacing(1),
+                         Frame(_("Xen Hypervisor"),
+                               HBox(
+                                    Left(CheckBox(Id(:xen_server), "Xen server")),
+                                    Left(CheckBox(Id(:xen_tools), "Xen tools")),
+                                    ),
+                               ),
+                         Frame(_("KVM Hypervisor"),
+                               HBox(
+                                    Left(CheckBox(Id(:kvm_server), "KVM server")),
+                                    Left(CheckBox(Id(:kvm_tools), "KVM tools")),
+                                    ),
+                               ),
+                         Frame(_("LXC Containers"),
+                               HBox(
+                                    Left(CheckBox(Id(:lxc), "LXC Containers")),
+                                    ),
+                               ),
+                         ButtonBox(
+                                   PushButton(Id(:accept), Label.AcceptButton),
+                                   PushButton(Id(:cancel), Label.CancelButton)
+                                   ),
+                         ),
+                    )
       end
 
       widget_id = UI.UserInput
       if widget_id == :accept
-        install_xen_server = Convert.to_boolean(UI.QueryWidget(Id(:xen_server), :Value))
-        install_xen_tools = Convert.to_boolean(UI.QueryWidget(Id(:xen_tools), :Value))
-        install_kvm_server = Convert.to_boolean(UI.QueryWidget(Id(:kvm_server), :Value))
-        install_kvm_tools = Convert.to_boolean(UI.QueryWidget(Id(:kvm_tools), :Value))
+          install_xen_server = UI.QueryWidget(Id(:xen_server), :Value)
+          install_xen_tools = UI.QueryWidget(Id(:xen_tools), :Value)
+          install_kvm_server = UI.QueryWidget(Id(:kvm_server), :Value)
+          install_kvm_tools = UI.QueryWidget(Id(:kvm_tools), :Value)
+          install_lxc = UI.QueryWidget(Id(:lxc), :Value)
       end
 
       UI.CloseDialog
 
-      if widget_id == :cancel || install_xen_server == false && install_kvm_server == false && install_kvm_tools == false && install_xen_tools == false
+      install_vm = false
+      install_vm = true if install_xen_server
+      install_vm = true if install_xen_tools
+      install_vm = true if install_kvm_server
+      install_vm = true if install_kvm_tools
+
+      if widget_id == :cancel || !install_vm && !install_lxc
         Builtins.y2milestone(
           "VM_XEN::ConfigureDom0 Cancel Selected or no platform selected."
         )
@@ -314,17 +314,23 @@ module Yast
       # package stage
       Progress.NextStage
 
-      if install_xen_server
-        packages = Builtins.add(packages, "patterns-sles-xen_server")
+      if install_vm = true
+        common_vm_packages = ["vm-install", "virt-install", "bridge-utils", "libvirt-client"]
       end
-      if install_xen_tools
-        packages = Builtins.add(packages, "patterns-sles-xen_tools")
-      end
-      if install_kvm_server
-        packages = Builtins.add(packages, "patterns-sles-kvm_server")
-      end
-      if install_kvm_tools
-        packages = Builtins.add(packages, "patterns-sles-kvm_tools")
+
+      if isOpenSuse == true
+        packages = ["patterns-openSUSE-xen_server"] if install_xen_server
+        packages = packages + ["xen-tools xen-libs libvirt-daemon-xen tigervnc"] if install_xen_tools
+        packages = packages + ["patterns-openSUSE-kvm_server"] if install_kvm_server
+        packages = packages + ["libvirt-daemon-qemu tigervnc"] if install_kvm_tools
+        packages = packages + ["libvirt-daemon-lxc"] if install_lxc
+        Package.DoInstall(common_vm_packages + packages )
+      else
+        Package.DoInstall(["patterns-sles-xen_server"]) if install_xen_server
+        Package.DoInstall(["patterns-sles-xen_tools"]) if install_xen_tools
+        Package.DoInstall(["patterns-sles-kvm_server"]) if install_kvm_server
+        Package.DoInstall(["patterns-sles-kvm_tools"]) if install_kvm_tools
+        Package.DoInstall(["libvirt-daemon-lxc"]) if install_lxc
       end
 
       inst_gui = true
