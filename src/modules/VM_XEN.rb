@@ -314,7 +314,7 @@ module Yast
       # package stage
       Progress.NextStage
 
-      if install_vm = true
+      if install_vm == true
         common_vm_packages = ["vm-install", "virt-install", "bridge-utils", "libvirt-client"]
       end
 
