@@ -262,7 +262,7 @@ module Yast
                          VMButtonBox(),
                          ),
                     )
-      else
+    else
       if isSLED == true
         UI.OpenDialog(
                       VBox(
@@ -294,6 +294,7 @@ module Yast
                            ),
                       )
       end
+    end
 
       widget_id = UI.UserInput
       if widget_id == :accept
