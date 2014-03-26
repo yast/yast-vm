@@ -250,7 +250,7 @@ module Yast
                              ),
                         )
     end
-    
+
     # Generate a pop dialog to allow user selection of Xen or KVM
     if is_s390 == true
       UI.OpenDialog(
@@ -262,8 +262,7 @@ module Yast
                          VMButtonBox(),
                          ),
                     )
-      else
-      if isSLED == true
+     elsif isSLED == true
         UI.OpenDialog(
                       VBox(
                            VSpacing(1),
