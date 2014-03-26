@@ -95,6 +95,15 @@ module Yast
       end
       false
     end
+    def isSLED
+      Builtins.y2milestone("Checking to see if this is SLED ...")
+      distro = OSRelease.ReleaseName
+      if distro.include? "SLED"
+        Builtins.y2milestone("Platform is %1", distro)
+        return true
+      end
+      false
+    end
 
     def isPAEKernel
       # check is we're running on 32 bit pae.
@@ -211,42 +220,101 @@ module Yast
       # error popup
       abortmsg = _("The installation will be aborted.")
 
-      # Generate a pop dialog to allow user selection of Xen or KVM
-      if is_s390 == true
+    def Information
+      widgets = Frame(_("Choose Hypervisor(s) to install"),
+                     HBox(VBox(
+                               Label("server: all minimal system to get a running Hypervisor"),
+                               Label("tools: configure, manage and monitor virtual machines"),
+                               ),
+                          ),
+                     )
+    end
+    def VMButtonBox
+      widgetB = ButtonBox(
+                          PushButton(Id(:accept), Label.AcceptButton),
+                          PushButton(Id(:cancel), Label.CancelButton),
+                          )
+    end
+    def KVMDialog
+      widgetKVM = Frame(_("KVM Hypervisor"),
+                        HBox(
+                             Left(CheckBox(Id(:kvm_server), Opt(:key_F6), "KVM server")),
+                             Left(CheckBox(Id(:kvm_tools), Opt(:key_F7), "KVM tools")),
+                             ),
+                        )
+    end
+    def LXCDialog
+      widgetLXC = Frame(_("libvirt LXC containers"),
+                        HBox(
+                             Left(CheckBox(Id(:lxc), Opt(:key_F4), "libvirt LXC daemon")),
+                             ),
+                        )
+    end
+    
+    # Generate a pop dialog to allow user selection of Xen or KVM
+    if is_s390 == true
+      UI.OpenDialog(
+                    VBox(
+                         Information(),
+                         VSpacing(1),
+                         KVMDialog(),
+                         LXCDialog(),
+                         VMButtonBox(),
+                         ),
+                    )
+      else
+      if isSLED == true
         UI.OpenDialog(
-          VBox(
-            Label(_("Select the virtualization platform to install.")),
-            Left(CheckBox(Id(:xen), Opt(:disabled), "Xen")),
-            Left(CheckBox(Id(:kvm), "KVM")),
-            ButtonBox(
-              PushButton(Id(:accept), Label.AcceptButton),
-              PushButton(Id(:cancel), Label.CancelButton)
-            )
-          )
-        )
+                      VBox(
+                           VSpacing(1),
+                           Frame(_("Software to connect to Virtualization server"),
+                                 HBox(
+                                      Left(CheckBox(Id(:client_tools), "Virtualization client tools")
+                                           ),
+                                      ),
+                                 ),
+                           LXCDialog(),
+                           VMButtonBox(),
+                           ),
+                      )
       else
         UI.OpenDialog(
-          VBox(
-            Label(_("Select the virtualization platform to install.")),
-            Left(CheckBox(Id(:xen), "Xen")),
-            Left(CheckBox(Id(:kvm), "KVM")),
-            ButtonBox(
-              PushButton(Id(:accept), Label.AcceptButton),
-              PushButton(Id(:cancel), Label.CancelButton)
-            )
-          )
-        )
+                      VBox(
+                           Information(),
+                           VSpacing(1),
+                           Frame(_("Xen Hypervisor"),
+                                 HBox(
+                                      Left(CheckBox(Id(:xen_server), Opt(:key_F8), "Xen server")),
+                                      Left(CheckBox(Id(:xen_tools), Opt(:key_F9), "Xen tools")),
+                                      ),
+                                 ),
+                           KVMDialog(),
+                           LXCDialog(),
+                           VMButtonBox(),
+                           ),
+                      )
       end
 
       widget_id = UI.UserInput
       if widget_id == :accept
-        install_xen = Convert.to_boolean(UI.QueryWidget(Id(:xen), :Value))
-        install_kvm = Convert.to_boolean(UI.QueryWidget(Id(:kvm), :Value))
+          install_xen_server = UI.QueryWidget(Id(:xen_server), :Value)
+          install_xen_tools = UI.QueryWidget(Id(:xen_tools), :Value)
+          install_kvm_server = UI.QueryWidget(Id(:kvm_server), :Value)
+          install_kvm_tools = UI.QueryWidget(Id(:kvm_tools), :Value)
+          install_client_tools = UI.QueryWidget(Id(:client_tools), :Value)
+          install_lxc = UI.QueryWidget(Id(:lxc), :Value)
       end
 
       UI.CloseDialog
 
-      if widget_id == :cancel || install_xen == false && install_kvm == false
+      install_vm = false
+      install_vm = true if install_xen_server
+      install_vm = true if install_xen_tools
+      install_vm = true if install_kvm_server
+      install_vm = true if install_kvm_tools
+      install_vm = true if install_client_tools
+
+      if widget_id == :cancel || !install_vm && !install_lxc
         Builtins.y2milestone(
           "VM_XEN::ConfigureDom0 Cancel Selected or no platform selected."
         )
@@ -272,19 +340,31 @@ module Yast
       # package stage
       Progress.NextStage
 
-      # Common packages to both Xen and KVM
-      packages = ["libvirt-python", "vm-install"]
-
-      if install_xen
-        packages = Builtins.add(packages, "libvirt-daemon-xen")
-        packages = Builtins.add(packages, "xen")
-        packages = Builtins.add(packages, "xen-libs")
-        packages = Builtins.add(packages, "xen-tools")
-        packages = Builtins.add(packages, "kernel-xen")
+      if install_vm == true
+        common_vm_packages = ["libvirt-client"]
+        # SLED doesn't have any installation capabilities (L3 support)
+        if isSLED == false
+          common_vm_packages = common_vm_packages + ["vm-install", "virt-install", "bridge-utils"]
+        end
       end
-      if install_kvm
-        packages = Builtins.add(packages, "libvirt-daemon-qemu")
-        packages = Builtins.add(packages, "qemu-kvm")
+
+      if isOpenSuse == true
+        packages = ["patterns-openSUSE-xen_server"] if install_xen_server
+        packages = packages + ["xen-tools xen-libs libvirt-daemon-xen tigervnc"] if install_xen_tools
+        packages = packages + ["patterns-openSUSE-kvm_server"] if install_kvm_server
+        packages = packages + ["libvirt-daemon-qemu tigervnc"] if install_kvm_tools
+        packages = packages + ["libvirt-daemon-lxc pm-utils"] if install_lxc
+        Package.DoInstall(common_vm_packages + packages )
+      else
+        Package.DoInstall(["libvirt-daemon-lxc pm-utils"]) if install_lxc
+        if isSLED == true
+          Package.DoInstall(["pattern-sled-virtualization_client"]) if install_client_tools
+        else
+          Package.DoInstall(["patterns-sles-xen_server"]) if install_xen_server
+          Package.DoInstall(["patterns-sles-xen_tools"]) if install_xen_tools
+          Package.DoInstall(["patterns-sles-kvm_server"]) if install_kvm_server
+          Package.DoInstall(["patterns-sles-kvm_tools"]) if install_kvm_tools
+        end
       end
 
       inst_gui = true
