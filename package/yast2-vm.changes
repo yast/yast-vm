@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Wed Apr  2 16:13:41 MDT 2014 - carnold@suse.com
+
+- bnc#871633 - yast2 virtualization fails to install xen pattern
+- Print correct message at end of install depending on what was
+  selected
+- Adjust alignment and spacing of main dialog
+- Cleanup whitespace in code
+- 3.1.6
+
+-------------------------------------------------------------------
 Wed Mar 12 15:49:26 CET 2014 - aginies@suse.com
 
 - use patterns instead of packages list (SLES and openSUSE)

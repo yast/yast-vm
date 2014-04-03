@@ -220,78 +220,89 @@ module Yast
       # error popup
       abortmsg = _("The installation will be aborted.")
 
-    def Information
-      widgets = Frame(_("Choose Hypervisor(s) to install"),
-                     HBox(VBox(
-                               Label("server: all minimal system to get a running Hypervisor"),
-                               Label("tools: configure, manage and monitor virtual machines"),
-                               ),
-                          ),
-                     )
-    end
-    def VMButtonBox
-      widgetB = ButtonBox(
-                          PushButton(Id(:accept), Label.AcceptButton),
-                          PushButton(Id(:cancel), Label.CancelButton),
-                          )
-    end
-    def KVMDialog
-      widgetKVM = Frame(_("KVM Hypervisor"),
-                        HBox(
-                             Left(CheckBox(Id(:kvm_server), Opt(:key_F6), "KVM server")),
-                             Left(CheckBox(Id(:kvm_tools), Opt(:key_F7), "KVM tools")),
-                             ),
-                        )
-    end
-    def LXCDialog
-      widgetLXC = Frame(_("libvirt LXC containers"),
-                        HBox(
-                             Left(CheckBox(Id(:lxc), Opt(:key_F4), "libvirt LXC daemon")),
-                             ),
-                        )
-    end
-
-    # Generate a pop dialog to allow user selection of Xen or KVM
-    if is_s390 == true
-      UI.OpenDialog(
-                    VBox(
-                         Information(),
-                         VSpacing(1),
-                         KVMDialog(),
-                         LXCDialog(),
-                         VMButtonBox(),
-                         ),
-                    )
-     elsif isSLED == true
-        UI.OpenDialog(
+      def Information
+        widgets = Frame(_("Choose Hypervisor(s) to install"),
+                    HBox(
                       VBox(
-                           VSpacing(1),
-                           Frame(_("Software to connect to Virtualization server"),
-                                 HBox(
-                                      Left(CheckBox(Id(:client_tools), "Virtualization client tools")
-                                           ),
-                                      ),
-                                 ),
-                           LXCDialog(),
-                           VMButtonBox(),
-                           ),
-                      )
+                        Left(Label("Server: Minimal system to get a running Hypervisor")),
+                        Left(Label("Tools: Configure, manage and monitor virtual machines")),
+                      ),
+                      HSpacing(2),
+                    ),
+                  )
+      end
+      def VMButtonBox
+        widgetB = ButtonBox(
+                    PushButton(Id(:accept), Label.AcceptButton),
+                    PushButton(Id(:cancel), Label.CancelButton),
+                  )
+      end
+      def KVMDialog
+        widgetKVM = Frame(_("KVM Hypervisor"),
+                      HBox(
+                        Left(CheckBox(Id(:kvm_server), Opt(:key_F6), "KVM server")),
+                        Left(CheckBox(Id(:kvm_tools), Opt(:key_F7), "KVM tools")),
+                      ),
+                    )
+      end
+      def LXCDialog
+        widgetLXC = Frame(_("libvirt LXC containers"),
+                      HBox(
+                        Left(CheckBox(Id(:lxc), Opt(:key_F4), "libvirt LXC daemon")),
+                      ),
+                    )
+      end
+
+      # Generate a pop dialog to allow user selection of Xen or KVM
+      if is_s390 == true
+        UI.OpenDialog(
+                      HBox(
+                        HSpacing(2),
+                        VBox(
+                          Information(),
+                          VSpacing(1),
+                          KVMDialog(),
+                          LXCDialog(),
+                          VMButtonBox(),
+                        ),
+                      ),
+        )
+      elsif isSLED == true
+        UI.OpenDialog(
+                      HBox(
+                        HSpacing(2),
+                        VBox(
+                          VSpacing(1),
+                          Frame(_("Software to connect to Virtualization server"),
+                            HBox(
+                              Left(CheckBox(Id(:client_tools), "Virtualization client tools")),
+                            ),
+                          ),
+                          LXCDialog(),
+                          VMButtonBox(),
+                        ),
+                      ),
+        )
       else
         UI.OpenDialog(
-                      VBox(
-                           Information(),
-                           VSpacing(1),
-                           Frame(_("Xen Hypervisor"),
-                                 HBox(
-                                      Left(CheckBox(Id(:xen_server), Opt(:key_F8), "Xen server")),
-                                      Left(CheckBox(Id(:xen_tools), Opt(:key_F9), "Xen tools")),
-                                      ),
-                                 ),
-                           KVMDialog(),
-                           LXCDialog(),
-                           VMButtonBox(),
-                           ),
-                      )
+                      HBox(
+                        HSpacing(2),
+                        VBox(
+                          VSpacing(1),
+                          Information(),
+                          VSpacing(1),
+                          Frame(_("Xen Hypervisor"),
+                            HBox(
+                              Left(CheckBox(Id(:xen_server), Opt(:key_F8), "Xen server")),
+                              Left(CheckBox(Id(:xen_tools), Opt(:key_F9), "Xen tools")),
+                            ),
+                          ),
+                          KVMDialog(),
+                          LXCDialog(),
+                          VMButtonBox(),
+                        ),
+                      ),
+        )
       end
 
       widget_id = UI.UserInput
@@ -309,8 +320,10 @@ module Yast
       install_vm = false
       install_vm = true if install_xen_server
       install_vm = true if install_xen_tools
+      install_xen = true if install_xen_server || install_xen_tools
       install_vm = true if install_kvm_server
       install_vm = true if install_kvm_tools
+      install_kvm = true if install_kvm_server || install_kvm_tools
       install_vm = true if install_client_tools
 
       if widget_id == :cancel || !install_vm && !install_lxc
@@ -516,44 +529,38 @@ module Yast
         "KVM components are installed. Reboot the machine and select the native kernel in the boot loader menu to install KVM guests."
       )
       message_xen_reboot = _(
-        "For installing Xen guests, reboot the machine and select the Xen section in the boot loader menu.\n"
+        "For installing Xen guests, reboot the machine and select the Xen section in the boot loader menu."
       )
       message_xen_ready = _("Xen Hypervisor and tools are installed.")
-      message = nil
+      message_lxc_ready = _("Libvirt LXC components are installed.")
+      message = ""
 
-      if install_xen == false
-        if Arch.is_xen == false
-          Popup.LongMessage(message_kvm_ready)
-        else
-          Popup.LongMessage(message_kvm_reboot)
+      if Arch.is_xen == false
+        if install_kvm
+          message.concat(message_kvm_ready)
+          message.concat("\n\n")
+        end
+        if install_xen
+          message.concat(message_xen_reboot)
+          message.concat("\n\n")
+        end
+        if install_lxc
+          message.concat(message_lxc_ready)
         end
       else
-        if Arch.is_xen == false
-          if install_kvm == true
-            message = Builtins.sformat(
-              "%1\n\n%2",
-              message_kvm_ready,
-              message_xen_reboot
-            )
-          else
-            message = message_xen_reboot
-          end
-          # popup message - ask user to reboot the machine
-          Popup.LongMessage(message)
-        else
-          # popup message - Notify user of successful completion (or already installed).
-          if install_kvm == true
-            message = Builtins.sformat(
-              "%1\n\n%2",
-              message_kvm_reboot,
-              message_xen_ready
-            )
-          else
-            message = message_xen_ready
-          end
-          Popup.Message(message)
+        if install_xen
+          message.concat(message_xen_ready)
+          message.concat("\n\n")
+        end
+        if install_kvm
+          message.concat(message_kvm_reboot)
+          message.concat("\n\n")
+        end
+        if install_lxc
+          message.concat(message_lxc_ready)
         end
       end
+      Popup.LongMessage(message)
 
       Wizard.CloseDialog
 
