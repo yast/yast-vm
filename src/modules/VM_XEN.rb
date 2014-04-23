@@ -360,22 +360,43 @@ module Yast
         end
       end
 
+      result = true
       if isOpenSuse == true
         packages = ["patterns-openSUSE-xen_server"] if install_xen_server
         packages = packages + ["xen-tools xen-libs libvirt-daemon-xen tigervnc"] if install_xen_tools
         packages = packages + ["patterns-openSUSE-kvm_server"] if install_kvm_server
         packages = packages + ["libvirt-daemon-qemu tigervnc"] if install_kvm_tools
         packages = packages + ["libvirt-daemon-lxc pm-utils"] if install_lxc
-        Package.DoInstall(common_vm_packages + packages )
+        result = Package.DoInstall(common_vm_packages + packages)
+        if result == false
+          Report.Error(_("Package installation failed\n"))
+          return false
+        end
       else
-        Package.DoInstall(["libvirt-daemon-lxc pm-utils"]) if install_lxc
+        if install_lxc
+          result = Package.DoInstall(["libvirt-daemon-lxc"])
+          if result == false
+            Report.Error(_("Package installation failed for lxc\n"))
+            return false
+          end
+        end
         if isSLED == true
-          Package.DoInstall(["pattern-sled-virtualization_client"]) if install_client_tools
+          result = Package.DoInstall(["pattern-sled-virtualization_client"]) if install_client_tools
+          if result == false
+            Report.Error(_("Package installation failed for sled client pattern\n"))
+            return false
+          end
         else
-          Package.DoInstall(["patterns-sles-xen_server"]) if install_xen_server
-          Package.DoInstall(["patterns-sles-xen_tools"]) if install_xen_tools
-          Package.DoInstall(["patterns-sles-kvm_server"]) if install_kvm_server
-          Package.DoInstall(["patterns-sles-kvm_tools"]) if install_kvm_tools
+          packages = []
+          packages = packages + ["patterns-sles-xen_server"] if install_xen_server
+          packages = packages + ["patterns-sles-xen_tools"] if install_xen_tools
+          packages = packages + ["patterns-sles-kvm_server"] if install_kvm_server
+          packages = packages + ["patterns-sles-kvm_tools"] if install_kvm_tools
+          result = Package.DoInstall(packages)
+          if result == false
+            Report.Error(_("Package installation failed for sles patterns\n"))
+            return false
+          end
         end
       end
 
@@ -532,6 +553,7 @@ module Yast
         "For installing Xen guests, reboot the machine and select the Xen section in the boot loader menu."
       )
       message_xen_ready = _("Xen Hypervisor and tools are installed.")
+      message_client_ready = _("Virtualization client tools are installed.")
       message_lxc_ready = _("Libvirt LXC components are installed.")
       message = ""
 
@@ -544,9 +566,6 @@ module Yast
           message.concat(message_xen_reboot)
           message.concat("\n\n")
         end
-        if install_lxc
-          message.concat(message_lxc_ready)
-        end
       else
         if install_xen
           message.concat(message_xen_ready)
@@ -556,9 +575,13 @@ module Yast
           message.concat(message_kvm_reboot)
           message.concat("\n\n")
         end
-        if install_lxc
-          message.concat(message_lxc_ready)
-        end
+      end
+      if install_client_tools
+        message.concat(message_client_ready)
+        message.concat("\n\n")
+      end
+      if install_lxc
+        message.concat(message_lxc_ready)
       end
       Popup.LongMessage(message)
 

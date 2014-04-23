@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Wed Apr 23 15:29:15 MDT 2014 - carnold@suse.com
+
+- bnc#874633 - yast2 virtualization fails to configure bridge
+- bnc#874426 - One of the notice window is empty after launching
+  "Install Hypervisor and Tools" in Yast2 
+- 3.1.7
+
+-------------------------------------------------------------------
 Wed Apr  2 16:13:41 MDT 2014 - carnold@suse.com
 
 - bnc#871633 - yast2 virtualization fails to install xen pattern
