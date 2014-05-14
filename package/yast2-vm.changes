@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed May 14 15:57:31 UTC 2014 - jreidinger@suse.com
+
+- adapt to new yast2-bootloader API(bnc#869608)
+- 3.1.9
+
+-------------------------------------------------------------------
 Wed May 14 08:35:01 MDT 2014 - carnold@suse.com
 
 - Install libvirt-daemon-config-network with the LXC pattern 
