@@ -505,25 +505,18 @@ module Yast
         SCR.Execute(path(".target.bash"), cmd)
       else
         # For s390, make sure /etc/zipl.conf contain switch_amode
-        def_section = Bootloader.getDefaultSection
-        switch_amode = Bootloader.getKernelParam(def_section, "switch_amode")
-        if switch_amode == "false"
-          zipl_updated = false
+        switch_amode = Bootloader.kernel_param(:current, "switch_amode")
+        if switch_amode == :missing
           Builtins.y2milestone(
             "No switch_amode kernel boot parameter in /etc/zipl.conf, adding ..."
           )
-          if Bootloader.setKernelParam(def_section, "switch_amode", "true") == true
-            if Bootloader.Write == true
-              zipl_updated = true
-              cmd = "/sbin/zipl"
-              Builtins.y2milestone("Executing: %1", cmd)
-              SCR.Execute(path(".target.bash"), cmd)
-              Builtins.y2milestone(
-                "Successful update of /etc/zipl.conf with the switch_amode kernel boot parameter"
-              )
-            end
-          end
-          if zipl_updated == false
+          Bootloader.modify_kernel_params(:current, "switch_amode", :present)
+          if Bootloader.Write
+            zipl_updated = true
+            Builtins.y2milestone(
+              "Successful update of /etc/zipl.conf with the switch_amode kernel boot parameter"
+            )
+          else
             Builtins.y2milestone(
               "Failed to correctly update /etc/zipl.conf with switch_amode kernel boot parameter"
             )
