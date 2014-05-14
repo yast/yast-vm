@@ -363,10 +363,10 @@ module Yast
       result = true
       if isOpenSuse == true
         packages = ["patterns-openSUSE-xen_server"] if install_xen_server
-        packages = packages + ["xen-tools xen-libs libvirt-daemon-xen tigervnc"] if install_xen_tools
+        packages = packages + ["xen-tools", "xen-libs", "libvirt-daemon-xen", "tigervnc"] if install_xen_tools
         packages = packages + ["patterns-openSUSE-kvm_server"] if install_kvm_server
-        packages = packages + ["libvirt-daemon-qemu tigervnc"] if install_kvm_tools
-        packages = packages + ["libvirt-daemon-lxc pm-utils"] if install_lxc
+        packages = packages + ["libvirt-daemon-qemu", "tigervnc"] if install_kvm_tools
+        packages = packages + ["libvirt-daemon-lxc", "libvirt-daemon-config-network", "pm-utils"] if install_lxc
         result = Package.DoInstall(common_vm_packages + packages)
         if result == false
           Report.Error(_("Package installation failed\n"))
@@ -374,7 +374,8 @@ module Yast
         end
       else
         if install_lxc
-          result = Package.DoInstall(["libvirt-daemon-lxc"])
+          packages = ["libvirt-daemon-lxc", "libvirt-daemon-config-network"]
+          result = Package.DoInstall(packages)
           if result == false
             Report.Error(_("Package installation failed for lxc\n"))
             return false
