@@ -17,7 +17,7 @@
 
 
 Name:           yast2-vm
-Version:        3.1.8
+Version:        3.1.9
 Release:        0
 Group:		System/YaST
 
@@ -25,7 +25,8 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Source0:        %{name}-%{version}.tar.bz2
 
 ExclusiveArch:  %ix86 x86_64 s390x
-BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-testsuite yast2-bootloader
+BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-testsuite
+BuildRequires:  yast2-bootloader >= 3.1.35
 BuildRequires:  yast2-devtools >= 3.1.10
 License:        GPL-2.0
 
