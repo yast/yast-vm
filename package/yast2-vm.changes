@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu May 22 11:36:51 UTC 2014 - jreidinger@suse.com
+
+- Fix passed kernel flavor (bnc#878909)
+- 3.1.10
+
+-------------------------------------------------------------------
 Wed May 14 15:57:31 UTC 2014 - jreidinger@suse.com
 
 - adapt to new yast2-bootloader API(bnc#869608)
