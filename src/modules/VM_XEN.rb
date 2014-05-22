@@ -505,12 +505,12 @@ module Yast
         SCR.Execute(path(".target.bash"), cmd)
       else
         # For s390, make sure /etc/zipl.conf contain switch_amode
-        switch_amode = Bootloader.kernel_param(:current, "switch_amode")
+        switch_amode = Bootloader.kernel_param(:common, "switch_amode")
         if switch_amode == :missing
           Builtins.y2milestone(
             "No switch_amode kernel boot parameter in /etc/zipl.conf, adding ..."
           )
-          Bootloader.modify_kernel_params(:current, "switch_amode", :present)
+          Bootloader.modify_kernel_params(:common, "switch_amode", :present)
           if Bootloader.Write
             zipl_updated = true
             Builtins.y2milestone(
