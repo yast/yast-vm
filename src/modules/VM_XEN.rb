@@ -45,6 +45,7 @@ module Yast
       Yast.import "Wizard"
       Yast.import "Label"
       Yast.import "Bootloader"
+      Yast.import "Lan"
 
 
       @net_path = "/sys/class/net/"
@@ -489,10 +490,9 @@ module Yast
               :focus_yes
             )
             Builtins.y2milestone("Configuring default bridge for Xen or KVM...")
-            WFM.call("lan_proposal", ["MakeProposal"])
-            UI.OpenDialog(VBox())
-            WFM.call("lan_proposal", ["Write"])
-            UI.CloseDialog
+            Lan.Read(:cache)
+            Lan.ProposeVirtualized
+            Lan.Write
           end
         end
 

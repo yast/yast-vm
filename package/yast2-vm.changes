@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri May 23 10:01:44 MDT 2014 - carnold@suse.com
+
+- bnc#879463 - Yast2 VM: network bridge is not created 
+- 3.1.11
+
+-------------------------------------------------------------------
 Thu May 22 11:36:51 UTC 2014 - jreidinger@suse.com
 
 - Fix passed kernel flavor (bnc#878909)
