@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed May 28 10:30:33 MDT 2014 - carnold@suse.com
+
+- bnc#877715 - SLES12_LOC : ALL_LANGS:the dialog Untranslated text
+  in 'Install Hypervisor and Tools' screen 
+- 3.1.12
+
+-------------------------------------------------------------------
 Fri May 23 10:01:44 MDT 2014 - carnold@suse.com
 
 - bnc#879463 - Yast2 VM: network bridge is not created 

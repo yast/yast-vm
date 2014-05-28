@@ -225,8 +225,8 @@ module Yast
         widgets = Frame(_("Choose Hypervisor(s) to install"),
                     HBox(
                       VBox(
-                        Left(Label("Server: Minimal system to get a running Hypervisor")),
-                        Left(Label("Tools: Configure, manage and monitor virtual machines")),
+                        Left(Label(_("Server: Minimal system to get a running Hypervisor"))),
+                        Left(Label(_("Tools: Configure, manage and monitor virtual machines"))),
                       ),
                       HSpacing(2),
                     ),
@@ -241,15 +241,15 @@ module Yast
       def KVMDialog
         widgetKVM = Frame(_("KVM Hypervisor"),
                       HBox(
-                        Left(CheckBox(Id(:kvm_server), Opt(:key_F6), "KVM server")),
-                        Left(CheckBox(Id(:kvm_tools), Opt(:key_F7), "KVM tools")),
+                        Left(CheckBox(Id(:kvm_server), Opt(:key_F6), _("KVM server"))),
+                        Left(CheckBox(Id(:kvm_tools), Opt(:key_F7), _("KVM tools"))),
                       ),
                     )
       end
       def LXCDialog
         widgetLXC = Frame(_("libvirt LXC containers"),
                       HBox(
-                        Left(CheckBox(Id(:lxc), Opt(:key_F4), "libvirt LXC daemon")),
+                        Left(CheckBox(Id(:lxc), Opt(:key_F4), _("libvirt LXC daemon"))),
                       ),
                     )
       end
@@ -276,7 +276,7 @@ module Yast
                           VSpacing(1),
                           Frame(_("Software to connect to Virtualization server"),
                             HBox(
-                              Left(CheckBox(Id(:client_tools), "Virtualization client tools")),
+                              Left(CheckBox(Id(:client_tools), _("Virtualization client tools"))),
                             ),
                           ),
                           LXCDialog(),
@@ -294,8 +294,8 @@ module Yast
                           VSpacing(1),
                           Frame(_("Xen Hypervisor"),
                             HBox(
-                              Left(CheckBox(Id(:xen_server), Opt(:key_F8), "Xen server")),
-                              Left(CheckBox(Id(:xen_tools), Opt(:key_F9), "Xen tools")),
+                              Left(CheckBox(Id(:xen_server), Opt(:key_F8), _("Xen server"))),
+                              Left(CheckBox(Id(:xen_tools), Opt(:key_F9), _("Xen tools"))),
                             ),
                           ),
                           KVMDialog(),
