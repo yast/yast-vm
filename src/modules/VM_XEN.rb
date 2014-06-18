@@ -139,6 +139,14 @@ module Yast
       isPAE
     end
 
+    def reloadApparmor
+      if Package.InstalledAll(["apparmor"])
+        cmd = "systemctl restart apparmor.service"
+        Builtins.y2milestone("Restart apparmor.service: %1", cmd)
+        SCR.Execute(path(".target.bash"), cmd)
+      end
+    end
+
     def isX86_64
       ret = true
 
@@ -367,7 +375,7 @@ module Yast
         packages = packages + ["xen-tools", "xen-libs", "libvirt-daemon-xen", "tigervnc"] if install_xen_tools
         packages = packages + ["patterns-openSUSE-kvm_server"] if install_kvm_server
         packages = packages + ["libvirt-daemon-qemu", "tigervnc"] if install_kvm_tools
-        packages = packages + ["libvirt-daemon-lxc", "libvirt-daemon-config-network", "pm-utils"] if install_lxc
+        packages = packages + ["libvirt-daemon-lxc", "libvirt-daemon-config-network"] if install_lxc
         result = Package.DoInstall(common_vm_packages + packages)
         if result == false
           Report.Error(_("Package installation failed\n"))
@@ -495,14 +503,6 @@ module Yast
             Lan.Write
           end
         end
-
-        # Enable and start the libvirtd daemon for both KVM and Xen
-        cmd = "systemctl enable libvirtd.service"
-        Builtins.y2milestone("Enable libvirtd.service: %1", cmd)
-        SCR.Execute(path(".target.bash"), cmd)
-        cmd = "systemctl start libvirtd.service"
-        Builtins.y2milestone("Start libvirtd.service: %1", cmd)
-        SCR.Execute(path(".target.bash"), cmd)
       else
         # For s390, make sure /etc/zipl.conf contain switch_amode
         switch_amode = Bootloader.kernel_param(:common, "switch_amode")
@@ -523,6 +523,17 @@ module Yast
           end
         end
       end
+
+      # Force AppArmor to reload the profiles
+      reloadApparmor
+
+      # Enable and start the libvirtd daemon for both KVM and Xen
+      cmd = "systemctl enable libvirtd.service"
+      Builtins.y2milestone("Enable libvirtd.service: %1", cmd)
+      SCR.Execute(path(".target.bash"), cmd)
+      cmd = "systemctl start libvirtd.service"
+      Builtins.y2milestone("Start libvirtd.service: %1", cmd)
+      SCR.Execute(path(".target.bash"), cmd)
 
       # Firewall stage - modify the firewall setting, add the xen bridge to FW_FORWARD_ALWAYS_INOUT_DEV
       # Progress::NextStage();

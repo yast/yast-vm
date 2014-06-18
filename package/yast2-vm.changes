@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Wed Jun 18 08:29:15 MDT 2014 - carnold@suse.com
+
+- Include enable and start of libvirtd service for s390x
+- Remove installing the pm-utils package. It is no longer needed
+- Restart apparmor before starting libvirtd. Otherwise libvirtd
+  runs unenforced at the first start.
+- 3.1.13
+
+-------------------------------------------------------------------
 Wed May 28 10:30:33 MDT 2014 - carnold@suse.com
 
 - bnc#877715 - SLES12_LOC : ALL_LANGS:the dialog Untranslated text
