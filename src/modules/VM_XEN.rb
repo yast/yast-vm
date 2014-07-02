@@ -277,6 +277,9 @@ module Yast
                       ),
         )
       elsif isSLED == true
+        progress_stages = [
+          _("Verify Installed Packages")
+        ]
         UI.OpenDialog(
                       HBox(
                         HSpacing(2),
@@ -463,44 +466,47 @@ module Yast
       end
 
       if is_s390 == false
-        # Default Bridge stage
-        Progress.NextStage
+        # SLED is not a Virtualization Host so don't create a bridge
+        if isSLED == false
+          # Default Bridge stage
+          Progress.NextStage
 
-        Progress.Title(_("Configuring Default Network Bridge..."))
+          Progress.Title(_("Configuring Default Network Bridge..."))
 
-        # Check for the existance of /sys/class/net/*/bridge
-        interfaces = Convert.convert(
-          SCR.Read(path(".target.dir"), @net_path),
-          :from => "any",
-          :to   => "list <string>"
-        )
-        Builtins.foreach(interfaces) do |i|
-          Builtins.y2milestone("Checking for bridges...")
-          bridge_path = Ops.add(Ops.add(Ops.add(@net_path, "/"), i), "/bridge")
-          if Ops.greater_or_equal(SCR.Read(path(".target.dir"), bridge_path), 0)
-            Builtins.y2milestone("Dom0 already has a configured bridge.")
-            bridge_exists = true
-            raise Break
+          # Check for the existance of /sys/class/net/*/bridge
+          interfaces = Convert.convert(
+            SCR.Read(path(".target.dir"), @net_path),
+            :from => "any",
+            :to   => "list <string>"
+          )
+          Builtins.foreach(interfaces) do |i|
+            Builtins.y2milestone("Checking for bridges...")
+            bridge_path = Ops.add(Ops.add(Ops.add(@net_path, "/"), i), "/bridge")
+            if Ops.greater_or_equal(SCR.Read(path(".target.dir"), bridge_path), 0)
+              Builtins.y2milestone("Dom0 already has a configured bridge.")
+              bridge_exists = true
+              raise Break
+            end
           end
-        end
 
-        # Popup yes/no dialog
-        if bridge_exists == false
-          if Popup.AnyQuestionRichText(
-              _("Network Bridge."),
-              _(
-                "<p>For normal network configurations hosting virtual machines, a network bridge is recommended.</p><p>Configure a default network bridge?</p>"
-              ),
-              45,
-              5,
-              Label.YesButton,
-              Label.NoButton,
-              :focus_yes
-            )
-            Builtins.y2milestone("Configuring default bridge for Xen or KVM...")
-            Lan.Read(:cache)
-            Lan.ProposeVirtualized
-            Lan.Write
+          # Popup yes/no dialog
+          if bridge_exists == false
+            if Popup.AnyQuestionRichText(
+                _("Network Bridge."),
+                _(
+                  "<p>For normal network configurations hosting virtual machines, a network bridge is recommended.</p><p>Configure a default network bridge?</p>"
+                ),
+                45,
+                5,
+                Label.YesButton,
+                Label.NoButton,
+                :focus_yes
+              )
+              Builtins.y2milestone("Configuring default bridge for Xen or KVM...")
+              Lan.Read(:cache)
+              Lan.ProposeVirtualized
+              Lan.Write
+            end
           end
         end
       else

@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Jul  2 17:02:00 MDT 2014 - carnold@suse.com
+
+- Don't create a bridge on SLED as it is not a Virtualization Host.
+- 3.1.14
+
+-------------------------------------------------------------------
 Wed Jun 18 08:29:15 MDT 2014 - carnold@suse.com
 
 - Include enable and start of libvirtd service for s390x
