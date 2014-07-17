@@ -45,6 +45,7 @@ module Yast
       Yast.import "Wizard"
       Yast.import "Label"
       Yast.import "Bootloader"
+      Yast.import "BootCommon"
       Yast.import "Lan"
 
 
@@ -457,8 +458,15 @@ module Yast
       # If grub2 is the bootloader and we succesfully installed Xen, update the grub2 files
       if install_xen
         Builtins.y2milestone("Checking for bootloader type")
-        if Bootloader.getLoaderType == "grub2"
+        if Bootloader.getLoaderType == "grub2" || Bootloader.getLoaderType == "grub2-efi"
           Progress.Title(_("Updating grub2 configuration files..."))
+
+          # To force and EFI update
+          BootCommon.location_changed = true
+          old_progress = Progress.set(false)
+          Bootloader.Write
+          Progress.set(old_progress)
+
           cmd = "/usr/sbin/grub2-mkconfig -o /boot/grub2/grub.cfg"
           Builtins.y2milestone("Executing: %1", cmd)
           SCR.Execute(path(".target.bash"), cmd)

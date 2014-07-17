@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Jul  9 15:02:28 MDT 2014 - carnold@suse.com
+
+- bnc#884831 - uefi Xen bootloader is not automatically inserted
+  as an efi boot option 
+- 3.1.15
+
+-------------------------------------------------------------------
 Wed Jul  2 17:02:00 MDT 2014 - carnold@suse.com
 
 - Don't create a bridge on SLED as it is not a Virtualization Host.
