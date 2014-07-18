@@ -15,7 +15,7 @@ X-SuSE-YaST-SortKey=
 X-SuSE-YaST-AutoinstResource=
 
 Icon=yast-vm-install
-Exec=/usr/bin/xdg-su -c "/sbin/yast2 xen"
+Exec=/usr/bin/xdg-su -c "/sbin/yast2 virtualization"
 
 Name=Install Hypervisor and Tools
 GenericName=Install Xen or KVM with Management Tools

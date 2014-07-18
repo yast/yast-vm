@@ -19,8 +19,8 @@
 # current contact information at www.novell.com.
 # ------------------------------------------------------------------------------
 
-# File:	modules/VM_XEN.ycp
-# Package:	VM_XEN configuration - generic module
+# File:	modules/VirtConfig.ycp
+# Package:	VirtConfig configuration - generic module
 # Authors:	Ladislav Slezak <lslezak@suse.cz>
 #		Michael G. Fritch <mgfritch@novell.com>
 #
@@ -28,7 +28,7 @@
 require "yast"
 
 module Yast
-  class VM_XENClass < Module
+  class VirtConfigClass < Module
     def main
       Yast.import "UI"
 
@@ -53,7 +53,7 @@ module Yast
     end
 
     def ConfigureFirewall
-      Builtins.y2milestone("VM_XEN::ConfigureFirewall() started")
+      Builtins.y2milestone("VirtConfig::ConfigureFirewall() started")
       ret = true
 
       # check whether the firewall option exists
@@ -84,7 +84,7 @@ module Yast
         Progress.set(progress_orig)
       end
 
-      Builtins.y2milestone("VM_XEN::ConfigureFirewall returned: %1", ret)
+      Builtins.y2milestone("VirtConfig::ConfigureFirewall returned: %1", ret)
       ret
     end
 
@@ -136,7 +136,7 @@ module Yast
           isPAE = false
         end
       end
-      Builtins.y2milestone("VM_XEN::isPAEKernel returned: %1", isPAE)
+      Builtins.y2milestone("VirtConfig::isPAEKernel returned: %1", isPAE)
       isPAE
     end
 
@@ -164,7 +164,7 @@ module Yast
         ret = false
       end
 
-      Builtins.y2milestone("VM_XEN::isX86_64 returned: %1", ret)
+      Builtins.y2milestone("VirtConfig::isX86_64 returned: %1", ret)
       ret
     end
 
@@ -183,7 +183,7 @@ module Yast
         ret = false
       end
 
-      Builtins.y2milestone("VM_XEN::isUML returned: %1", ret)
+      Builtins.y2milestone("VirtConfig::isUML returned: %1", ret)
       false
     end
 
@@ -341,7 +341,7 @@ module Yast
 
       if widget_id == :cancel || !install_vm && !install_lxc
         Builtins.y2milestone(
-          "VM_XEN::ConfigureDom0 Cancel Selected or no platform selected."
+          "VirtConfig::ConfigureDom0 Cancel Selected or no platform selected."
         )
         return false
       end
@@ -416,7 +416,7 @@ module Yast
 
       inst_gui = true
 
-      Builtins.y2milestone("VM_XEN::ConfigureDom0 Checking for packages...")
+      Builtins.y2milestone("VirtConfig::ConfigureDom0 Checking for packages...")
 
       # Assume python gtk is installed. If in text mode we don't care
       if Ops.get_boolean(UI.GetDisplayInfo, "TextMode", true) == true
@@ -606,7 +606,7 @@ module Yast
 
       Wizard.CloseDialog
 
-      Builtins.y2milestone("VM_XEN::ConfigureDom0 returned: %1", success)
+      Builtins.y2milestone("VirtConfig::ConfigureDom0 returned: %1", success)
       success
     end
 
@@ -618,6 +618,6 @@ module Yast
     publish :function => :ConfigureDom0, :type => "boolean (boolean)"
   end
 
-  VM_XEN = VM_XENClass.new
-  VM_XEN.main
+  VirtConfig = VirtConfigClass.new
+  VirtConfig.main
 end

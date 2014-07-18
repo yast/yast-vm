@@ -19,14 +19,14 @@
 # current contact information at www.novell.com.
 # ------------------------------------------------------------------------------
 
-# File:	clients/xen.ycp
+# File:	clients/virtualization.ycp
 # Package:	Installation/management in a virtual machine
 # Summary:	Main virtual machine installation/management
 # Authors:	Michael G. Fritch <mgfritch@novell.com>
 #
-# $Id: xen.ycp 57028 2009-04-29 10:58:09Z lslezak $
+# $Id: virtualization.ycp 57028 2009-04-29 10:58:09Z lslezak $
 module Yast
-  class XenClient < Client
+  class VirtualizationClient < Client
     def main
       #**
       # <h3>Configuration of novell-xad</h3>
@@ -35,7 +35,7 @@ module Yast
 
       # The main ()
       Builtins.y2milestone("----------------------------------------")
-      Builtins.y2milestone("Xen (yast2-vm) module started")
+      Builtins.y2milestone("Virtualization (yast2-vm) module started")
 
 
       Yast.import "Arch"
@@ -44,7 +44,7 @@ module Yast
       Yast.import "Package"
       Yast.import "Popup"
       Yast.import "Report"
-      Yast.import "VM_XEN"
+      Yast.import "VirtConfig"
 
       # Main
 
@@ -64,7 +64,7 @@ module Yast
       #    if (ret == false) return `abort;
 
       # Finish
-      Builtins.y2milestone("Xen (yast-vm) module finished")
+      Builtins.y2milestone("Virtualization (yast-vm) module finished")
       Builtins.y2milestone("----------------------------------------")
 
       :next 
@@ -78,19 +78,19 @@ module Yast
       is_s390 = false
 
       # check whether VM can be started (cannot start a vm using UML)
-      return false if VM_XEN.isUML
+      return false if VirtConfig.isUML
 
       # s390 is technical preview and we only fully support x86_64
       if Arch.s390_64 == true
         is_s390 = true
-      elsif VM_XEN.isX86_64 == false
+      elsif VirtConfig.isX86_64 == false
         return false
       end
 
-      Builtins.y2milestone("Checking for Xen installation")
+      Builtins.y2milestone("Checking for Virtualization installation")
 
       # check the dom0 configuration...
-      ret = ret && VM_XEN.ConfigureDom0(is_s390)
+      ret = ret && VirtConfig.ConfigureDom0(is_s390)
       return false if ret == false
 
       Builtins.y2milestone("CheckConfiguration returned: %1", ret)
@@ -99,4 +99,4 @@ module Yast
   end
 end
 
-Yast::XenClient.new.main
+Yast::VirtualizationClient.new.main

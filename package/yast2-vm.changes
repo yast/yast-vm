@@ -1,6 +1,18 @@
 -------------------------------------------------------------------
 Wed Jul  9 15:02:28 MDT 2014 - carnold@suse.com
 
+- bcn#887933 - Yast2 module Xen should be renamed to something more
+  generic
+  Renamed the following files and updated the methods to reflect the
+  new generic naming syntax:
+    xen.rb -> virtualization.rb
+    xen.desktop -> virtualization-config.desktop
+    VM_XEN.rb -> VirtConfig.rb
+- 3.1.16
+
+-------------------------------------------------------------------
+Wed Jul  9 15:02:28 MDT 2014 - carnold@suse.com
+
 - bnc#884831 - uefi Xen bootloader is not automatically inserted
   as an efi boot option 
 - 3.1.15

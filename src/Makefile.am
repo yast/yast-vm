@@ -2,10 +2,10 @@
 
 module_DATA = \
   modules/RelocationServer.rb \
-  modules/VM_XEN.rb
+  modules/VirtConfig.rb
 
 client_DATA = \
-  clients/xen.rb \
+  clients/virtualization.rb \
   clients/vm_finish.rb \
   clients/relocation-server.rb
 
@@ -21,7 +21,7 @@ scrconf_DATA = \
 
 desktop_DATA = \
   desktop/relocation-server.desktop \
-  desktop/xen.desktop
+  desktop/virtualization-config.desktop
 
 desktop1dir = @desktopdir@/groups
 desktop1_DATA = \

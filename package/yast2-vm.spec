@@ -17,7 +17,7 @@
 
 
 Name:           yast2-vm
-Version:        3.1.15
+Version:        3.1.16
 Release:        0
 Group:		System/YaST
 
@@ -50,7 +50,7 @@ This YaST module installs the tools necessary for creating VMs with Xen or KVM.
 %yast_install
 
 %ifarch %ix86
-rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/xen.desktop
+rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/virtualization-config.desktop
 rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
 %endif
 
@@ -60,16 +60,16 @@ rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
 %dir %{yast_scrconfdir}
 %dir %{yast_yncludedir}
 %{yast_clientdir}/relocation-server.rb
-%{yast_clientdir}/xen.rb
+%{yast_clientdir}/virtualization.rb
 %{yast_clientdir}/vm_finish.rb
-%{yast_moduledir}/VM_XEN.rb
+%{yast_moduledir}/VirtConfig.rb
 %{yast_moduledir}/RelocationServer.*
 %{yast_yncludedir}/*
 %{yast_scrconfdir}/*
 %{yast_desktopdir}/groups/virtualization.desktop
 %ifnarch %ix86
 %{yast_desktopdir}/relocation-server.desktop
-%{yast_desktopdir}/xen.desktop
+%{yast_desktopdir}/virtualization-config.desktop
 %endif
 %doc %{yast_docdir}
 %doc %{yast_docdir}/COPYING

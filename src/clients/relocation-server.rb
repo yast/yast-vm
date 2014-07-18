@@ -45,7 +45,7 @@ module Yast
       Yast.import "Progress"
       Yast.import "Report"
       Yast.import "Summary"
-      Yast.import "VM_XEN"
+      Yast.import "VirtConfig"
       Yast.import "Arch"
 
       Yast.import "CommandLine"
@@ -94,12 +94,12 @@ module Yast
       ret = true
 
       # check whether VM can be started (cannot start a vm using UML)
-      return false if VM_XEN.isUML
+      return false if VirtConfig.isUML
 
       Builtins.y2milestone("Checking for Xen installation")
 
       # check the dom0 configuration...
-      ret = ret && VM_XEN.ConfigureDom0(Arch.s390_64)
+      ret = ret && VirtConfig.ConfigureDom0(Arch.s390_64)
       return false if ret == false
 
       Builtins.y2milestone("CheckConfiguration returned: %1", ret)
