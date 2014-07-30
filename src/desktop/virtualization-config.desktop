@@ -5,7 +5,7 @@ Categories=Settings;System;Qt;X-SuSE-YaST;X-SuSE-YaST-Virtualization;
 X-KDE-ModuleType=Library
 X-KDE-HasReadOnlyMode=true
 X-KDE-Library=yast2
-X-SuSE-YaST-Call=xen
+X-SuSE-YaST-Call=virtualization
 
 X-SuSE-YaST-Group=Virtualization
 X-SuSE-YaST-Argument=

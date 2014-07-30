@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Jul 30 08:32:45 MDT 2014 - carnold@suse.com
+
+- bnc#889579 - yast2-vm fails to start
+- 3.1.17
+
+-------------------------------------------------------------------
 Fri Jul 18 10:24:32 MDT 2014 - carnold@suse.com
 
 - bcn#887933 - Yast2 module Xen should be renamed to something more
