@@ -365,6 +365,9 @@ module Yast
       # package stage
       Progress.NextStage
 
+      packages = []
+      common_vm_packages = []
+
       if install_vm == true
         common_vm_packages = ["libvirt-client"]
         # SLED doesn't have any installation capabilities (L3 support)
@@ -401,7 +404,6 @@ module Yast
             return false
           end
         else
-          packages = []
           packages = packages + ["patterns-sles-xen_server"] if install_xen_server
           packages = packages + ["patterns-sles-xen_tools"] if install_xen_tools
           packages = packages + ["patterns-sles-kvm_server"] if install_kvm_server

@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Aug 20 08:26:07 MDT 2014 - carnold@suse.com
+
+- bnc#892759 - "Install Hypervisor and Tools" fails with error:
+  Details: undefined method `+' for nil:NilClass 
+- 3.1.18
+
+-------------------------------------------------------------------
 Fri Jul 30 08:32:45 MDT 2014 - carnold@suse.com
 
 - bnc#889579 - yast2-vm fails to start
