@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Nov 19 10:33:42 MST 2014 - carnold@suse.com
+
+- bnc#905580 - SIGSEGV in yast2 relocation-server 
+- 3.1.19
+
+-------------------------------------------------------------------
 Wed Aug 20 08:26:07 MDT 2014 - carnold@suse.com
 
 - bnc#892759 - "Install Hypervisor and Tools" fails with error:
