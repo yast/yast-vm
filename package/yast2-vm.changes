@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Dec  1 13:30:04 MST 2014 - carnold@suse.com
+
+- bnc#907747 - yast-vm fails to find the pattern on sled
+- 3.1.20 
+
+-------------------------------------------------------------------
 Wed Nov 19 10:33:42 MST 2014 - carnold@suse.com
 
 - bnc#905580 - SIGSEGV in yast2 relocation-server 
