@@ -238,6 +238,10 @@ module Yast
     end
 
     def ReadLibvirtServices
+      if !Package.Installed("libvirt-daemon")
+        Builtins.y2milestone("libvirt is not installed")
+        return false
+      end
       @libvirtd_enabled = Service.Enabled("libvirtd")
       @sshd_enabled = Service.Enabled("sshd")
 
@@ -380,6 +384,8 @@ module Yast
         # Error message
         if !ReadLibvirtServices()
           Report.Error(_("Cannot read the current libvirtd/sshd state."))
+          Report.Error(Message.CannotContinueWithoutPackagesInstalled)
+          return false
         end
         Builtins.sleep(sl)
       end

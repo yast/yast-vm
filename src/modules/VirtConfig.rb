@@ -398,7 +398,7 @@ module Yast
           end
         end
         if isSLED == true
-          result = Package.DoInstall(["pattern-sled-virtualization_client"]) if install_client_tools
+          result = Package.DoInstall(["patterns-sled-virtualization_client"]) if install_client_tools
           if result == false
             Report.Error(_("Package installation failed for sled client pattern\n"))
             return false
