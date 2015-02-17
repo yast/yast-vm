@@ -118,6 +118,26 @@ else if (func == "Write")
 	// Although console appears to be a tty, do not do character translations
 	SCR::Execute(.target.bash, "/bin/sed -i 's/^CONSOLE_MAGIC=.*$/CONSOLE_MAGIC=\"\"/' /etc/sysconfig/console");
     }
+    else if (Arch::s390())
+    {
+        // check for S390 KVM terminal
+        string tty_dev = "/dev/hvc0";
+
+        if (FileUtils::Exists(tty_dev))
+        {
+            y2milestone("Found terminal device: %1", tty_dev);
+
+            string config_line = sformat("2345:respawn:/sbin/mingetty --noclear %1", tty_dev);
+            y2milestone("New inittab config: %1", config_line);
+
+            SCR::Write(.etc.inittab."1", config_line);
+            // flush the changes
+            SCR::Write(.etc.inittab, nil);
+
+            // allow root login on the tty
+            SCR::Execute(.target.bash, "/usr/bin/grep -q hvc0 /etc/securetty || echo hvc0 >> /etc/securetty");
+        }
+    }
 }
 else
 {
