@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Feb 20 11:40:04 UTC 2015 - lslezak@suse.cz
+
+- use /dev/hvc0 console in KVM on S390 (bnc#579016)
+- 2.17.17
+
+-------------------------------------------------------------------
 Thu May 16 10:03:27 MDT 2013 - carnold@suse.com
 
 - bnc#820057 - Install Hypervisor and Tools doesn't add
