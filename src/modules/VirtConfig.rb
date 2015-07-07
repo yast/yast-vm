@@ -526,7 +526,7 @@ module Yast
           Builtins.y2milestone(
             "No switch_amode kernel boot parameter in /etc/zipl.conf, adding ..."
           )
-          Bootloader.modify_kernel_params(:common, "switch_amode", :present)
+          Bootloader.modify_kernel_params(:common, "switch_amode" => :present)
           if Bootloader.Write
             zipl_updated = true
             Builtins.y2milestone(
