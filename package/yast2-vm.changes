@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Jul  7 14:31:13 MDT 2015 - carnold@suse.com
+
+- bnc#936091 - installation of kvm and kvm-tools on s390 finishes
+  with "Missing parameters to modify [:common, "switch_amode"]"
+- 3.1.21
+
+-------------------------------------------------------------------
 Mon Dec  1 13:30:04 MST 2014 - carnold@suse.com
 
 - bnc#907747 - yast-vm fails to find the pattern on sled
