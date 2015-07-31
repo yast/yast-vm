@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Jul 21 15:13:29 UTC 2015 - jreidinger@suse.com
+
+- fix crash when installing kvm virtualization pattern (bnc#938530)
+- 3.1.23
+
+-------------------------------------------------------------------
 Tue Jul  7 14:31:13 MDT 2015 - carnold@suse.com
 
 - bnc#936091 - installation of kvm and kvm-tools on s390 finishes

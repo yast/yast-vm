@@ -347,7 +347,7 @@ module Yast
       end
 
       Wizard.OpenNextBackDialog
-      Wizard.SetDesktopTitleAndIcon("xen")
+      Wizard.SetDesktopTitleAndIcon("virtualization-config")
 
       # enable progress
       progress = Progress.set(true)
