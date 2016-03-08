@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Aug 11 13:24:12 MDT 2015 - carnold@suse.com
+
+- bsc#941125 - yast2-vm: uses /etc/inittab
+- 3.1.21 
+
+-------------------------------------------------------------------
 Mon Dec  1 13:30:04 MST 2014 - carnold@suse.com
 
 - bnc#907747 - yast-vm fails to find the pattern on sled
