@@ -104,7 +104,9 @@ module Yast
 
           # Allow a console in addition to VNC with the PV framebuffer
           Builtins.y2milestone("check for xvc0 in inittab and securetty")
-          if !Builtins.contains(SCR.Dir(path(".etc.inittab")), "x0")
+          @etc_inittab = "/etc/inittab"
+          if FileUtils.Exists(@etc_inittab) &&
+              !Builtins.contains(SCR.Dir(path(".etc.inittab")), "x0")
             # On an upgrade, don't add new entry if existing one is commented out - bnc#720929
             if 0 !=
                 SCR.Execute(

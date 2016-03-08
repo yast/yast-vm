@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Aug 11 13:24:12 MDT 2015 - carnold@suse.com
+
+- bsc#941125 - yast2-vm: uses /etc/inittab
+- 3.1.22
+
+-------------------------------------------------------------------
 Tue Jul  7 14:31:13 MDT 2015 - carnold@suse.com
 
 - bnc#936091 - installation of kvm and kvm-tools on s390 finishes
