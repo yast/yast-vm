@@ -551,6 +551,14 @@ module Yast
       Builtins.y2milestone("Start libvirtd.service: %1", cmd)
       SCR.Execute(path(".target.bash"), cmd)
 
+      # Enable and start the virtlogd daemon (libvirt >= 1.3.0) for both KVM and Xen
+      cmd = "systemctl enable virtlogd.service"
+      Builtins.y2milestone("Enable virtlogd.service: %1", cmd)
+      SCR.Execute(path(".target.bash"), cmd)
+      cmd = "systemctl start virtlogd.service"
+      Builtins.y2milestone("Start virtlogd.service: %1", cmd)
+      SCR.Execute(path(".target.bash"), cmd)
+
       # Firewall stage - modify the firewall setting, add the xen bridge to FW_FORWARD_ALWAYS_INOUT_DEV
       # Progress::NextStage();
 

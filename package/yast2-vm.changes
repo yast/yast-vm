@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon Mar 14 13:34:00 MDT 2016 - carnold@suse.com
+
+- bsc#971054 - virtlogd is now required by libvirt and must be
+  started automatically
+- 3.1.25
+
+-------------------------------------------------------------------
 Tue Aug 11 13:24:12 MDT 2015 - carnold@suse.com
 
 - bsc#941125 - yast2-vm: uses /etc/inittab
