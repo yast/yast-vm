@@ -551,9 +551,12 @@ module Yast
       Builtins.y2milestone("Start libvirtd.service: %1", cmd)
       SCR.Execute(path(".target.bash"), cmd)
 
-      # Enable the virtlogd socket (libvirt >= 1.3.0) for both KVM and Xen
+      # Enable and start the virtlogd socket (libvirt >= 1.3.0) for both KVM and Xen
       cmd = "systemctl enable virtlogd.socket"
       Builtins.y2milestone("Enable virtlogd.socket: %1", cmd)
+      SCR.Execute(path(".target.bash"), cmd)
+      cmd = "systemctl start virtlogd.socket"
+      Builtins.y2milestone("Start virtlogd.socket: %1", cmd)
       SCR.Execute(path(".target.bash"), cmd)
 
       # Firewall stage - modify the firewall setting, add the xen bridge to FW_FORWARD_ALWAYS_INOUT_DEV
