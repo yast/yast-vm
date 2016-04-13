@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Apr 13 12:17:24 UTC 2016 - jreidinger@suse.com
+
+- Remove workarounds not needed for new bootloader
+  (related to FATE#317701)
+- 3.1.26
+
+-------------------------------------------------------------------
 Mon Mar 14 13:34:00 MDT 2016 - carnold@suse.com
 
 - bsc#971054 - virtlogd is now required by libvirt and must be
