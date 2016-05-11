@@ -100,7 +100,7 @@ module Yast
 
 
           # We no longer need to do remove these entries now that we use xvc
-          #SCR::Execute(.target.bash, "/bin/sed -i 's/.*mingetty tty[2-9]$//' /etc/inittab");
+          #SCR::Execute(.target.bash, "/usr/bin/sed -i 's/.*mingetty tty[2-9]$//' /etc/inittab");
 
           # Allow a console in addition to VNC with the PV framebuffer
           Builtins.y2milestone("check for xvc0 in inittab and securetty")
@@ -129,7 +129,7 @@ module Yast
                 )
                 SCR.Execute(
                   path(".target.bash"),
-                  "/bin/sed --in-place 's/^x0:/#x0:/g' /etc/inittab"
+                  "/usr/bin/sed --in-place 's/^x0:/#x0:/g' /etc/inittab"
                 )
               end
             else
@@ -146,8 +146,16 @@ module Yast
           # Although console appears to be a tty, do not do character translations
           SCR.Execute(
             path(".target.bash"),
-            "/bin/sed -i 's/^CONSOLE_MAGIC=.*$/CONSOLE_MAGIC=\"\"/' /etc/sysconfig/console"
+            "/usr/bin/sed -i 's/^CONSOLE_MAGIC=.*$/CONSOLE_MAGIC=\"\"/' /etc/sysconfig/console"
           )
+        else
+          Builtins.y2milestone("Check if VM running on KVM")
+          kvm_cmd = "/usr/bin/lscpu | /usr/bin/grep -q KVM"
+          if 0 == SCR.Execute(path(".target.bash"), kvm_cmd)
+            Builtins.y2milestone("Update /etc/default/grub with console information")
+            console_cmd = "/usr/bin/sed --in-place '/GRUB_CMDLINE_LINUX=.*/s/\"$/ console=ttyS0\"/g' /etc/default/grub"
+            SCR.Execute(path(".target.bash"), console_cmd)
+          end
         end
       else
         Builtins.y2error("unknown function: %1", @func)
