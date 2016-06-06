@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Jun  6 07:46:10 UTC 2016 - igonzalezsosa@suse.com
+
+- Stop generating autodocs (fate#320356)
+- 3.1.29
+
+-------------------------------------------------------------------
 Thu May 12 09:16:01 MDT 2016 - carnold@suse.com
 
 - fate#319328 rejected. Revert the last commit
