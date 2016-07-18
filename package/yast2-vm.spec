@@ -17,7 +17,7 @@
 
 
 Name:           yast2-vm
-Version:        3.1.29
+Version:        3.1.30
 Release:        0
 Summary:        Configure Hypervisor and Tools for Xen and KVM
 License:        GPL-2.0
@@ -33,7 +33,7 @@ BuildRequires:  yast2-testsuite
 Requires:       yast2 >= 3.0.4
 Requires:       yast2-ruby-bindings >= 1.0.0
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-ExclusiveArch:  %ix86 x86_64 s390x
+ExclusiveArch:  aarch64 %ix86 x86_64 s390x
 
 %description
 This YaST module installs the tools necessary for creating VMs with Xen or KVM.

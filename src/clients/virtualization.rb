@@ -76,6 +76,7 @@ module Yast
     def CheckConfiguration
       ret = true
       is_s390 = false
+      is_aarch64 = false
 
       # check whether VM can be started (cannot start a vm using UML)
       return false if VirtConfig.isUML
@@ -83,6 +84,9 @@ module Yast
       # s390 is technical preview and we only fully support x86_64
       if Arch.s390_64 == true
         is_s390 = true
+      # aarch64 is technical preview and we only fully support x86_64
+      elsif Arch.aarch64 == true
+        is_aarch64 = true
       elsif VirtConfig.isX86_64 == false
         return false
       end
