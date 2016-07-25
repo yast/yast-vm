@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Jul 25 08:07:08 UTC 2016 - dmueller@suse.com
+
+- Enable for AArch64 (bsc#989900)
+- 3.1.30
+
+-------------------------------------------------------------------
 Mon Jun  6 07:46:10 UTC 2016 - igonzalezsosa@suse.com
 
 - Stop generating autodocs (fate#320356)
