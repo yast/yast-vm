@@ -75,22 +75,19 @@ module Yast
     # check whether VM can be started
     def CheckConfiguration
       ret = true
-      is_s390 = false
 
       # check whether VM can be started (cannot start a vm using UML)
       return false if VirtConfig.isUML
 
-      # s390 is technical preview and we only fully support x86_64
-      if Arch.s390_64 == true
-        is_s390 = true
-      elsif VirtConfig.isX86_64 == false
-        return false
-      end
+      # we only fully support x86_64
+      # s390 and aarch64 are technical preview
+      is_preview = Arch.s390_64 || Arch.aarch64
+      return false unless is_preview || VirtConfig.isX86_64
 
       Builtins.y2milestone("Checking for Virtualization installation")
 
       # check the dom0 configuration...
-      ret = ret && VirtConfig.ConfigureDom0(is_s390)
+      ret = ret && VirtConfig.ConfigureDom0(Arch.s390_64)
       return false if ret == false
 
       Builtins.y2milestone("CheckConfiguration returned: %1", ret)

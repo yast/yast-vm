@@ -24,7 +24,7 @@ Group:		System/YaST
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Source0:        %{name}-%{version}.tar.bz2
 
-ExclusiveArch:  %ix86 x86_64 s390x
+ExclusiveArch:  aarch64 %ix86 x86_64 s390x
 BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-testsuite
 BuildRequires:  yast2-bootloader >= 3.1.35
 BuildRequires:  yast2-devtools >= 3.1.10
