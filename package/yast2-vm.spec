@@ -1,7 +1,7 @@
 #
 # spec file for package yast2-vm
 #
-# Copyright (c) 2015 SUSE LINUX Products GmbH, Nuernberg, Germany.
+# Copyright (c) 2017 SUSE LINUX Products GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -17,7 +17,7 @@
 
 
 Name:           yast2-vm
-Version:        3.1.30
+Version:        3.1.31
 Release:        0
 Group:		System/YaST
 
