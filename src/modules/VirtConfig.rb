@@ -29,6 +29,9 @@ require "yast"
 
 module Yast
   class VirtConfigClass < Module
+
+    include Yast::Logger
+
     def main
       Yast.import "UI"
 
@@ -235,6 +238,7 @@ module Yast
                       VBox(
                         Left(Label(_("Server: Minimal system to get a running Hypervisor"))),
                         Left(Label(_("Tools: Configure, manage and monitor virtual machines"))),
+                        Left(Label(_("A disabled checkbox means the Hypervisor item has already been installed"))),
                       ),
                       HSpacing(2),
                     ),
@@ -317,6 +321,33 @@ module Yast
         )
       end
 
+      log.info "VirtConfig::ConfigureDom0: Checking for Installed Patterns and Packages"
+      if isOpenSuse
+        UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-openSUSE-xen_server"))
+        # On openSUSE there are no 'tools' patterns for Xen and KVM
+        if Package.Installed("xen-tools") && Package.Installed("xen-libs") &&
+           Package.Installed("libvirt-daemon-xen") && Package.Installed("tigervnc") &&
+           Package.Installed("virt-manager")
+          UI.ChangeWidget(Id(:xen_tools), :Enabled, false)
+        end
+        UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-openSUSE-kvm_server"))
+        if Package.Installed("libvirt-daemon-qemu") || Package.Installed("tigervnc") ||
+           Package.Installed("virt-manager")
+          UI.ChangeWidget(Id(:kvm_tools), :Enabled, false)
+        end
+      elsif isSLED
+        # On SLED there is only a client pattern. The dialog has just a client and LXC checkbox
+        UI.ChangeWidget(Id(:client_tools), :Enabled, !Package.Installed("patterns-sled-virtualization_client"))
+      else
+        UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-sles-xen_server"))
+        UI.ChangeWidget(Id(:xen_tools), :Enabled, !Package.Installed("patterns-sles-xen_tools"))
+        UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-sles-kvm_server"))
+        UI.ChangeWidget(Id(:kvm_tools), :Enabled, !Package.Installed("patterns-sles-kvm_tools"))
+      end
+      if Package.Installed("libvirt-daemon-lxc") && Package.Installed("libvirt-daemon-config-network")
+        UI.ChangeWidget(Id(:lxc), :Enabled, false)
+      end
+
       widget_id = UI.UserInput
       if widget_id == :accept
           install_xen_server = UI.QueryWidget(Id(:xen_server), :Value)
@@ -378,9 +409,9 @@ module Yast
       result = true
       if isOpenSuse == true
         packages = ["patterns-openSUSE-xen_server"] if install_xen_server
-        packages = packages + ["xen-tools", "xen-libs", "libvirt-daemon-xen", "tigervnc"] if install_xen_tools
+        packages = packages + ["xen-tools", "xen-libs", "libvirt-daemon-xen", "tigervnc", "virt-manager"] if install_xen_tools
         packages = packages + ["patterns-openSUSE-kvm_server"] if install_kvm_server
-        packages = packages + ["libvirt-daemon-qemu", "tigervnc"] if install_kvm_tools
+        packages = packages + ["libvirt-daemon-qemu", "tigervnc", "virt-manager"] if install_kvm_tools
         packages = packages + ["libvirt-daemon-lxc", "libvirt-daemon-config-network"] if install_lxc
         result = Package.DoInstall(common_vm_packages + packages)
         if result == false
