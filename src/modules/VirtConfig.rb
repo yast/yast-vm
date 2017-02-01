@@ -29,6 +29,9 @@ require "yast"
 
 module Yast
   class VirtConfigClass < Module
+
+    include Yast::Logger
+
     def main
       Yast.import "UI"
 
@@ -235,7 +238,7 @@ module Yast
                       VBox(
                         Left(Label(_("Server: Minimal system to get a running Hypervisor"))),
                         Left(Label(_("Tools: Configure, manage and monitor virtual machines"))),
-                        Left(Label(_("A desensitized checkbox means the Hypervisor item has already been installed"))),
+                        Left(Label(_("A disabled checkbox means the Hypervisor item has already been installed"))),
                       ),
                       HSpacing(2),
                     ),
@@ -318,65 +321,28 @@ module Yast
         )
       end
 
-      Builtins.y2milestone("VirtConfig::ConfigureDom0: Checking for Installed Patterns and Packages")
-      is_xen_server_installed = false
-      is_xen_tools_installed = false
-      is_kvm_server_installed = false
-      is_kvm_tools_installed = false
-      is_client_tools_installed = false
-      if isOpenSuse == true
+      log.info "VirtConfig::ConfigureDom0: Checking for Installed Patterns and Packages"
+      if isOpenSuse
+        UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-openSUSE-xen_server"))
         # On openSUSE there are no 'tools' patterns for Xen and KVM
-        if Package.Installed("patterns-openSUSE-xen_server")
-          is_xen_server_installed = true
-        end
         if Package.Installed("xen-tools") && Package.Installed("xen-libs") &&
            Package.Installed("libvirt-daemon-xen") && Package.Installed("tigervnc") &&
            Package.Installed("virt-manager")
-          is_xen_tools_installed = true
+          UI.ChangeWidget(Id(:xen_tools), :Enabled, false)
         end
-        if Package.Installed("patterns-openSUSE-kvm_server")
-          is_kvm_server_installed = true
-        end
-        if Package.Installed("libvirt-daemon-qemu") && Package.Installed("tigervnc") &&
+        UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-openSUSE-kvm_server"))
+        if Package.Installed("libvirt-daemon-qemu") || Package.Installed("tigervnc") ||
            Package.Installed("virt-manager")
-          is_kvm_tools_installed = true
+          UI.ChangeWidget(Id(:kvm_tools), :Enabled, false)
         end
+      elsif isSLED
+        # On SLED there is only a client pattern. The dialog has just a client and LXC checkbox
+        UI.ChangeWidget(Id(:client_tools), :Enabled, !Package.Installed("patterns-sled-virtualization_client"))
       else
-        if isSLED == true
-          # On SLED there is only a 'virtualization_client' pattern
-          if Package.Installed("patterns-sled-virtualization_client")
-            is_client_tools_installed = true
-          end
-        else
-          if Package.Installed("patterns-sles-xen_server")
-            is_xen_server_installed = true
-          end
-          if Package.Installed("patterns-sles-xen_tools")
-            is_xen_tools_installed = true
-          end
-          if Package.Installed("patterns-sles-kvm_server")
-            is_kvm_server_installed = true
-          end
-          if Package.Installed("patterns-sles-kvm_tools")
-            is_kvm_tools_installed = true
-          end
-        end
-      end
-      # Desensitize CheckBox if pattern or packages are already installed
-      if is_xen_server_installed
-        UI.ChangeWidget(Id(:xen_server), :Enabled, false)
-      end
-      if is_xen_tools_installed
-        UI.ChangeWidget(Id(:xen_tools), :Enabled, false)
-      end
-      if is_kvm_server_installed
-        UI.ChangeWidget(Id(:kvm_server), :Enabled, false)
-      end
-      if is_kvm_tools_installed
-        UI.ChangeWidget(Id(:kvm_tools), :Enabled, false)
-      end
-      if is_client_tools_installed
-        UI.ChangeWidget(Id(:client_tools), :Enabled, false)
+        UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-sles-xen_server"))
+        UI.ChangeWidget(Id(:xen_tools), :Enabled, !Package.Installed("patterns-sles-xen_tools"))
+        UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-sles-kvm_server"))
+        UI.ChangeWidget(Id(:kvm_tools), :Enabled, !Package.Installed("patterns-sles-kvm_tools"))
       end
       if Package.Installed("libvirt-daemon-lxc") && Package.Installed("libvirt-daemon-config-network")
         UI.ChangeWidget(Id(:lxc), :Enabled, false)
