@@ -39,6 +39,7 @@ module Yast
       Yast.import "Arch"
       Yast.import "Report"
       Yast.import "FileUtils"
+      Yast.import "Service"
 
       @ret = nil
       @func = ""
@@ -83,24 +84,7 @@ module Yast
           # disable HW services - they are useless and usually failing in a virtual machine
           @disable_services = ["acpid", "kbd", "earlykbd"]
 
-          Builtins.y2milestone("disabling services: %1", @disable_services)
-          Builtins.foreach(@disable_services) do |s|
-            disabled = Convert.to_integer(
-              SCR.Execute(
-                path(".target.bash"),
-                Builtins.sformat("/sbin/insserv -r %1", s)
-              )
-            )
-            Builtins.y2milestone(
-              "insserv: service %1 disabled: %2",
-              s,
-              disabled == 0 ? true : false
-            )
-          end 
-
-
-          # We no longer need to do remove these entries now that we use xvc
-          #SCR::Execute(.target.bash, "/bin/sed -i 's/.*mingetty tty[2-9]$//' /etc/inittab");
+          @disable_services.each { |s| Service.Disable(s) }
 
           # Allow a console in addition to VNC with the PV framebuffer
           Builtins.y2milestone("check for xvc0 in inittab and securetty")
