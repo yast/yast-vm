@@ -82,7 +82,7 @@ module Yast
         # be sure that we are in Xen domU
         if Arch.is_xenU
           # disable HW services - they are useless and usually failing in a virtual machine
-          @disable_services = ["acpid", "kbd", "earlykbd"]
+          @disable_services = ["acpid"]
 
           @disable_services.each { |s| Service.Disable(s) }
 
