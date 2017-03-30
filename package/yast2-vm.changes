@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Mar 29 10:24:09 UTC 2017 - mfilka@suse.com
+
+- bnc#1026027
+  - dropped calls to insserv
+- 3.2.1
+
+-------------------------------------------------------------------
 Tue Jan 31 13:52:36 MST 2017 - carnold@suse.com
 
 - bsc#978225 - yast virtualization menu not updated after install
