@@ -99,15 +99,6 @@ module Yast
       end
       false
     end
-    def isTumbleweed
-      Builtins.y2milestone("Checking to see if this is Tumbleweed ...")
-      distro = OSRelease.ReleaseName
-      if distro.include? "Tumbleweed"
-        Builtins.y2milestone("Platform is %1", distro)
-        return true
-      end
-      false
-    end
     def isSLED
       Builtins.y2milestone("Checking to see if this is SLED ...")
       distro = OSRelease.ReleaseName
@@ -332,22 +323,14 @@ module Yast
 
       log.info "VirtConfig::ConfigureDom0: Checking for Installed Patterns and Packages"
       if isOpenSuse
-	if isTumbleweed
-           UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-server-xen_server"))
-	else
-           UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-openSUSE-xen_server"))
-	end
+        UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-openSUSE-xen_server"))
         # On openSUSE there are no 'tools' patterns for Xen and KVM
         if Package.Installed("xen-tools") && Package.Installed("xen-libs") &&
            Package.Installed("libvirt-daemon-xen") && Package.Installed("tigervnc") &&
            Package.Installed("virt-manager")
           UI.ChangeWidget(Id(:xen_tools), :Enabled, false)
         end
-	if isTumbleweed
-           UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-server-kvm_server"))
-	else
-           UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-openSUSE-kvm_server"))
-	end
+        UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-openSUSE-kvm_server"))
         if Package.Installed("libvirt-daemon-qemu") || Package.Installed("tigervnc") ||
            Package.Installed("virt-manager")
           UI.ChangeWidget(Id(:kvm_tools), :Enabled, false)
@@ -425,17 +408,9 @@ module Yast
 
       result = true
       if isOpenSuse == true
-	if isTumbleweed == true
-          packages = ["patterns-server-xen_server"] if install_xen_server
-	else
-          packages = ["patterns-openSUSE-xen_server"] if install_xen_server
-	end
+        packages = ["patterns-openSUSE-xen_server"] if install_xen_server
         packages = packages + ["xen-tools", "xen-libs", "libvirt-daemon-xen", "tigervnc", "virt-manager"] if install_xen_tools
-	if isTumbleweed == true
-          packages = packages + ["patterns-server-kvm_server"] if install_kvm_server
-	else
-          packages = packages + ["patterns-openSUSE-kvm_server"] if install_kvm_server
-	end
+        packages = packages + ["patterns-openSUSE-kvm_server"] if install_kvm_server
         packages = packages + ["libvirt-daemon-qemu", "tigervnc", "virt-manager"] if install_kvm_tools
         packages = packages + ["libvirt-daemon-lxc", "libvirt-daemon-config-network"] if install_lxc
         result = Package.DoInstall(common_vm_packages + packages)

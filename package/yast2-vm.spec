@@ -1,7 +1,7 @@
 #
 # spec file for package yast2-vm
 #
-# Copyright (c) 2017 SUSE LINUX GmbH, Nuernberg, Germany.
+# Copyright (c) 2017 SUSE LINUX Products GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -17,28 +17,25 @@
 
 
 Name:           yast2-vm
-Version:        3.2.2
+Version:        3.2.1
 Release:        0
+Group:		System/YaST
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Source0:        %{name}-%{version}.tar.bz2
 
 ExclusiveArch:  aarch64 %ix86 x86_64 s390x
-BuildRequires:  perl-XML-Writer
-BuildRequires:  update-desktop-files
-BuildRequires:  yast2
+BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-testsuite
 BuildRequires:  yast2-bootloader >= 3.1.35
 BuildRequires:  yast2-devtools >= 3.1.10
-BuildRequires:  yast2-testsuite
+License:        GPL-2.0
 
 # OSRelease
-Requires:       yast2 >= 3.0.4
+Requires:	yast2 >= 3.0.4
 
 Requires:       yast2-ruby-bindings >= 1.0.0
 
-Summary:        Configure Hypervisor and Tools for Xen and KVM
-License:        GPL-2.0
-Group:          System/YaST
+Summary:	Configure Hypervisor and Tools for Xen and KVM
 
 %description
 This YaST module installs the tools necessary for creating VMs with Xen or KVM.
@@ -56,6 +53,7 @@ This YaST module installs the tools necessary for creating VMs with Xen or KVM.
 rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/virtualization-config.desktop
 rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
 %endif
+
 
 %files
 %defattr(-,root,root)
@@ -75,5 +73,3 @@ rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
 %endif
 %doc %{yast_docdir}
 %doc %{yast_docdir}/COPYING
-
-%changelog
