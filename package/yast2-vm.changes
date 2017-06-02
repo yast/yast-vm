@@ -1,6 +1,6 @@
 -------------------------------------------------------------------
 Thu May 25 14:02:32 UTC 2017 - zgock999@gmail.com
-- Fix package Install problem on Tumbleweed
+- Fix package Install problem on Tumbleweed (bsc#1040042)
 - 3.2.2
 
 -------------------------------------------------------------------
