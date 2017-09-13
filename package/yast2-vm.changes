@@ -1,6 +1,12 @@
 -------------------------------------------------------------------
-Thu May 25 14:02:32 UTC 2017 - zgock999@gmail.com
+
+Wed Jul 19 14:02:32 UTC 2017 - zgock999@gmail.com
 - Fix package Install problem on Tumbleweed (bsc#1040042)
+
+-------------------------------------------------------------------
+Wed Jul 19 12:36:51 UTC 2017 - jreidinger@suse.com
+
+- add proper dependency on yast2-bootloader (bsc#1048759)
 - 3.2.2
 
 -------------------------------------------------------------------
