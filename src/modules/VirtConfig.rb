@@ -108,10 +108,10 @@ module Yast
       end
       false
     end
-    def isSLED
-      Builtins.y2milestone("Checking to see if this is SLED ...")
+    def isSLES
+      Builtins.y2milestone("Checking to see if this is SLES ...")
       distro = OSRelease.ReleaseName
-      if distro.include? "SLED"
+      if distro.include? "SLES"
         Builtins.y2milestone("Platform is %1", distro)
         return true
       end
@@ -289,25 +289,6 @@ module Yast
                         ),
                       ),
         )
-      elsif isSLED == true
-        progress_stages = [
-          _("Verify Installed Packages")
-        ]
-        UI.OpenDialog(
-                      HBox(
-                        HSpacing(2),
-                        VBox(
-                          VSpacing(1),
-                          Frame(_("Software to connect to Virtualization server"),
-                            HBox(
-                              Left(CheckBox(Id(:client_tools), _("Virtualization client tools"))),
-                            ),
-                          ),
-                          LXCDialog(),
-                          VMButtonBox(),
-                        ),
-                      ),
-        )
       else
         UI.OpenDialog(
                       HBox(
@@ -352,14 +333,11 @@ module Yast
            Package.Installed("virt-manager")
           UI.ChangeWidget(Id(:kvm_tools), :Enabled, false)
         end
-      elsif isSLED
-        # On SLED there is only a client pattern. The dialog has just a client and LXC checkbox
-        UI.ChangeWidget(Id(:client_tools), :Enabled, !Package.Installed("patterns-sled-virtualization_client"))
-      else
-        UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-sles-xen_server"))
-        UI.ChangeWidget(Id(:xen_tools), :Enabled, !Package.Installed("patterns-sles-xen_tools"))
-        UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-sles-kvm_server"))
-        UI.ChangeWidget(Id(:kvm_tools), :Enabled, !Package.Installed("patterns-sles-kvm_tools"))
+      elsif isSLES
+        UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-server-xen_server"))
+        UI.ChangeWidget(Id(:xen_tools), :Enabled, !Package.Installed("patterns-server-xen_tools"))
+        UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-server-kvm_server"))
+        UI.ChangeWidget(Id(:kvm_tools), :Enabled, !Package.Installed("patterns-server-kvm_tools"))
       end
       if Package.Installed("libvirt-daemon-lxc") && Package.Installed("libvirt-daemon-config-network")
         UI.ChangeWidget(Id(:lxc), :Enabled, false)
@@ -416,11 +394,7 @@ module Yast
       common_vm_packages = []
 
       if install_vm == true
-        common_vm_packages = ["libvirt-client"]
-        # SLED doesn't have any installation capabilities (L3 support)
-        if isSLED == false
-          common_vm_packages = common_vm_packages + ["vm-install", "virt-install", "bridge-utils"]
-        end
+        common_vm_packages = ["libvirt-client", "vm-install", "virt-install", "bridge-utils"]
       end
 
       result = true
@@ -452,17 +426,11 @@ module Yast
             return false
           end
         end
-        if isSLED == true
-          result = Package.DoInstall(["patterns-sled-virtualization_client"]) if install_client_tools
-          if result == false
-            Report.Error(_("Package installation failed for sled client pattern\n"))
-            return false
-          end
-        else
-          packages = packages + ["patterns-sles-xen_server"] if install_xen_server
-          packages = packages + ["patterns-sles-xen_tools"] if install_xen_tools
-          packages = packages + ["patterns-sles-kvm_server"] if install_kvm_server
-          packages = packages + ["patterns-sles-kvm_tools"] if install_kvm_tools
+        if isSLES == true
+          packages = packages + ["patterns-server-xen_server"] if install_xen_server
+          packages = packages + ["patterns-server-xen_tools"] if install_xen_tools
+          packages = packages + ["patterns-server-kvm_server"] if install_kvm_server
+          packages = packages + ["patterns-server-kvm_tools"] if install_kvm_tools
           result = Package.DoInstall(packages)
           if result == false
             Report.Error(_("Package installation failed for sles patterns\n"))
@@ -525,30 +493,29 @@ module Yast
       end
 
       if is_s390 == false
-        # SLED is not a Virtualization Host so don't create a bridge
-        if isSLED == false
-          # Default Bridge stage
-          Progress.NextStage
+        # create a bridget for SLES host
+        # Default Bridge stage
+        Progress.NextStage
 
-          Progress.Title(_("Configuring Default Network Bridge..."))
+        Progress.Title(_("Configuring Default Network Bridge..."))
 
-          # Check for the existance of /sys/class/net/*/bridge
-          interfaces = Convert.convert(
+        # Check for the existance of /sys/class/net/*/bridge
+        interfaces = Convert.convert(
             SCR.Read(path(".target.dir"), @net_path),
             :from => "any",
             :to   => "list <string>"
-          )
-          Builtins.foreach(interfaces) do |i|
-            Builtins.y2milestone("Checking for bridges...")
-            bridge_path = Ops.add(Ops.add(Ops.add(@net_path, "/"), i), "/bridge")
-            if Ops.greater_or_equal(SCR.Read(path(".target.dir"), bridge_path), 0)
-              Builtins.y2milestone("Dom0 already has a configured bridge.")
-              bridge_exists = true
-              raise Break
-            end
+                                     )
+        Builtins.foreach(interfaces) do |i|
+          Builtins.y2milestone("Checking for bridges...")
+          bridge_path = Ops.add(Ops.add(Ops.add(@net_path, "/"), i), "/bridge")
+          if Ops.greater_or_equal(SCR.Read(path(".target.dir"), bridge_path), 0)
+            Builtins.y2milestone("Dom0 already has a configured bridge.")
+            bridge_exists = true
+            raise Break
           end
+      end
 
-          # Popup yes/no dialog
+        # Popup yes/no dialog
           if bridge_exists == false
             if Popup.AnyQuestionRichText(
                 _("Network Bridge."),
@@ -566,7 +533,6 @@ module Yast
               Lan.ProposeVirtualized
               Lan.Write
             end
-          end
         end
       else
         # For s390, make sure /etc/zipl.conf contain switch_amode
