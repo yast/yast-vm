@@ -114,6 +114,8 @@ module Yast
       if distro.include? "SLES"
         Builtins.y2milestone("Platform is %1", distro)
         return true
+      else
+        return false
       end
       false
     end
@@ -426,7 +428,7 @@ module Yast
             return false
           end
         end
-        if isSLES == true
+        if isSLES
           packages = packages + ["patterns-server-xen_server"] if install_xen_server
           packages = packages + ["patterns-server-xen_tools"] if install_xen_tools
           packages = packages + ["patterns-server-kvm_server"] if install_kvm_server

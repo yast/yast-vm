@@ -3,6 +3,8 @@ Wed Oct 11 14:59:40 UTC 2017 - aginies@suse.com
 
 - use new pattern name for SLES (same as TW)
 - Remove SLED as this is no more needed
+- BSC1055459 
+- 3.2.3
 
 -------------------------------------------------------------------
 
