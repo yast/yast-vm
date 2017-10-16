@@ -17,7 +17,7 @@
 
 
 Name:           yast2-vm
-Version:        3.2.2
+Version:        3.2.3
 Release:        0
 Group:		System/YaST
 
