@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Nov  2 10:43:22 MDT 2017 - carnold@suse.com
+
+- bsc#1066160 - yast2-vm lacks dependencies
+  yast2-vm.spec
+- 3.2.4
+
+-------------------------------------------------------------------
 Wed Oct 11 14:59:40 UTC 2017 - aginies@suse.com
 
 - use new pattern name for SLES (same as TW)
