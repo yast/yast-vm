@@ -1,4 +1,15 @@
 -------------------------------------------------------------------
+Thu Nov  2 10:43:22 MDT 2017 - carnold@suse.com
+
+- bsc#1007599 - yast virtualization module does not work well with
+  NM
+- bsc#1066160 - yast2-vm lacks dependencies
+- bsc#1008719 - Installing hypervisor (KVM) should also install
+  network config
+- Cleanup some whitespace issues in VirtConfig.rb and changelog
+- 3.2.4
+
+-------------------------------------------------------------------
 Wed Oct 11 14:59:40 UTC 2017 - aginies@suse.com
 
 - use new pattern name for SLES (same as TW)
@@ -7,8 +18,8 @@ Wed Oct 11 14:59:40 UTC 2017 - aginies@suse.com
 - 3.2.3
 
 -------------------------------------------------------------------
-
 Wed Jul 19 14:02:32 UTC 2017 - zgock999@gmail.com
+
 - Fix package Install problem on Tumbleweed (bsc#1040042)
 
 -------------------------------------------------------------------
