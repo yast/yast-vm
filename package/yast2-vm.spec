@@ -17,7 +17,7 @@
 
 
 Name:           yast2-vm
-Version:        3.2.3
+Version:        3.2.4
 Release:        0
 Group:		System/YaST
 
@@ -29,6 +29,7 @@ BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-testsuite
 BuildRequires:  yast2-bootloader >= 3.1.35
 Requires:       yast2-bootloader >= 3.1.35
 BuildRequires:  yast2-devtools >= 3.1.10
+Requires:       yast2-network >= 3.1.108
 License:        GPL-2.0
 
 # OSRelease

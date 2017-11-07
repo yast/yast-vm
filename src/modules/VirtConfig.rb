@@ -211,7 +211,7 @@ module Yast
 
       progress_descriptions = []
 
-      bridge_exists = false
+      configure_bridge = true
       install_xen = false
       install_kvm = false
       widget_id = nil
@@ -406,13 +406,13 @@ module Yast
 	else
           packages = ["patterns-openSUSE-xen_server"] if install_xen_server
 	end
-        packages = packages + ["xen-tools", "xen-libs", "libvirt-daemon-xen", "tigervnc", "virt-manager"] if install_xen_tools
+        packages = packages + ["xen-tools", "xen-libs", "libvirt-daemon-xen", "libvirt-daemon-config-network", "tigervnc", "virt-manager"] if install_xen_tools
 	if isTumbleweed == true
           packages = packages + ["patterns-server-kvm_server"] if install_kvm_server
 	else
           packages = packages + ["patterns-openSUSE-kvm_server"] if install_kvm_server
 	end
-        packages = packages + ["libvirt-daemon-qemu", "tigervnc", "virt-manager"] if install_kvm_tools
+        packages = packages + ["libvirt-daemon-qemu", "libvirt-daemon-config-network", "tigervnc", "virt-manager"] if install_kvm_tools
         packages = packages + ["libvirt-daemon-lxc", "libvirt-daemon-config-network"] if install_lxc
         result = Package.DoInstall(common_vm_packages + packages)
         if result == false
@@ -507,34 +507,39 @@ module Yast
             :from => "any",
             :to   => "list <string>"
                                      )
-        Builtins.foreach(interfaces) do |i|
-          Builtins.y2milestone("Checking for bridges...")
-          bridge_path = Ops.add(Ops.add(Ops.add(@net_path, "/"), i), "/bridge")
-          if Ops.greater_or_equal(SCR.Read(path(".target.dir"), bridge_path), 0)
-            Builtins.y2milestone("Dom0 already has a configured bridge.")
-            bridge_exists = true
-            raise Break
+        if NetworkService.is_network_manager
+          Builtins.y2milestone("NetworkManager is being used. Bridge configuration must be done manually.")
+          configure_bridge = false
+        else
+          Builtins.foreach(interfaces) do |i|
+            Builtins.y2milestone("Checking for bridges...")
+            bridge_path = Ops.add(Ops.add(Ops.add(@net_path, "/"), i), "/bridge")
+            if Ops.greater_or_equal(SCR.Read(path(".target.dir"), bridge_path), 0)
+              Builtins.y2milestone("Dom0 already has a configured bridge.")
+              configure_bridge = false
+              raise Break
+            end
           end
-      end
+        end
 
         # Popup yes/no dialog
-          if bridge_exists == false
-            if Popup.AnyQuestionRichText(
-                _("Network Bridge."),
-                _(
-                  "<p>For normal network configurations hosting virtual machines, a network bridge is recommended.</p><p>Configure a default network bridge?</p>"
-                ),
-                45,
-                5,
-                Label.YesButton,
-                Label.NoButton,
-                :focus_yes
-              )
-              Builtins.y2milestone("Configuring default bridge for Xen or KVM...")
-              Lan.Read(:cache)
-              Lan.ProposeVirtualized
-              Lan.Write
-            end
+        if configure_bridge == true
+          if Popup.AnyQuestionRichText(
+              _("Network Bridge."),
+              _(
+                "<p>For normal network configurations hosting virtual machines, a network bridge is recommended.</p><p>Configure a default network bridge?</p>"
+              ),
+              45,
+              5,
+              Label.YesButton,
+              Label.NoButton,
+              :focus_yes
+            )
+            Builtins.y2milestone("Configuring default bridge for Xen or KVM...")
+            Lan.Read(:cache)
+            Lan.ProposeVirtualized
+            Lan.Write
+          end
         end
       else
         # For s390, make sure /etc/zipl.conf contain switch_amode
