@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Fri Feb  9 12:19:42 MST 2018 - carnold@suse.com
+
+- The check for TextMode was in the wrong place and
+  useless. Move it and update package list if user
+  doesn't want GUI components installed. (bsc#1077694)
+- 3.2.5
+
+-------------------------------------------------------------------
 Thu Nov  2 10:43:22 MDT 2017 - carnold@suse.com
 
 - bsc#1007599 - yast virtualization module does not work well with
