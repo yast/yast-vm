@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 # ------------------------------------------------------------------------------
-# Copyright (c) 2013 Novell, Inc. All Rights Reserved.
+# Copyright (c) 2018 Novell, Inc. All Rights Reserved.
 #
 #
 # This program is free software; you can redistribute it and/or modify it under
@@ -153,6 +153,52 @@ module Yast
       isPAE
     end
 
+    # Check for TextMode only
+    def installGUIComponents(packages)
+      inst_gui = true
+
+      Builtins.y2milestone("Checking for TextMode display")
+
+      kvm_index = packages.index("patterns-server-kvm_tools")
+      xen_index = packages.index("patterns-server-xen_tools")
+
+      if kvm_index != nil || xen_index != nil
+        # The tools patterns install gui components. If in text mode we may not want them
+        if Ops.get_boolean(UI.GetDisplayInfo, "TextMode", true) == true
+          inst_gui = Popup.YesNo(
+            _("Running in text mode. Install graphical components anyway?")
+          )
+        end
+      end
+      if inst_gui == false
+        # Text Mode Only.
+        Builtins.y2milestone("Requested not to install graphical components")
+        Builtins.y2milestone("Current package list = %1", packages)
+        common_packages = ["libvirt-client", "libvirt-daemon-config-network", "virt-manager-common", "virt-install", "vm-install"]
+        add_common = false
+
+        # The tools patterns will pull in graphical components so drop entire pattern if present
+        if kvm_index != nil
+          packages = Builtins.remove(packages, kvm_index)
+          packages = Builtins.add(packages, "libvirt-daemon-qemu")
+          add_common = true
+        end
+
+        if xen_index != nil
+          packages = Builtins.remove(packages, xen_index)
+          packages = Builtins.add(packages, "libvirt-daemon-xen")
+          add_common = true
+        end
+
+        if add_common == true
+          packages = packages + common_packages
+        end
+        Builtins.y2milestone("Non-gui package list = %1", packages)
+      end
+
+      return packages
+    end
+
     def reloadApparmor
       if Package.InstalledAll(["apparmor"])
         cmd = "systemctl restart apparmor.service"
@@ -199,7 +245,6 @@ module Yast
       Builtins.y2milestone("VirtConfig::isUML returned: %1", ret)
       false
     end
-
 
     def ConfigureDom0(is_s390)
       progress_stages = [
@@ -395,12 +440,12 @@ module Yast
       packages = []
       common_vm_packages = []
 
-      if install_vm == true
-        common_vm_packages = ["libvirt-client", "vm-install", "virt-install", "bridge-utils"]
-      end
-
       result = true
       if isOpenSuse == true
+        if install_vm == true
+          common_vm_packages = ["libvirt-client", "vm-install", "virt-install"]
+        end
+
 	if isTumbleweed == true
           packages = ["patterns-server-xen_server"] if install_xen_server
 	else
@@ -433,29 +478,13 @@ module Yast
           packages = packages + ["patterns-server-xen_tools"] if install_xen_tools
           packages = packages + ["patterns-server-kvm_server"] if install_kvm_server
           packages = packages + ["patterns-server-kvm_tools"] if install_kvm_tools
+          packages = installGUIComponents(packages)
           result = Package.DoInstall(packages)
           if result == false
             Report.Error(_("Package installation failed for sles patterns\n"))
             return false
           end
         end
-      end
-
-      inst_gui = true
-
-      Builtins.y2milestone("VirtConfig::ConfigureDom0 Checking for packages...")
-
-      # Assume python gtk is installed. If in text mode we don't care
-      if Ops.get_boolean(UI.GetDisplayInfo, "TextMode", true) == true
-        inst_gui = Popup.YesNo(
-          _("Running in text mode. Install graphical components anyway?")
-        )
-      end
-      if inst_gui == true
-        packages = Builtins.add(packages, "python-gtk")
-        # Also make sure virt-manager and virt-viewer is there - runs GUI only
-        packages = Builtins.add(packages, "virt-manager")
-        packages = Builtins.add(packages, "virt-viewer")
       end
 
       success = true
