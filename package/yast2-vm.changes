@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Tue Mar 20 13:59:17 MDT 2018 - carnold@suse.com
+
+- bsc#1083455 - Internal error in yast configuration part
+  "Relocation Server Configuration" - "Service with name
+  'libvirtd-relocation-server' does not exist"
+- 3.2.6
+
+-------------------------------------------------------------------
 Fri Feb  9 12:19:42 MST 2018 - carnold@suse.com
 
 - The check for TextMode was in the wrong place and

@@ -245,14 +245,14 @@ module Yast
       @libvirtd_enabled = Service.Enabled("libvirtd")
       @sshd_enabled = Service.Enabled("sshd")
 
-      if Service.Status("libvirtd") == 0
+      if Service.active?("libvirtd") == 0
         @libvirtd_is_running = true
         Builtins.y2milestone("libvirtd is running")
       else
         @libvirtd_is_running = false
         Builtins.y2milestone("libvirtd is not running")
       end
-      if Service.Status("sshd") == 0
+      if Service.active?("sshd") == 0
         @sshd_is_running = true
         Builtins.y2milestone("sshd is running")
       else
@@ -261,7 +261,7 @@ module Yast
       end
 
       ports = SuSEFirewallServices.GetNeededTCPPorts(
-        "service:libvirtd-relocation-server"
+        "libvirtd-relocation-server"
       )
       @libvirtd_ports = Builtins.filter(ports) do |s|
         s != @libvirtd_default_ports
@@ -292,7 +292,7 @@ module Yast
           end
         end
         SuSEFirewallServices.SetNeededPortsAndProtocols(
-          "service:libvirtd-relocation-server",
+          "libvirtd-relocation-server",
           { "tcp_ports" => @libvirtd_ports }
         )
       end
