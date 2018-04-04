@@ -5,6 +5,13 @@ Fri Apr  6 18:54:53 UTC 2018 - mfilka@suse.com
 - 4.0.0
 
 -------------------------------------------------------------------
+Wed Apr  4 11:28:38 MDT 2018 - carnold@suse.com
+
+- bsc#1086487 - YaST2 segfault when virt-manager is installed but
+  not yast2-vm
+- 3.2.7
+
+-------------------------------------------------------------------
 Tue Mar 20 13:59:17 MDT 2018 - carnold@suse.com
 
 - bsc#1083455 - Internal error in yast configuration part
