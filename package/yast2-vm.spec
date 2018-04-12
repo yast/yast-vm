@@ -1,7 +1,7 @@
 #
 # spec file for package yast2-vm
 #
-# Copyright (c) 2017 SUSE LINUX Products GmbH, Nuernberg, Germany.
+# Copyright (c) 2018 SUSE LINUX Products GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -17,14 +17,13 @@
 
 
 Name:           yast2-vm
-Version:        4.0.0
+Version:        4.0.1
 Release:        0
 Group:		System/YaST
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Source0:        %{name}-%{version}.tar.bz2
 
-ExclusiveArch:  aarch64 %ix86 x86_64 s390x
 BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-testsuite
 BuildRequires:  yast2-bootloader >= 3.1.35
 Requires:       yast2-bootloader >= 3.1.35
@@ -32,8 +31,8 @@ BuildRequires:  yast2-devtools >= 3.1.10
 Requires:       yast2-network >= 3.1.108
 License:        GPL-2.0
 
-# OSRelease
-Requires:	yast2 >= 3.0.4
+# SuSEFirewall2 replaced by firewalld (fate#323460)
+Requires:       yast2 >= 4.0.39
 
 Requires:       yast2-ruby-bindings >= 1.0.0
 

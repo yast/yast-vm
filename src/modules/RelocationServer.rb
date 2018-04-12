@@ -29,9 +29,11 @@
 # Representation of the configuration of relocation-server.
 # Input and output routines.
 require "yast"
+require "y2firewall/firewalld"
 
 module Yast
   class RelocationServerClass < Module
+    include Yast::Logger
     def main
       Yast.import "UI"
       textdomain "relocation-server"
@@ -44,8 +46,6 @@ module Yast
       Yast.import "Message"
       Yast.import "Service"
       Yast.import "FileUtils"
-      Yast.import "SuSEFirewall"
-      Yast.import "SuSEFirewallServices"
 
       # Data was modified?
       @modified = false
@@ -81,6 +81,13 @@ module Yast
         "plain_migration"    => false,
         "default_port_range" => false
       }
+    end
+
+    # Convenience method for obtaining a firewalld singleton instance
+    #
+    # @return [Y2Firewall::Firewalld] singleton instance
+    def firewalld
+      Y2Firewall::Firewalld.instance
     end
 
     # Returns whether the configuration has been modified.
@@ -159,6 +166,9 @@ module Yast
       true
     end
 
+    FWD_XEND_SERVICE = "xend-relocation-server".freeze
+    FWD_LIBVIRTD_SERVICE = "libvirtd-relocation-server".freeze
+
     # Writes current xend configuration
     def WriteXendSettings
       Builtins.y2milestone("Writing Xend configuration: %1", @SETTINGS)
@@ -176,10 +186,12 @@ module Yast
       port = GetXendOption("xend-relocation-port")
       ssl_port = GetXendOption("xend-relocation-ssl-port")
       ports_list = [port, ssl_port]
-      SuSEFirewallServices.SetNeededPortsAndProtocols(
-        "service:xend-relocation-server",
-        { "tcp_ports" => ports_list }
-      )
+
+      begin
+        Y2Firewall::Firewalld::Service.modify_ports(name: FWD_XEND_SERVICE, tcp_ports: ports_list)
+      rescue Y2Firewall::Firewalld::Service::NotFound
+        y2error("Firewalld '#{FWD_XEND_SERVICE}' service is not available.")
+      end
 
       true
     end
@@ -245,14 +257,14 @@ module Yast
       @libvirtd_enabled = Service.Enabled("libvirtd")
       @sshd_enabled = Service.Enabled("sshd")
 
-      if Service.Status("libvirtd") == 0
+      if Service.active?("libvirtd")
         @libvirtd_is_running = true
         Builtins.y2milestone("libvirtd is running")
       else
         @libvirtd_is_running = false
         Builtins.y2milestone("libvirtd is not running")
       end
-      if Service.Status("sshd") == 0
+      if Service.active?("sshd")
         @sshd_is_running = true
         Builtins.y2milestone("sshd is running")
       else
@@ -260,9 +272,13 @@ module Yast
         Builtins.y2milestone("sshd is not running")
       end
 
-      ports = SuSEFirewallServices.GetNeededTCPPorts(
-        "service:libvirtd-relocation-server"
-      )
+      begin
+        fwd_libvirt = firewalld.find_service("libvirtd-relocation_service")
+        ports = fwd_libvirt.tcp_ports
+      rescue Y2Firewall::Firewalld::Service::NotFound
+        ports = []
+      end
+
       @libvirtd_ports = Builtins.filter(ports) do |s|
         s != @libvirtd_default_ports
       end
@@ -291,10 +307,11 @@ module Yast
             )
           end
         end
-        SuSEFirewallServices.SetNeededPortsAndProtocols(
-          "service:libvirtd-relocation-server",
-          { "tcp_ports" => @libvirtd_ports }
-        )
+        begin
+          Y2Firewall::Firewalld::Service.modify_ports(name: FWD_LIBVIRTD_SERVICE, tcp_ports: @libvirtd_ports)
+        rescue Y2Firewall::Firewalld::Service::NotFound
+          y2error("Firewalld '#{FWD_LIBVIRTD_SERVICE}' service is not available.")
+        end
       end
 
       all_ok
@@ -374,7 +391,7 @@ module Yast
       Progress.NextStage
       progress_state = Progress.set(false)
       # Error message
-      Report.Warning(_("Cannot read firewall settings.")) if !SuSEFirewall.Read
+      Report.Warning(_("Cannot read firewall settings.")) if !firewalld.read
       Progress.set(progress_state)
       Builtins.sleep(sl)
 
@@ -478,7 +495,7 @@ module Yast
       Progress.NextStage
       progress_state = Progress.set(false)
       # Error message
-      Report.Error(_("Cannot write firewall settings.")) if !SuSEFirewall.Write
+      Report.Error(_("Cannot write firewall settings.")) if !firewalld.write
       Progress.set(progress_state)
       Builtins.sleep(sl)
 

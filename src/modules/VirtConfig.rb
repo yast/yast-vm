@@ -26,25 +26,21 @@
 #
 # $Id$
 require "yast"
+require "y2firewall/firewalld"
 
 module Yast
   class VirtConfigClass < Module
-
     include Yast::Logger
 
     def main
       Yast.import "UI"
-
       textdomain "vm"
-
-
       Yast.import "Arch"
       Yast.import "OSRelease"
       Yast.import "Package"
       Yast.import "Progress"
       Yast.import "Popup"
       Yast.import "Report"
-      Yast.import "SuSEFirewall"
       Yast.import "Wizard"
       Yast.import "Label"
       Yast.import "Bootloader"
@@ -52,42 +48,6 @@ module Yast
 
 
       @net_path = "/sys/class/net/"
-    end
-
-    def ConfigureFirewall
-      Builtins.y2milestone("VirtConfig::ConfigureFirewall() started")
-      ret = true
-
-      # check whether the firewall option exists
-      firewall_configured = false
-      if Builtins.contains(
-          SCR.Dir(path(".sysconfig.SuSEfirewall2")),
-          "FW_FORWARD_ALWAYS_INOUT_DEV"
-        )
-        xen_bridge = "xenbr+"
-        # read the current value
-        forward = Convert.to_string(
-          SCR.Read(path(".sysconfig.SuSEfirewall2.FW_FORWARD_ALWAYS_INOUT_DEV"))
-        )
-        Builtins.y2milestone("FW_FORWARD_ALWAYS_INOUT_DEV=%1", forward)
-        if Builtins.contains(Builtins.splitstring(forward, " "), xen_bridge)
-          Builtins.y2milestone("Firewall already configured!")
-          firewall_configured = true # xenbr+ already exists
-        end
-      end
-
-      if firewall_configured == false
-        # add xenbr+ to the firewall configuration
-        Builtins.y2milestone("Configuring firewall to allow Xen bridge...")
-        progress_orig = Progress.set(false)
-        SuSEFirewall.Read
-        SuSEFirewall.AddXenSupport
-        ret = ret && SuSEFirewall.Write
-        Progress.set(progress_orig)
-      end
-
-      Builtins.y2milestone("VirtConfig::ConfigureFirewall returned: %1", ret)
-      ret
     end
 
     def isOpenSuse
@@ -610,17 +570,6 @@ module Yast
       Builtins.y2milestone("Start virtlogd.socket: %1", cmd)
       SCR.Execute(path(".target.bash"), cmd)
 
-      # Firewall stage - modify the firewall setting, add the xen bridge to FW_FORWARD_ALWAYS_INOUT_DEV
-      # Progress::NextStage();
-
-      # Configure firewall to allow xenbr+
-      # success = success && ConfigureFirewall();
-      # if ( success == false ) {
-      #     // error popup
-      #     Report::Error(_("Failed to configure the firewall to allow the Xen bridge") + "\n" + abortmsg);
-      #     return false;
-      # }
-
       Progress.Finish
 
       message_kvm_ready = _(
@@ -671,7 +620,6 @@ module Yast
       success
     end
 
-    publish :function => :ConfigureFirewall, :type => "boolean ()"
     publish :function => :isOpenSuse, :type => "boolean ()"
     publish :function => :isPAEKernel, :type => "boolean ()"
     publish :function => :isX86_64, :type => "boolean ()"
