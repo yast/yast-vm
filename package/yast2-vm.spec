@@ -17,7 +17,7 @@
 
 
 Name:           yast2-vm
-Version:        4.0.0
+Version:        4.0.1
 Release:        0
 Group:		System/YaST
 
@@ -31,8 +31,8 @@ BuildRequires:  yast2-devtools >= 3.1.10
 Requires:       yast2-network >= 3.1.108
 License:        GPL-2.0
 
-# OSRelease
-Requires:	yast2 >= 3.0.4
+# SuSEFirewall2 replaced by firewalld (fate#323460)
+Requires:       yast2 >= 4.0.39
 
 Requires:       yast2-ruby-bindings >= 1.0.0
 
