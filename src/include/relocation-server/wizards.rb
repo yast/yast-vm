@@ -68,8 +68,8 @@ module Yast
         "fw-libvirt"  => CWMFirewallInterfaces.CreateOpenFirewallWidget(
           {
             "services"        => [
-              "service:libvirtd-relocation-server",
-              "service:sshd"
+              "libvirtd-relocation-server",
+              "ssh"
             ],
             "display_details" => true
           }

@@ -29,9 +29,11 @@
 # Representation of the configuration of relocation-server.
 # Input and output routines.
 require "yast"
+require "y2firewall/firewalld"
 
 module Yast
   class RelocationServerClass < Module
+    include Yast::Logger
     def main
       Yast.import "UI"
       textdomain "relocation-server"
@@ -44,8 +46,6 @@ module Yast
       Yast.import "Message"
       Yast.import "Service"
       Yast.import "FileUtils"
-      Yast.import "SuSEFirewall"
-      Yast.import "SuSEFirewallServices"
 
       # Data was modified?
       @modified = false
@@ -63,6 +63,13 @@ module Yast
         "plain_migration"    => false,
         "default_port_range" => false
       }
+    end
+
+    # Convenience method for obtaining a firewalld singleton instance
+    #
+    # @return [Y2Firewall::Firewalld] singleton instance
+    def firewalld
+      Y2Firewall::Firewalld.instance
     end
 
     # Returns whether the configuration has been modified.
@@ -113,6 +120,8 @@ module Yast
       nil
     end
 
+    FWD_LIBVIRTD_SERVICE = "libvirtd-relocation-server".freeze
+
     def ReadLibvirtServices
       if !Package.Installed("libvirt-daemon")
         Builtins.y2milestone("libvirt is not installed")
@@ -136,9 +145,13 @@ module Yast
         Builtins.y2milestone("sshd is not running")
       end
 
-      ports = SuSEFirewallServices.GetNeededTCPPorts(
-        "libvirtd-relocation-server"
-      )
+      begin
+        fwd_libvirt = firewalld.find_service(FWD_LIBVIRTD_SERVICE)
+        ports = fwd_libvirt.tcp_ports
+      rescue Y2Firewall::Firewalld::Service::NotFound
+        ports = []
+      end
+
       @libvirtd_ports = Builtins.filter(ports) do |s|
         s != @libvirtd_default_ports
       end
@@ -167,10 +180,11 @@ module Yast
             )
           end
         end
-        SuSEFirewallServices.SetNeededPortsAndProtocols(
-          "libvirtd-relocation-server",
-          { "tcp_ports" => @libvirtd_ports }
-        )
+        begin
+          Y2Firewall::Firewalld::Service.modify_ports(name: FWD_LIBVIRTD_SERVICE, tcp_ports: @libvirtd_ports)
+        rescue Y2Firewall::Firewalld::Service::NotFound
+          y2error("Firewalld '#{FWD_LIBVIRTD_SERVICE}' service is not available.")
+        end
       end
 
       all_ok
@@ -209,7 +223,7 @@ module Yast
       Progress.NextStage
       progress_state = Progress.set(false)
       # Error message
-      Report.Warning(_("Cannot read firewall settings.")) if !SuSEFirewall.Read
+      Report.Warning(_("Cannot read firewall settings.")) if !firewalld.read
       Progress.set(progress_state)
       Builtins.sleep(sl)
 
@@ -271,7 +285,7 @@ module Yast
       Progress.NextStage
       progress_state = Progress.set(false)
       # Error message
-      Report.Error(_("Cannot write firewall settings.")) if !SuSEFirewall.Write
+      Report.Error(_("Cannot write firewall settings.")) if !firewalld.write
       Progress.set(progress_state)
       Builtins.sleep(sl)
 
