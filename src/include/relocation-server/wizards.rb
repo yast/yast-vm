@@ -48,29 +48,6 @@ module Yast
     # @return sequence result
     def MainSequence
       widgets = {
-        "fw-xend" => CWMFirewallInterfaces.CreateOpenFirewallWidget(
-          {
-            "services"        => ["service:xend-relocation-server"],
-            "display_details" => true
-          }
-        ),
-        "xend"    => {
-          "widget"        => :custom,
-          "help"          => Ops.get_string(@HELPS, "xend_configuration", ""),
-          "custom_widget" => XendConfigurationDialogContent(),
-          "handle"        => fun_ref(
-            method(:HandleXendConfigurationDialog),
-            "symbol (string, map)"
-          ),
-          "init"          => fun_ref(
-            method(:InitXendConfigurationDialog),
-            "void (string)"
-          ),
-          "store"         => fun_ref(
-            method(:StoreXendConfigurationDialog),
-            "void (string, map)"
-          )
-        },
         "libvirt"     => {
           "widget"        => :custom,
           "help"          => Ops.get_string(@HELPS, "libvirt_configuration", ""),
@@ -100,11 +77,6 @@ module Yast
       }
 
       tabs = {
-        "xend_configuration" => {
-          "header"       => _("&Xend"),
-          "widget_names" => ["xend", "fw-xend"],
-          "contents"     => XendConfigurationDialogContent()
-        },
         "kvm_configuration"  => {
           "header"       => _("&KVM"),
           "widget_names" => ["libvirt", "fw-libvirt"],
@@ -117,32 +89,22 @@ module Yast
         }
       }
 
-      if !RelocationServer.is_xend()
-        Builtins.remove(tabs, "xend_configuration")
-        if !Arch.is_kvm
-          Builtins.remove(tabs, "kvm_configuration")
-        else
-          Builtins.remove(tabs, "libxl_configuration")
-        end
-      else
+      if !Arch.is_kvm
         Builtins.remove(tabs, "kvm_configuration")
+      else
+        Builtins.remove(tabs, "libxl_configuration")
       end
 
       wd_arg = {
-        "tab_order"    => ["xend_configuration"],
+        "tab_order"    => ["libxl_configuration"],
         "tabs"         => tabs,
         "widget_descr" => widgets,
-        "initial_tab"  => "xend_configuration"
+        "initial_tab"  => "libxl_configuration"
       }
 
-      if !RelocationServer.is_xend()
-        if Arch.is_kvm
-          Ops.set(wd_arg, "tab_order", ["kvm_configuration"])
-          Ops.set(wd_arg, "initial_tab", "kvm_configuration")
-        else
-          Ops.set(wd_arg, "tab_order", ["libxl_configuration"])
-          Ops.set(wd_arg, "initial_tab", "libxl_configuration")
-        end
+      if Arch.is_kvm
+        Ops.set(wd_arg, "tab_order", ["kvm_configuration"])
+        Ops.set(wd_arg, "initial_tab", "kvm_configuration")
       end
 
       wd = { "tab" => CWMTab.CreateWidget(wd_arg) }

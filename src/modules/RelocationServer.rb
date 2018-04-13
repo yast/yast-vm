@@ -50,24 +50,6 @@ module Yast
       # Data was modified?
       @modified = false
 
-      # map of xend settings
-      @SETTINGS = {}
-
-      @DEFAULT_CONFIG = {
-        "xend-relocation-server"               => "no",
-        "xend-relocation-ssl-server"           => "no",
-        "xend-relocation-port"                 => "8002",
-        "xend-relocation-ssl-port"             => "8003",
-        "xend-relocation-server-ssl-key-file"  => "xmlrpc.key",
-        "xend-relocation-server-ssl-cert-file" => "xmlrpc.cert",
-        "xend-relocation-ssl"                  => "no",
-        "xend-relocation-address"              => "",
-        "xend-relocation-hosts-allow"          => "^localhost$ ^localhost\\.localdomain$"
-      }
-
-      # Describes whether the daemon is running
-      @xend_is_running = false
-
       @libvirtd_default_ports = "49152:49215"
       @libvirtd_ports = []
 
@@ -95,15 +77,6 @@ module Yast
       nil
     end
 
-    # Determine if we are using the libxl toolstack
-    def is_xend
-      if !Arch.is_xen0 || !FileUtils.Exists("/etc/vm/xend-config.sxp") || !FileUtils.Exists("/usr/sbin/xend")
-        return false
-      end
-
-      true
-    end
-
     #   Returns a confirmation popup dialog whether user wants to really abort.
     def Abort
       Popup.ReallyAbort(GetModified())
@@ -117,103 +90,6 @@ module Yast
       return Abort() if UI.PollInput == :abort
 
       false
-    end
-
-    # Returns the Xend Option as a list of strings.
-    #
-    # @param [String] option_key of the xend configuration
-    # @return [String] with option_values
-    def GetXendOption(option_key)
-      Ops.get(@SETTINGS, option_key, Ops.get(@DEFAULT_CONFIG, option_key, ""))
-    end
-
-    # Returns default Xend Option as a list of strings.
-    #
-    # @param [String] option_key of the Xend configuration
-    # @return [String] with option_values
-
-    def GetDefaultXendOption(option_key)
-      Ops.get(@DEFAULT_CONFIG, option_key, "")
-    end
-
-    # Sets values for an option.
-    #
-    # @param [String] option_key with the Xend configuration key
-    # @param string option_values with the Xend configuration values
-    def SetXendOption(option_key, option_vals)
-      Ops.set(@SETTINGS, option_key, option_vals)
-
-      nil
-    end
-
-    # Reads current xend configuration
-    def ReadXendSettings
-      Builtins.foreach(SCR.Dir(path(".etc.xen.xend-config"))) do |key|
-        val = Convert.to_string(
-          SCR.Read(Builtins.add(path(".etc.xen.xend-config"), key))
-        )
-        Ops.set(@SETTINGS, key, val) if val != nil
-      end
-
-      Builtins.y2milestone("Xend configuration has been read: %1", @SETTINGS)
-      true
-    end
-
-    # Writes current xend configuration
-    def WriteXendSettings
-      Builtins.y2milestone("Writing Xend configuration: %1", @SETTINGS)
-
-      Builtins.foreach(@SETTINGS) do |option_key, option_val|
-        SCR.Write(
-          Builtins.add(path(".etc.xen.xend-config"), option_key),
-          option_val
-        )
-      end
-      # This is very important
-      # it flushes the cache, and stores the configuration on the disk
-      SCR.Write(path(".etc.xen.xend-config"), nil)
-
-      port = GetXendOption("xend-relocation-port")
-      ssl_port = GetXendOption("xend-relocation-ssl-port")
-      ports_list = [port, ssl_port]
-      SuSEFirewallServices.SetNeededPortsAndProtocols(
-        "service:xend-relocation-server",
-        { "tcp_ports" => ports_list }
-      )
-
-      true
-    end
-
-    # Reads current xend status
-    def ReadXendService
-      xend = "/usr/sbin/xend"
-      retval = 1
-      if FileUtils.Exists(xend)
-        retval = Convert.to_integer(SCR.Execute(path(".target.bash_output"), Builtins.sformat("%1 status", xend)))
-      end
-      if retval == 0
-        @xend_is_running = true
-        Builtins.y2milestone("Xend is running")
-      else
-        @xend_is_running = false
-        Builtins.y2milestone("Xend is not running")
-      end
-
-      true
-    end
-
-    # Restarts the xend when the daemon was running when starting the configuration
-    def WriteXendService
-      all_ok = true
-
-      if @xend_is_running
-        Builtins.y2milestone("Restarting xend daemon")
-        all_ok = Service.Restart("xend")
-      else
-        Builtins.y2milestone("Xend is not running - leaving...")
-      end
-
-      all_ok
     end
 
     def GetLibVirtdPorts
@@ -245,14 +121,14 @@ module Yast
       @libvirtd_enabled = Service.Enabled("libvirtd")
       @sshd_enabled = Service.Enabled("sshd")
 
-      if Service.Status("libvirtd") == 0
+      if Service.active?("libvirtd")
         @libvirtd_is_running = true
         Builtins.y2milestone("libvirtd is running")
       else
         @libvirtd_is_running = false
         Builtins.y2milestone("libvirtd is not running")
       end
-      if Service.Status("sshd") == 0
+      if Service.active?("sshd")
         @sshd_is_running = true
         Builtins.y2milestone("sshd is running")
       else
@@ -261,7 +137,7 @@ module Yast
       end
 
       ports = SuSEFirewallServices.GetNeededTCPPorts(
-        "service:libvirtd-relocation-server"
+        "libvirtd-relocation-server"
       )
       @libvirtd_ports = Builtins.filter(ports) do |s|
         s != @libvirtd_default_ports
@@ -292,7 +168,7 @@ module Yast
           end
         end
         SuSEFirewallServices.SetNeededPortsAndProtocols(
-          "service:libvirtd-relocation-server",
+          "libvirtd-relocation-server",
           { "tcp_ports" => @libvirtd_ports }
         )
       end
@@ -306,31 +182,10 @@ module Yast
       # RelocationServer read dialog caption
       caption = _("Initializing relocation-server Configuration")
 
-      xen_steps = 3
       libvirt_steps = 2
 
       sl = 500
       Builtins.sleep(sl)
-
-      xen_stg = [
-        # Progress stage 1/3
-        _("Read the current xend configuration"),
-        # Progress stage 2/3
-        _("Read the current xend state"),
-        # Progress stage 3/3
-        _("Read firewall settings")
-      ]
-
-      xen_tits = [
-        # Progress step 1/3
-        _("Reading the current xend configuration..."),
-        # Progress step 2/3
-        _("Reading the current xend state..."),
-        # Progress step 3/3
-        _("Reading firewall settings..."),
-        # Progress finished
-        Message.Finished
-      ]
 
       libvirt_stg = [
         # Progress stage 1/2
@@ -348,27 +203,7 @@ module Yast
         Message.Finished
       ]
 
-      if is_xend()
-        Progress.New(caption, " ", xen_steps, xen_stg, xen_tits, "")
-      else
-        Progress.New(caption, " ", libvirt_steps, libvirt_stg, libvirt_tits, "")
-      end
-
-      if is_xend()
-        return false if PollAbort()
-        Progress.NextStage
-        # Error message
-        Report.Error(Message.CannotReadCurrentSettings) if !ReadXendSettings()
-        Builtins.sleep(sl)
-
-        return false if PollAbort()
-        Progress.NextStage
-        # Error message
-        if !ReadXendService()
-          Report.Error(_("Cannot read the current Xend state."))
-        end
-        Builtins.sleep(sl)
-      end
+      Progress.New(caption, " ", libvirt_steps, libvirt_stg, libvirt_tits, "")
 
       return false if PollAbort()
       Progress.NextStage
@@ -378,17 +213,15 @@ module Yast
       Progress.set(progress_state)
       Builtins.sleep(sl)
 
-      if Arch.is_kvm || !is_xend()
-        return false if PollAbort()
-        Progress.NextStage
-        # Error message
-        if !ReadLibvirtServices()
-          Report.Error(_("Cannot read the current libvirtd/sshd state."))
-          Report.Error(Message.CannotContinueWithoutPackagesInstalled)
-          return false
-        end
-        Builtins.sleep(sl)
+      return false if PollAbort()
+      Progress.NextStage
+      # Error message
+      if !ReadLibvirtServices()
+        Report.Error(_("Cannot read the current libvirtd/sshd state."))
+        Report.Error(Message.CannotContinueWithoutPackagesInstalled)
+        return false
       end
+      Builtins.sleep(sl)
 
       return false if PollAbort()
       # Progress finished
@@ -406,30 +239,10 @@ module Yast
       # RelocationServer read dialog caption
       caption = _("Saving relocation-server Configuration")
 
-      xen_steps = 3
       libvirt_steps = 2
 
       sl = 500
       Builtins.sleep(sl)
-
-      xen_stg = [
-        # Progress stage 1
-        _("Write the Xend settings"),
-        # Progress stage 2
-        _("Adjust the Xend service"),
-        # Progress stage 3
-        _("Write firewall settings")
-      ]
-
-      xen_tits = [
-        # Progress step 1
-        _("Writing the Xend settings..."),
-        # Progress step 2
-        _("Adjusting the Xend service..."),
-        # Progress step 3
-        _("Writing firewall settings..."),
-        Message.Finished
-      ]
 
       libvirt_stg = [
         # Progress stage 1
@@ -446,33 +259,13 @@ module Yast
         Message.Finished
       ]
 
-      if is_xend()
-        Progress.New(caption, " ", xen_steps, xen_stg, xen_tits, "")
-      else
-        Progress.New(caption, " ", libvirt_steps, libvirt_stg, libvirt_tits, "")
-      end
+      Progress.New(caption, " ", libvirt_steps, libvirt_stg, libvirt_tits, "")
 
-      if is_xend()
-        return false if PollAbort()
-        Progress.NextStage
-        # Error message
-        if !WriteXendSettings()
-          Report.Error(_("Cannot write the xend settings."))
-        end
-        Builtins.sleep(sl)
-
-        return false if PollAbort()
-        Progress.NextStage
-        # Error message
-        Report.Error(Message.CannotAdjustService("xend")) if !WriteXendService()
-        Builtins.sleep(sl)
-      else
-        return false if PollAbort()
-        Progress.NextStage
-        # Error message
-        Report.Error(Message.CannotAdjustService("xend")) if !WriteLibvirtServices()
-        Builtins.sleep(sl)
-      end
+      return false if PollAbort()
+      Progress.NextStage
+      # Error message
+      Report.Error(Message.CannotAdjustService("libvirt")) if !WriteLibvirtServices()
+      Builtins.sleep(sl)
 
       return false if PollAbort()
       Progress.NextStage
@@ -495,9 +288,6 @@ module Yast
     publish :function => :SetModified, :type => "void ()"
     publish :function => :Abort, :type => "boolean ()"
     publish :function => :PollAbort, :type => "boolean ()"
-    publish :function => :GetXendOption, :type => "string (string)"
-    publish :function => :GetDefaultXendOption, :type => "string (string)"
-    publish :function => :SetXendOption, :type => "void (string, string)"
     publish :function => :GetLibVirtdPorts, :type => "list <string> ()"
     publish :function => :SetLibvirtdPorts, :type => "void (list <string>)"
     publish :function => :GetLibvirtdOption, :type => "boolean (string)"
