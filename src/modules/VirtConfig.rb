@@ -29,22 +29,17 @@ require "yast"
 
 module Yast
   class VirtConfigClass < Module
-
     include Yast::Logger
 
     def main
       Yast.import "UI"
-
       textdomain "vm"
-
-
       Yast.import "Arch"
       Yast.import "OSRelease"
       Yast.import "Package"
       Yast.import "Progress"
       Yast.import "Popup"
       Yast.import "Report"
-      Yast.import "SuSEFirewall"
       Yast.import "Wizard"
       Yast.import "Label"
       Yast.import "Bootloader"
@@ -52,42 +47,6 @@ module Yast
 
 
       @net_path = "/sys/class/net/"
-    end
-
-    def ConfigureFirewall
-      Builtins.y2milestone("VirtConfig::ConfigureFirewall() started")
-      ret = true
-
-      # check whether the firewall option exists
-      firewall_configured = false
-      if Builtins.contains(
-          SCR.Dir(path(".sysconfig.SuSEfirewall2")),
-          "FW_FORWARD_ALWAYS_INOUT_DEV"
-        )
-        xen_bridge = "xenbr+"
-        # read the current value
-        forward = Convert.to_string(
-          SCR.Read(path(".sysconfig.SuSEfirewall2.FW_FORWARD_ALWAYS_INOUT_DEV"))
-        )
-        Builtins.y2milestone("FW_FORWARD_ALWAYS_INOUT_DEV=%1", forward)
-        if Builtins.contains(Builtins.splitstring(forward, " "), xen_bridge)
-          Builtins.y2milestone("Firewall already configured!")
-          firewall_configured = true # xenbr+ already exists
-        end
-      end
-
-      if firewall_configured == false
-        # add xenbr+ to the firewall configuration
-        Builtins.y2milestone("Configuring firewall to allow Xen bridge...")
-        progress_orig = Progress.set(false)
-        SuSEFirewall.Read
-        SuSEFirewall.AddXenSupport
-        ret = ret && SuSEFirewall.Write
-        Progress.set(progress_orig)
-      end
-
-      Builtins.y2milestone("VirtConfig::ConfigureFirewall returned: %1", ret)
-      ret
     end
 
     def isOpenSuse
@@ -360,25 +319,27 @@ module Yast
 
       log.info "VirtConfig::ConfigureDom0: Checking for Installed Patterns and Packages"
       if isOpenSuse
-	if isTumbleweed
-           UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-server-xen_server"))
-	else
-           UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-openSUSE-xen_server"))
-	end
-        # On openSUSE there are no 'tools' patterns for Xen and KVM
-        if Package.Installed("xen-tools") && Package.Installed("xen-libs") &&
-           Package.Installed("libvirt-daemon-xen") && Package.Installed("tigervnc") &&
-           Package.Installed("virt-manager")
-          UI.ChangeWidget(Id(:xen_tools), :Enabled, false)
+        UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-server-xen_server"))
+        if isTumbleweed
+          # On Tumbleweed there is not a 'tools' pattern for Xen. Check for a few minimal RPMs
+          if Package.Installed("xen-tools") && Package.Installed("xen-libs") &&
+             Package.Installed("libvirt-daemon-xen") && Package.Installed("tigervnc") &&
+             Package.Installed("virt-manager")
+            UI.ChangeWidget(Id(:xen_tools), :Enabled, false)
+          end
+        else
+          UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-server-xen_tools"))
         end
-	if isTumbleweed
-           UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-server-kvm_server"))
-	else
-           UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-openSUSE-kvm_server"))
-	end
-        if Package.Installed("libvirt-daemon-qemu") || Package.Installed("tigervnc") ||
-           Package.Installed("virt-manager")
-          UI.ChangeWidget(Id(:kvm_tools), :Enabled, false)
+
+        UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-server-kvm_server"))
+        if isTumbleweed
+          # On Tumbleweed there is not a 'tools' pattern for KVM. Check for a few minimal RPMs
+          if Package.Installed("libvirt-daemon-qemu") && Package.Installed("virt-manager") &&
+             Package.Installed("tigervnc")
+            UI.ChangeWidget(Id(:kvm_tools), :Enabled, false)
+          end
+        else
+          UI.ChangeWidget(Id(:kvm_tools), :Enabled, !Package.Installed("patterns-server-kvm_tools"))
         end
       elsif isSLES
         UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-server-xen_server"))
@@ -446,18 +407,19 @@ module Yast
           common_vm_packages = ["libvirt-client", "vm-install", "virt-install"]
         end
 
-	if isTumbleweed == true
-          packages = ["patterns-server-xen_server"] if install_xen_server
-	else
-          packages = ["patterns-openSUSE-xen_server"] if install_xen_server
-	end
-        packages = packages + ["xen-tools", "xen-libs", "libvirt-daemon-xen", "libvirt-daemon-config-network", "tigervnc", "virt-manager"] if install_xen_tools
-	if isTumbleweed == true
-          packages = packages + ["patterns-server-kvm_server"] if install_kvm_server
-	else
-          packages = packages + ["patterns-openSUSE-kvm_server"] if install_kvm_server
-	end
-        packages = packages + ["libvirt-daemon-qemu", "libvirt-daemon-config-network", "tigervnc", "virt-manager"] if install_kvm_tools
+        packages = ["patterns-server-xen_server"] if install_xen_server
+        if isTumbleweed
+          packages = packages + ["xen-tools", "xen-libs", "libvirt-daemon-xen", "libvirt-daemon-config-network", "tigervnc", "virt-manager"] if install_xen_tools
+        else
+          packages = ["patterns-server-xen_tools"] if install_xen_tools
+        end
+
+        packages = packages + ["patterns-server-kvm_server"] if install_kvm_server
+        if isTumbleweed
+          packages = packages + ["libvirt-daemon-qemu", "libvirt-daemon-config-network", "tigervnc", "virt-manager"] if install_kvm_tools
+        else
+          packages = ["patterns-server-kvm_tools"] if install_kvm_tools
+        end
         packages = packages + ["libvirt-daemon-lxc", "libvirt-daemon-config-network"] if install_lxc
         result = Package.DoInstall(common_vm_packages + packages)
         if result == false
@@ -610,17 +572,6 @@ module Yast
       Builtins.y2milestone("Start virtlogd.socket: %1", cmd)
       SCR.Execute(path(".target.bash"), cmd)
 
-      # Firewall stage - modify the firewall setting, add the xen bridge to FW_FORWARD_ALWAYS_INOUT_DEV
-      # Progress::NextStage();
-
-      # Configure firewall to allow xenbr+
-      # success = success && ConfigureFirewall();
-      # if ( success == false ) {
-      #     // error popup
-      #     Report::Error(_("Failed to configure the firewall to allow the Xen bridge") + "\n" + abortmsg);
-      #     return false;
-      # }
-
       Progress.Finish
 
       message_kvm_ready = _(
@@ -671,7 +622,6 @@ module Yast
       success
     end
 
-    publish :function => :ConfigureFirewall, :type => "boolean ()"
     publish :function => :isOpenSuse, :type => "boolean ()"
     publish :function => :isPAEKernel, :type => "boolean ()"
     publish :function => :isX86_64, :type => "boolean ()"

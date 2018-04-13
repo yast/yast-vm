@@ -1,4 +1,25 @@
 -------------------------------------------------------------------
+Fri Apr 13 08:34:25 UTC 2018 - knut.anderssen@suse.com
+
+- Use the new firewalld API (bsc#1083455)
+- 4.0.1
+
+-------------------------------------------------------------------
+Thu Apr 12 15:22:44 MDT 2018 - carnold@suse.com
+
+- bsc#1086487 - YaST2 segfault when virt-manager is installed but
+  not yast2-vm
+- bsc#1083455 - Internal error in yast configuration part
+  "Relocation Server Configuration" - "Service with name
+  'libvirtd-relocation-server' does not exist"
+- bsc#1089255 - yast install hypervisor and tools not working
+  correctly
+- bsc#1088338 - yast2 vm tries to install
+  patterns-openSUSE-kvm_server
+- Remove all xend code from Relocation Server. It is no longer
+  supported.
+
+-------------------------------------------------------------------
 Fri Apr  6 18:54:53 UTC 2018 - mfilka@suse.com
 
 - bnc#1087957 - version bump

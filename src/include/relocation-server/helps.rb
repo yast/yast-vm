@@ -51,14 +51,6 @@ module Yast
               "An additional dialog informs whether it is safe to do so.\n" +
               "</p>\n"
           ),
-        "xend_configuration" => _(
-          "<p><b>Relocation Address</b><br>\n" +
-            "Address xend should listen on for relocation-socket connections</p>\n" +
-            "<p><b>Allowed Hosts</b><br>\n" +
-            "The hosts allowed to talk to the relocation port. If this is empty, then all connections are allowed. Otherwise, this should be a space-separated sequence of regular expressions. Any host with a fully-qualified domain name or an IP address that matches one of these regular expressions will be accepted.</p>\n" +
-            "<p><b>SSL Key File/SSL Cert File</b><br>\n" +
-            "SSL key and certificate to use for the ssl relocation interface</p>"
-        ),
         "libvirt_configuration"  => _(
           "<p><b><big>Tunneled migration</big></b><br>\n" +
             "The source host libvirtd opens a direct connection to the destination host libvirtd for sending migration data. This allows the option of encrypting the data stream.</p>\n" +
