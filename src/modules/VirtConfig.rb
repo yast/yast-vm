@@ -360,25 +360,27 @@ module Yast
 
       log.info "VirtConfig::ConfigureDom0: Checking for Installed Patterns and Packages"
       if isOpenSuse
-	if isTumbleweed
-           UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-server-xen_server"))
-	else
-           UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-openSUSE-xen_server"))
-	end
-        # On openSUSE there are no 'tools' patterns for Xen and KVM
-        if Package.Installed("xen-tools") && Package.Installed("xen-libs") &&
-           Package.Installed("libvirt-daemon-xen") && Package.Installed("tigervnc") &&
-           Package.Installed("virt-manager")
-          UI.ChangeWidget(Id(:xen_tools), :Enabled, false)
+        UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-server-xen_server"))
+        if isTumbleweed
+          # On Tumbleweed there is not a 'tools' pattern for Xen. Check for a few minimal RPMs
+          if Package.Installed("xen-tools") && Package.Installed("xen-libs") &&
+             Package.Installed("libvirt-daemon-xen") && Package.Installed("tigervnc") &&
+             Package.Installed("virt-manager")
+            UI.ChangeWidget(Id(:xen_tools), :Enabled, false)
+          end
+        else
+          UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-server-xen_tools"))
         end
-	if isTumbleweed
-           UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-server-kvm_server"))
-	else
-           UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-openSUSE-kvm_server"))
-	end
-        if Package.Installed("libvirt-daemon-qemu") || Package.Installed("tigervnc") ||
-           Package.Installed("virt-manager")
-          UI.ChangeWidget(Id(:kvm_tools), :Enabled, false)
+
+        UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-server-kvm_server"))
+        if isTumbleweed
+          # On Tumbleweed there is not a 'tools' pattern for KVM. Check for a few minimal RPMs
+          if Package.Installed("libvirt-daemon-qemu") && Package.Installed("virt-manager") &&
+             Package.Installed("tigervnc")
+            UI.ChangeWidget(Id(:kvm_tools), :Enabled, false)
+          end
+        else
+          UI.ChangeWidget(Id(:kvm_tools), :Enabled, !Package.Installed("patterns-server-kvm_tools"))
         end
       elsif isSLES
         UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-server-xen_server"))
@@ -446,18 +448,19 @@ module Yast
           common_vm_packages = ["libvirt-client", "vm-install", "virt-install"]
         end
 
-	if isTumbleweed == true
-          packages = ["patterns-server-xen_server"] if install_xen_server
-	else
-          packages = ["patterns-openSUSE-xen_server"] if install_xen_server
-	end
-        packages = packages + ["xen-tools", "xen-libs", "libvirt-daemon-xen", "libvirt-daemon-config-network", "tigervnc", "virt-manager"] if install_xen_tools
-	if isTumbleweed == true
-          packages = packages + ["patterns-server-kvm_server"] if install_kvm_server
-	else
-          packages = packages + ["patterns-openSUSE-kvm_server"] if install_kvm_server
-	end
-        packages = packages + ["libvirt-daemon-qemu", "libvirt-daemon-config-network", "tigervnc", "virt-manager"] if install_kvm_tools
+        packages = ["patterns-server-xen_server"] if install_xen_server
+        if isTumbleweed
+          packages = packages + ["xen-tools", "xen-libs", "libvirt-daemon-xen", "libvirt-daemon-config-network", "tigervnc", "virt-manager"] if install_xen_tools
+        else
+          packages = ["patterns-server-xen_tools"] if install_xen_tools
+        end
+
+        packages = packages + ["patterns-server-kvm_server"] if install_kvm_server
+        if isTumbleweed
+          packages = packages + ["libvirt-daemon-qemu", "libvirt-daemon-config-network", "tigervnc", "virt-manager"] if install_kvm_tools
+        else
+          packages = ["patterns-server-kvm_tools"] if install_kvm_tools
+        end
         packages = packages + ["libvirt-daemon-lxc", "libvirt-daemon-config-network"] if install_lxc
         result = Package.DoInstall(common_vm_packages + packages)
         if result == false
