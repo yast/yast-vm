@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu May 10 13:43:20 MDT 2018 - carnold@suse.com
+
+- bsc#1091967 - relocation-server configuration - error : cannot
+  read the current libvirt/sshd state
+
+-------------------------------------------------------------------
 Fri Apr 13 08:34:25 UTC 2018 - knut.anderssen@suse.com
 
 - Use the new firewalld API (bsc#1083455)
