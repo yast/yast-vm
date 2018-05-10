@@ -37,6 +37,7 @@ module Yast
     def main
       Yast.import "UI"
       textdomain "relocation-server"
+      Yast.import "VirtConfig"
 
       Yast.import "Arch"
       Yast.import "Progress"
@@ -233,7 +234,16 @@ module Yast
       if !ReadLibvirtServices()
         Report.Error(_("Cannot read the current libvirtd/sshd state."))
         Report.Error(Message.CannotContinueWithoutPackagesInstalled)
-        return false
+        inst_hyper = Popup.YesNo(
+          _("Run 'Install Hypervisor and Tools' to correct this?")
+          )
+        if inst_hyper == true
+          Builtins.y2milestone("Running Install Hypervisor and Tools")
+          inst_hyper = VirtConfig.ConfigureDom0(Arch.s390_64)
+        end
+        if inst_hyper == false
+          return false
+        end
       end
       Builtins.sleep(sl)
 
