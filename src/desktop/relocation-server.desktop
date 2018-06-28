@@ -13,6 +13,7 @@ X-SuSE-YaST-AutoInst=
 X-SuSE-YaST-Geometry=
 X-SuSE-YaST-SortKey=
 X-SuSE-YaST-AutoInstResource=
+X-SuSE-YaST-Keywords=vm,virtualization
 
 Icon=yast-vm-install
 Exec=/usr/bin/xdg-su -c "/sbin/yast2 relocation-server"

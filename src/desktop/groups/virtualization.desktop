@@ -7,6 +7,7 @@ X-KDE-HasReadOnlyMode=true
 
 X-SuSE-YaST-Group=Virtualization
 X-SuSE-YaST-SortKey=60
+X-SuSE-YaST-Keywords=vm,virtualization
 
 OnlyShowIn=X-SuSE-YaST;
 Icon=yast-host
