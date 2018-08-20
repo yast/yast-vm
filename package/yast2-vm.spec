@@ -29,7 +29,7 @@ BuildRequires:  yast2-bootloader >= 3.1.35
 Requires:       yast2-bootloader >= 3.1.35
 BuildRequires:  yast2-devtools >= 3.1.10
 Requires:       yast2-network >= 3.1.108
-License:        GPL-2.0
+License:        GPL-2.0-only
 
 # OSRelease
 Requires:	yast2 >= 3.0.4
@@ -73,4 +73,4 @@ rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
 %{yast_desktopdir}/virtualization-config.desktop
 %endif
 %doc %{yast_docdir}
-%doc %{yast_docdir}/COPYING
+%license %{yast_docdir}/COPYING
