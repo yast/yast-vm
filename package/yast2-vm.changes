@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Wed Oct 31 10:58:27 MDT 2018 - carnold@suse.com
+
+- bsc#1109832 - libvirt-daemon-config-network not installed by yast
+  vm. Tumbleweed is now getting the '_tools' patterns for xen and
+  kvm that are already found on SLE.
+- 4.0.3
+
+-------------------------------------------------------------------
 Mon Aug 20 13:29:15 CEST 2018 - schubi@suse.de
 
 - Switched license in spec file from SPDX2 to SPDX3 format.
