@@ -35,6 +35,7 @@ module Yast
       Yast.import "UI"
       textdomain "vm"
       Yast.import "Arch"
+      Yast.import "Message"
       Yast.import "OSRelease"
       Yast.import "Package"
       Yast.import "Progress"
@@ -381,20 +382,20 @@ module Yast
       if install_lxc
         packages = ["libvirt-daemon-lxc", "libvirt-daemon-config-network"]
         result = Package.DoInstall(packages)
-        if result == false
-          Report.Error(_("Package installation failed for lxc\n"))
+        unless result
+          Report.Error(Message.FailedToInstallPackages)
           return false
         end
       end
 
-      packages = packages + ["patterns-server-xen_server"] if install_xen_server
-      packages = packages + ["patterns-server-xen_tools"] if install_xen_tools
-      packages = packages + ["patterns-server-kvm_server"] if install_kvm_server
-      packages = packages + ["patterns-server-kvm_tools"] if install_kvm_tools
+      packages << "patterns-server-xen_server" if install_xen_server
+      packages << "patterns-server-xen_tools" if install_xen_tools
+      packages << "patterns-server-kvm_server" if install_kvm_server
+      packages << "patterns-server-kvm_tools" if install_kvm_tools
       packages = installGUIComponents(packages)
       result = Package.DoInstall(packages)
-      if result == false
-        Report.Error(_("Package installation failed for sles patterns\n"))
+      unless result
+        Report.Error(Message.FailedToInstallPackages)
         return false
       end
 
