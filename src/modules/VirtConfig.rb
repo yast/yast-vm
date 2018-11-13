@@ -35,6 +35,7 @@ module Yast
       Yast.import "UI"
       textdomain "vm"
       Yast.import "Arch"
+      Yast.import "Message"
       Yast.import "OSRelease"
       Yast.import "Package"
       Yast.import "Progress"
@@ -318,35 +319,11 @@ module Yast
       end
 
       log.info "VirtConfig::ConfigureDom0: Checking for Installed Patterns and Packages"
-      if isOpenSuse
-        UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-server-xen_server"))
-        if isTumbleweed
-          # On Tumbleweed there is not a 'tools' pattern for Xen. Check for a few minimal RPMs
-          if Package.Installed("xen-tools") && Package.Installed("xen-libs") &&
-             Package.Installed("libvirt-daemon-xen") && Package.Installed("tigervnc") &&
-             Package.Installed("virt-manager")
-            UI.ChangeWidget(Id(:xen_tools), :Enabled, false)
-          end
-        else
-          UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-server-xen_tools"))
-        end
+      UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-server-xen_server"))
+      UI.ChangeWidget(Id(:xen_tools), :Enabled, !Package.Installed("patterns-server-xen_tools"))
+      UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-server-kvm_server"))
+      UI.ChangeWidget(Id(:kvm_tools), :Enabled, !Package.Installed("patterns-server-kvm_tools"))
 
-        UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-server-kvm_server"))
-        if isTumbleweed
-          # On Tumbleweed there is not a 'tools' pattern for KVM. Check for a few minimal RPMs
-          if Package.Installed("libvirt-daemon-qemu") && Package.Installed("virt-manager") &&
-             Package.Installed("tigervnc")
-            UI.ChangeWidget(Id(:kvm_tools), :Enabled, false)
-          end
-        else
-          UI.ChangeWidget(Id(:kvm_tools), :Enabled, !Package.Installed("patterns-server-kvm_tools"))
-        end
-      elsif isSLES
-        UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-server-xen_server"))
-        UI.ChangeWidget(Id(:xen_tools), :Enabled, !Package.Installed("patterns-server-xen_tools"))
-        UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-server-kvm_server"))
-        UI.ChangeWidget(Id(:kvm_tools), :Enabled, !Package.Installed("patterns-server-kvm_tools"))
-      end
       if Package.Installed("libvirt-daemon-lxc") && Package.Installed("libvirt-daemon-config-network")
         UI.ChangeWidget(Id(:lxc), :Enabled, false)
       end
@@ -402,51 +379,24 @@ module Yast
       common_vm_packages = []
 
       result = true
-      if isOpenSuse == true
-        if install_vm == true
-          common_vm_packages = ["libvirt-client", "vm-install", "virt-install"]
-        end
-
-        packages = ["patterns-server-xen_server"] if install_xen_server
-        if isTumbleweed
-          packages = packages + ["xen-tools", "xen-libs", "libvirt-daemon-xen", "libvirt-daemon-config-network", "tigervnc", "virt-manager"] if install_xen_tools
-        else
-          packages = ["patterns-server-xen_tools"] if install_xen_tools
-        end
-
-        packages = packages + ["patterns-server-kvm_server"] if install_kvm_server
-        if isTumbleweed
-          packages = packages + ["libvirt-daemon-qemu", "libvirt-daemon-config-network", "tigervnc", "virt-manager"] if install_kvm_tools
-        else
-          packages = ["patterns-server-kvm_tools"] if install_kvm_tools
-        end
-        packages = packages + ["libvirt-daemon-lxc", "libvirt-daemon-config-network"] if install_lxc
-        result = Package.DoInstall(common_vm_packages + packages)
-        if result == false
-          Report.Error(_("Package installation failed\n"))
+      if install_lxc
+        packages = ["libvirt-daemon-lxc", "libvirt-daemon-config-network"]
+        result = Package.DoInstall(packages)
+        unless result
+          Report.Error(Message.FailedToInstallPackages)
           return false
         end
-      else
-        if install_lxc
-          packages = ["libvirt-daemon-lxc", "libvirt-daemon-config-network"]
-          result = Package.DoInstall(packages)
-          if result == false
-            Report.Error(_("Package installation failed for lxc\n"))
-            return false
-          end
-        end
-        if isSLES
-          packages = packages + ["patterns-server-xen_server"] if install_xen_server
-          packages = packages + ["patterns-server-xen_tools"] if install_xen_tools
-          packages = packages + ["patterns-server-kvm_server"] if install_kvm_server
-          packages = packages + ["patterns-server-kvm_tools"] if install_kvm_tools
-          packages = installGUIComponents(packages)
-          result = Package.DoInstall(packages)
-          if result == false
-            Report.Error(_("Package installation failed for sles patterns\n"))
-            return false
-          end
-        end
+      end
+
+      packages << "patterns-server-xen_server" if install_xen_server
+      packages << "patterns-server-xen_tools" if install_xen_tools
+      packages << "patterns-server-kvm_server" if install_kvm_server
+      packages << "patterns-server-kvm_tools" if install_kvm_tools
+      packages = installGUIComponents(packages)
+      result = Package.DoInstall(packages)
+      unless result
+        Report.Error(Message.FailedToInstallPackages)
+        return false
       end
 
       success = true
