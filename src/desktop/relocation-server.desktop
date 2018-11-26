@@ -15,7 +15,7 @@ X-SuSE-YaST-SortKey=
 X-SuSE-YaST-AutoInstResource=
 X-SuSE-YaST-Keywords=vm,virtualization
 
-Icon=yast-vm-install
+Icon=yast-vm-migrate
 Exec=/usr/bin/xdg-su -c "/sbin/yast2 relocation-server"
 
 Name=Relocation Server Configuration

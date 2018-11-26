@@ -52,7 +52,7 @@ module Yast
     # @return `abort if aborted and `next otherwise
     def ReadDialog
       Wizard.RestoreHelp(Ops.get_string(@HELPS, "read", ""))
-      Wizard.SetTitleIcon("yast-vm-install")
+      Wizard.SetDesktopIcon("relocation-server")
       # RelocationServer::SetAbortFunction(PollAbort);
       return :abort if !Confirm.MustBeRoot
       ret = RelocationServer.Read
@@ -63,7 +63,7 @@ module Yast
     # @return `abort if aborted and `next otherwise
     def WriteDialog
       Wizard.RestoreHelp(Ops.get_string(@HELPS, "write", ""))
-      Wizard.SetTitleIcon("yast-vm-install")
+      Wizard.SetDesktopIcon("relocation-server")
       # RelocationServer::SetAbortFunction(PollAbort);
       ret = RelocationServer.Write
       ret ? :next : :abort
