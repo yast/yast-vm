@@ -70,7 +70,7 @@ rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
 %ifnarch %ix86
 %{yast_desktopdir}/relocation-server.desktop
 %{yast_desktopdir}/virtualization-config.desktop
-%{_datadir}/icons/*
+%{yast_icondir}
 %endif
 %doc %{yast_docdir}
 %license %{yast_docdir}/COPYING
