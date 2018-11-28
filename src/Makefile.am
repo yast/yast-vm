@@ -23,10 +23,11 @@ desktop_DATA = \
   desktop/relocation-server.desktop \
   desktop/virtualization-config.desktop
 
-desktop1dir = @desktopdir@/groups
-desktop1_DATA = \
-  desktop/groups/virtualization.desktop
+scalabledir = @icondir@/hicolor/scalable/apps
+scalable_DATA = \
+  icons/hicolor/scalable/apps/yast-vm-install.svg \
+  icons/hicolor/scalable/apps/yast-vm-migrate.svg
 
-EXTRA_DIST = $(module_DATA) $(client_DATA) $(ynclude_DATA) $(scrconf_DATA) $(desktop_DATA) $(desktop1_DATA)
+EXTRA_DIST = $(module_DATA) $(client_DATA) $(ynclude_DATA) $(scrconf_DATA) $(desktop_DATA) $(scalable_DATA)
 
 include $(top_srcdir)/Makefile.am.common

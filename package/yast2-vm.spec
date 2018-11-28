@@ -17,7 +17,7 @@
 
 
 Name:           yast2-vm
-Version:        4.0.3
+Version:        4.0.4
 Release:        0
 Group:		System/YaST
 
@@ -67,10 +67,10 @@ rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
 %{yast_moduledir}/RelocationServer.*
 %{yast_yncludedir}/*
 %{yast_scrconfdir}/*
-%{yast_desktopdir}/groups/virtualization.desktop
 %ifnarch %ix86
 %{yast_desktopdir}/relocation-server.desktop
 %{yast_desktopdir}/virtualization-config.desktop
+%{yast_icondir}
 %endif
 %doc %{yast_docdir}
 %license %{yast_docdir}/COPYING
