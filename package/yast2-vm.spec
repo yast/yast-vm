@@ -17,7 +17,7 @@
 
 
 Name:           yast2-vm
-Version:        4.0.4
+Version:        4.1.0
 Release:        0
 Group:		System/YaST
 
@@ -53,6 +53,7 @@ This YaST module installs the tools necessary for creating VMs with Xen or KVM.
 %ifarch %ix86
 rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/virtualization-config.desktop
 rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
+rm -rf $RPM_BUILD_ROOT/usr/share/icons/*
 %endif
 
 
