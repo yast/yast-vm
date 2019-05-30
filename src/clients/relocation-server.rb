@@ -99,7 +99,7 @@ module Yast
       Builtins.y2milestone("Checking for Xen installation")
 
       # check the dom0 configuration...
-      ret = ret && VirtConfig.ConfigureDom0(Arch.s390_64)
+      ret = ret && VirtConfig.ConfigureDom0()
       return false if ret == false
 
       Builtins.y2milestone("CheckConfiguration returned: %1", ret)

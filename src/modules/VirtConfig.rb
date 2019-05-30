@@ -206,7 +206,7 @@ module Yast
       false
     end
 
-    def ConfigureDom0(is_s390)
+    def ConfigureDom0()
       progress_stages = [
         # progress stage 1/2
         _("Verify Installed Packages"),
@@ -283,7 +283,7 @@ module Yast
       end
 
       # Generate a pop dialog to allow user selection of Xen or KVM
-      if is_s390 == true
+      if Arch.s390_64 || Arch.ppc64
         UI.OpenDialog(
                       HBox(
                         HSpacing(2),
@@ -435,7 +435,7 @@ module Yast
         end
       end
 
-      if is_s390 == false
+      if !Arch.s390_64
         # create a bridget for SLES host
         # Default Bridge stage
         Progress.NextStage
