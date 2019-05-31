@@ -12,37 +12,34 @@
 # license that conforms to the Open Source Definition (Version 1.9)
 # published by the Open Source Initiative.
 
-# Please submit bugfixes or comments via http://bugs.opensuse.org/
+# Please submit bugfixes or comments via https://bugs.opensuse.org/
 #
 
-
 Name:           yast2-vm
+Summary:        Configure Hypervisor and Tools for Xen and KVM
 Version:        4.1.0
 Release:        0
-Group:		System/YaST
+Group:          System/YaST
+License:        GPL-2.0-only
+Url:            https://github.com/yast/yast-vm
 
-BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Source0:        %{name}-%{version}.tar.bz2
 
 BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-testsuite
 BuildRequires:  yast2-bootloader >= 3.1.35
-Requires:       yast2-bootloader >= 3.1.35
 BuildRequires:  yast2-devtools >= 3.1.10
-Requires:       yast2-network >= 3.1.108
-License:        GPL-2.0-only
 
 # OSRelease
-Requires:	yast2 >= 3.0.4
-
+Requires:       yast2 >= 3.0.4
 Requires:       yast2-ruby-bindings >= 1.0.0
-
-Summary:	Configure Hypervisor and Tools for Xen and KVM
+Requires:       yast2-network >= 3.1.108
+Requires:       yast2-bootloader >= 3.1.35
 
 %description
 This YaST module installs the tools necessary for creating VMs with Xen or KVM.
 
 %prep
-%setup -n %{name}-%{version}
+%setup -q
 
 %build
 %yast_build
@@ -54,24 +51,19 @@ This YaST module installs the tools necessary for creating VMs with Xen or KVM.
 rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/virtualization-config.desktop
 rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
 rm -rf $RPM_BUILD_ROOT/usr/share/icons/*
+%else
+%yast_metainfo
 %endif
 
-
 %files
-%defattr(-,root,root)
-%dir %{yast_scrconfdir}
-%dir %{yast_yncludedir}
-%{yast_clientdir}/relocation-server.rb
-%{yast_clientdir}/virtualization.rb
-%{yast_clientdir}/vm_finish.rb
-%{yast_moduledir}/VirtConfig.rb
-%{yast_moduledir}/RelocationServer.*
-%{yast_yncludedir}/*
-%{yast_scrconfdir}/*
+%{yast_clientdir}
+%{yast_moduledir}
+%{yast_yncludedir}
+%{yast_scrconfdir}
 %ifnarch %ix86
-%{yast_desktopdir}/relocation-server.desktop
-%{yast_desktopdir}/virtualization-config.desktop
+%{yast_desktopdir}
 %{yast_icondir}
+%{yast_metainfodir}
 %endif
 %doc %{yast_docdir}
 %license %{yast_docdir}/COPYING
