@@ -17,8 +17,9 @@ X-SuSE-YaST-Keywords=vm,virtualization
 Icon=yast-vm-install
 Exec=/usr/bin/xdg-su -c "/sbin/yast2 virtualization"
 
-Name=Install Hypervisor and Tools
-GenericName=Install Xen or KVM with Management Tools
+Name=YaST Install VM
+GenericName=Install Hypervisor and Tools
+Comment=Install Xen or KVM with Management Tools
 X-KDE-SubstituteUID=true
 StartupNotify=true
 
