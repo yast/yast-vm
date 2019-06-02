@@ -20,8 +20,8 @@ scrconf_DATA = \
   scrconf/xend.scr
 
 desktop_DATA = \
-  desktop/org.openSUSE.YaST.RelocationServer.desktop \
-  desktop/org.openSUSE.YaST.VirtualizationConfig.desktop
+  desktop/org.opensuse.yast.RelocationServer.desktop \
+  desktop/org.opensuse.yast.VirtualizationConfig.desktop
 
 scalabledir = @icondir@/hicolor/scalable/apps
 scalable_DATA = \
