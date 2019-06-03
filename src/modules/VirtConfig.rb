@@ -357,7 +357,7 @@ module Yast
       end
 
       Wizard.OpenNextBackDialog
-      Wizard.SetDesktopTitleAndIcon("virtualization-config")
+      Wizard.SetDesktopTitleAndIcon("org.opensuse.yast.VirtualizationConfig")
 
       # enable progress
       progress = Progress.set(true)

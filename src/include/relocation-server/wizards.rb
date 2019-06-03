@@ -132,7 +132,7 @@ module Yast
       )
       Wizard.HideBackButton
       Wizard.SetAbortButton(:abort, Label.CancelButton)
-      Wizard.SetDesktopTitleAndIcon("relocation-server")
+      Wizard.SetDesktopTitleAndIcon("org.opensuse.yast.RelocationServer")
 
       CWM.Run(w, { :abort => fun_ref(method(:ReallyExit), "boolean ()") })
     end
@@ -154,7 +154,7 @@ module Yast
       }
 
       Wizard.CreateDialog
-      Wizard.SetDesktopTitleAndIcon("relocation-server")
+      Wizard.SetDesktopTitleAndIcon("org.opensuse.yast.RelocationServer")
 
       ret = Sequencer.Run(aliases, sequence)
 

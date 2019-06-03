@@ -18,6 +18,7 @@ X-SuSE-YaST-Keywords=vm,virtualization
 Icon=yast-vm-migrate
 Exec=/usr/bin/xdg-su -c "/sbin/yast2 relocation-server"
 
-Name=Relocation Server Configuration
-GenericName=Configure Host for Virtual Machine Migration
+Name=YaST Relocation Server
+GenericName=Relocation Server Configuration
+Comment=Configure Host for Virtual Machine Migration
 StartupNotify=true
