@@ -27,7 +27,7 @@ Source0:        %{name}-%{version}.tar.bz2
 
 BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-testsuite
 BuildRequires:  yast2-bootloader >= 3.1.35
-BuildRequires:  yast2-devtools >= 3.1.10
+BuildRequires:  yast2-devtools >= 4.2.2
 
 # OSRelease
 Requires:       yast2 >= 3.0.4
