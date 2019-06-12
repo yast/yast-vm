@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Jun 12 10:27:01 UTC 2019 - Ladislav Slezak <lslezak@suse.cz>
+
+- Fixed build on i586 arch (related to fate#319035)
+- 4.2.2
+
+-------------------------------------------------------------------
 Tue Jun  4 10:59:39 MDT 2019 - carnold@suse.com
 
 - bsc#1105891 - virtualization test not supported for ppc64le.

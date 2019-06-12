@@ -17,7 +17,7 @@
 
 Name:           yast2-vm
 Summary:        Configure Hypervisor and Tools for Xen and KVM
-Version:        4.2.1
+Version:        4.2.2
 Release:        0
 Group:          System/YaST
 License:        GPL-2.0-only
@@ -48,8 +48,8 @@ This YaST module installs the tools necessary for creating VMs with Xen or KVM.
 %yast_install
 
 %ifarch %ix86
-rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/virtualization-config.desktop
-rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/relocation-server.desktop
+rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/org.opensuse.yast.VirtualizationConfig.desktop
+rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/org.opensuse.yast.RelocationServer.desktop
 rm -rf $RPM_BUILD_ROOT/usr/share/icons/*
 %else
 %yast_metainfo
