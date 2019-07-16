@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Fri Jun 14 15:05:21 MDT 2019 - carnold@suse.com
+
+- bsc#1091967 - relocation-server configuration - error : cannot
+  read the current libvirt/sshd state. Just fix the error message
+  so the user knows what to do.
+- 4.2.3
+
+-------------------------------------------------------------------
 Wed Jun 12 10:27:01 UTC 2019 - Ladislav Slezak <lslezak@suse.cz>
 
 - Fixed build on i586 arch (related to fate#319035)

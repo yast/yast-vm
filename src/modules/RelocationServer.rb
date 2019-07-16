@@ -231,7 +231,7 @@ module Yast
       Progress.NextStage
       # Error message
       if !ReadLibvirtServices()
-        Report.Error(_("Cannot read the current libvirtd/sshd state."))
+        Report.Error(_("Please install the libvirtd-daemon package."))
         Report.Error(Message.CannotContinueWithoutPackagesInstalled)
         return false
       end
