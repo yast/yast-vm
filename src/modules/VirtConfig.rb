@@ -449,8 +449,10 @@ module Yast
             :to   => "list <string>"
                                      )
         if NetworkService.is_network_manager
-          Builtins.y2milestone("NetworkManager is being used. Bridge configuration must be done manually.")
+          nm_bridge_config = _("NetworkManager is being used. Bridge configuration must be done manually.")
+          Builtins.y2milestone(nm_bridge_config)
           configure_bridge = false
+          Popup.Warning(nm_bridge_config)
         else
           Builtins.foreach(interfaces) do |i|
             Builtins.y2milestone("Checking for bridges...")
