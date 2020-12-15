@@ -87,41 +87,7 @@ module Yast
           @disable_services.each { |s| Service.Disable(s) }
 
           # Allow a console in addition to VNC with the PV framebuffer
-          Builtins.y2milestone("check for xvc0 in inittab and securetty")
-          @etc_inittab = "/etc/inittab"
-          if FileUtils.Exists(@etc_inittab) &&
-              !Builtins.contains(SCR.Dir(path(".etc.inittab")), "x0")
-            # On an upgrade, don't add new entry if existing one is commented out - bnc#720929
-            if 0 !=
-                SCR.Execute(
-                  path(".target.bash"),
-                  "/usr/bin/grep -q '^#x0:' /etc/inittab"
-                )
-              Builtins.y2milestone("Adding the x0 entry in the inittab file")
-              SCR.Write(
-                path(".etc.inittab.x0"),
-                Builtins.sformat(
-                  "12345:respawn:/sbin/agetty -L 9600 xvc0 xterm"
-                )
-              )
-              SCR.Write(path(".etc.inittab"), nil)
-              @dev_xvc0 = "/dev/xvc0"
-              if !FileUtils.Exists(@dev_xvc0)
-                Builtins.y2milestone(
-                  "%1 not found, commenting out the x0 entry in the inittab",
-                  @dev_xvc0
-                )
-                SCR.Execute(
-                  path(".target.bash"),
-                  "/bin/sed --in-place 's/^x0:/#x0:/g' /etc/inittab"
-                )
-              end
-            else
-              Builtins.y2milestone(
-                "The x0 entry in the inittab is there but commented out"
-              )
-            end
-          end
+          Builtins.y2milestone("check for xvc0 in securetty")
           SCR.Execute(
             path(".target.bash"),
             "/usr/bin/grep -q xvc0 /etc/securetty || echo xvc0 >> /etc/securetty"
