@@ -274,13 +274,6 @@ module Yast
                       ),
                     )
       end
-      def LXCDialog
-        widgetLXC = Frame(_("libvirt LXC containers"),
-                      HBox(
-                        Left(CheckBox(Id(:lxc), Opt(:key_F4), _("libvirt LXC daemon"))),
-                      ),
-                    )
-      end
 
       # Generate a pop dialog to allow user selection of Xen or KVM
       if Arch.s390_64 || Arch.ppc64
@@ -291,7 +284,6 @@ module Yast
                           Information(),
                           VSpacing(1),
                           KVMDialog(),
-                          LXCDialog(),
                           VMButtonBox(),
                         ),
                       ),
@@ -311,7 +303,6 @@ module Yast
                             ),
                           ),
                           KVMDialog(),
-                          LXCDialog(),
                           VMButtonBox(),
                         ),
                       ),
@@ -324,10 +315,6 @@ module Yast
       UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-server-kvm_server"))
       UI.ChangeWidget(Id(:kvm_tools), :Enabled, !Package.Installed("patterns-server-kvm_tools"))
 
-      if Package.Installed("libvirt-daemon-lxc") && Package.Installed("libvirt-daemon-config-network")
-        UI.ChangeWidget(Id(:lxc), :Enabled, false)
-      end
-
       widget_id = UI.UserInput
       if widget_id == :accept
           install_xen_server = UI.QueryWidget(Id(:xen_server), :Value)
@@ -335,7 +322,6 @@ module Yast
           install_kvm_server = UI.QueryWidget(Id(:kvm_server), :Value)
           install_kvm_tools = UI.QueryWidget(Id(:kvm_tools), :Value)
           install_client_tools = UI.QueryWidget(Id(:client_tools), :Value)
-          install_lxc = UI.QueryWidget(Id(:lxc), :Value)
       end
 
       UI.CloseDialog
@@ -349,7 +335,7 @@ module Yast
       install_kvm = true if install_kvm_server || install_kvm_tools
       install_vm = true if install_client_tools
 
-      if widget_id == :cancel || !install_vm && !install_lxc
+      if widget_id == :cancel || !install_vm
         Builtins.y2milestone(
           "VirtConfig::ConfigureDom0 Cancel Selected or no platform selected."
         )
@@ -379,14 +365,6 @@ module Yast
       common_vm_packages = []
 
       result = true
-      if install_lxc
-        packages = ["libvirt-daemon-lxc", "libvirt-daemon-config-network"]
-        result = Package.DoInstall(packages)
-        unless result
-          Report.Error(Message.FailedToInstallPackages)
-          return false
-        end
-      end
 
       packages << "patterns-server-xen_server" if install_xen_server
       packages << "patterns-server-xen_tools" if install_xen_tools
@@ -537,7 +515,6 @@ module Yast
       )
       message_xen_ready = _("Xen Hypervisor and tools are installed.")
       message_client_ready = _("Virtualization client tools are installed.")
-      message_lxc_ready = _("Libvirt LXC components are installed.")
       message = ""
 
       if Arch.is_xen == false
@@ -563,9 +540,7 @@ module Yast
         message.concat(message_client_ready)
         message.concat("\n\n")
       end
-      if install_lxc
-        message.concat(message_lxc_ready)
-      end
+
       Popup.LongMessage(message)
 
       Wizard.CloseDialog
