@@ -248,66 +248,14 @@ module Yast
       # error popup
       abortmsg = _("The installation will be aborted.")
 
-      def Information
-        widgets = Frame(_("Choose Hypervisor(s) to install"),
-                    HBox(
-                      VBox(
-                        Left(Label(_("Server: Minimal system to get a running Hypervisor"))),
-                        Left(Label(_("Tools: Configure, manage and monitor virtual machines"))),
-                        Left(Label(_("A disabled checkbox means the Hypervisor item has already been installed"))),
-                      ),
-                      HSpacing(2),
-                    ),
-                  )
-      end
-      def VMButtonBox
-        widgetB = ButtonBox(
-                    PushButton(Id(:accept), Label.AcceptButton),
-                    PushButton(Id(:cancel), Label.CancelButton),
-                  )
-      end
-      def KVMDialog
-        widgetKVM = Frame(_("KVM Hypervisor"),
-                      HBox(
-                        Left(CheckBox(Id(:kvm_server), Opt(:key_F6), _("KVM server"))),
-                        Left(CheckBox(Id(:kvm_tools), Opt(:key_F7), _("KVM tools"))),
-                      ),
-                    )
-      end
-
       # Generate a pop dialog to allow user selection of Xen or KVM
-      if Arch.s390_64 || Arch.ppc64
-        UI.OpenDialog(
-                      HBox(
-                        HSpacing(2),
-                        VBox(
-                          Information(),
-                          VSpacing(1),
-                          KVMDialog(),
-                          VMButtonBox(),
-                        ),
-                      ),
+      UI.OpenDialog(
+        MarginBox(2, 0,
+          VBox(
+            * widgets.flat_map { |w| [VSpacing(1), w] }
+          )
         )
-      else
-        UI.OpenDialog(
-                      HBox(
-                        HSpacing(2),
-                        VBox(
-                          VSpacing(1),
-                          Information(),
-                          VSpacing(1),
-                          Frame(_("Xen Hypervisor"),
-                            HBox(
-                              Left(CheckBox(Id(:xen_server), Opt(:key_F8), _("Xen server"))),
-                              Left(CheckBox(Id(:xen_tools), Opt(:key_F9), _("Xen tools"))),
-                            ),
-                          ),
-                          KVMDialog(),
-                          VMButtonBox(),
-                        ),
-                      ),
-        )
-      end
+      )
 
       log.info "VirtConfig::ConfigureDom0: Checking for Installed Patterns and Packages"
       UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-server-xen_server"))
@@ -547,6 +495,52 @@ module Yast
 
       Builtins.y2milestone("VirtConfig::ConfigureDom0 returned: %1", success)
       success
+    end
+
+    def information_widget
+      Frame(
+        _("Choose Hypervisor(s) to install"),
+        MarginBox(1, 0.5,
+          VBox(
+            Left(Label(_("Server: Minimal system to get a running Hypervisor"))),
+            Left(Label(_("Tools: Configure, manage and monitor virtual machines"))),
+            Left(Label(_("A disabled checkbox means the Hypervisor item has already been installed")))
+          )
+        )
+      )
+    end
+
+    def button_box_widget
+      ButtonBox(
+        PushButton(Id(:accept), Label.AcceptButton),
+        PushButton(Id(:cancel), Label.CancelButton)
+      )
+    end
+
+    def kvm_widget
+      Frame(
+        _("KVM Hypervisor"),
+        HBox(
+          Left(CheckBox(Id(:kvm_server), Opt(:key_F6), _("KVM server"))),
+          Left(CheckBox(Id(:kvm_tools), Opt(:key_F7), _("KVM tools"))),
+        )
+      )
+    end
+
+    def xen_widget
+      return if Arch.s390_64 || Arch.ppc64
+
+      Frame(
+        _("Xen Hypervisor"),
+        HBox(
+          Left(CheckBox(Id(:xen_server), Opt(:key_F8), _("Xen server"))),
+          Left(CheckBox(Id(:xen_tools), Opt(:key_F9), _("Xen tools"))),
+        )
+      )
+    end
+
+    def widgets
+      [information_widget, xen_widget, kvm_widget, button_box_widget].compact
     end
 
     publish :function => :isOpenSuse, :type => "boolean ()"
