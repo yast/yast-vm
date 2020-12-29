@@ -528,7 +528,7 @@ module Yast
     end
 
     def xen_widget
-      return if Arch.s390_64 || Arch.ppc64
+      return if Arch.s390_64 || Arch.ppc64 || Arch.aarch64
 
       Frame(
         _("Xen Hypervisor"),
