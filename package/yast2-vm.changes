@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Jan  5 10:03:41 MST 2021 - carnold@suse.com
+
+- jsc#SLE-17070 - Yast2 vm: remove LXC entry
+  LXC is deprecated in SLE15-SP3
+- 4.2.6
+
+-------------------------------------------------------------------
 Tue Dec 15 15:31:59 UTC 2020 - Stefan Schubert <schubi@suse.de>
 
 - Removed old code for sysvinit configuration (bsc#1175494).
