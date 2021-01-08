@@ -248,85 +248,20 @@ module Yast
       # error popup
       abortmsg = _("The installation will be aborted.")
 
-      def Information
-        widgets = Frame(_("Choose Hypervisor(s) to install"),
-                    HBox(
-                      VBox(
-                        Left(Label(_("Server: Minimal system to get a running Hypervisor"))),
-                        Left(Label(_("Tools: Configure, manage and monitor virtual machines"))),
-                        Left(Label(_("A disabled checkbox means the Hypervisor item has already been installed"))),
-                      ),
-                      HSpacing(2),
-                    ),
-                  )
-      end
-      def VMButtonBox
-        widgetB = ButtonBox(
-                    PushButton(Id(:accept), Label.AcceptButton),
-                    PushButton(Id(:cancel), Label.CancelButton),
-                  )
-      end
-      def KVMDialog
-        widgetKVM = Frame(_("KVM Hypervisor"),
-                      HBox(
-                        Left(CheckBox(Id(:kvm_server), Opt(:key_F6), _("KVM server"))),
-                        Left(CheckBox(Id(:kvm_tools), Opt(:key_F7), _("KVM tools"))),
-                      ),
-                    )
-      end
-      def LXCDialog
-        widgetLXC = Frame(_("libvirt LXC containers"),
-                      HBox(
-                        Left(CheckBox(Id(:lxc), Opt(:key_F4), _("libvirt LXC daemon"))),
-                      ),
-                    )
-      end
-
       # Generate a pop dialog to allow user selection of Xen or KVM
-      if Arch.s390_64 || Arch.ppc64
-        UI.OpenDialog(
-                      HBox(
-                        HSpacing(2),
-                        VBox(
-                          Information(),
-                          VSpacing(1),
-                          KVMDialog(),
-                          LXCDialog(),
-                          VMButtonBox(),
-                        ),
-                      ),
+      UI.OpenDialog(
+        MarginBox(2, 0,
+          VBox(
+            * widgets.flat_map { |w| [VSpacing(1), w] }
+          )
         )
-      else
-        UI.OpenDialog(
-                      HBox(
-                        HSpacing(2),
-                        VBox(
-                          VSpacing(1),
-                          Information(),
-                          VSpacing(1),
-                          Frame(_("Xen Hypervisor"),
-                            HBox(
-                              Left(CheckBox(Id(:xen_server), Opt(:key_F8), _("Xen server"))),
-                              Left(CheckBox(Id(:xen_tools), Opt(:key_F9), _("Xen tools"))),
-                            ),
-                          ),
-                          KVMDialog(),
-                          LXCDialog(),
-                          VMButtonBox(),
-                        ),
-                      ),
-        )
-      end
+      )
 
       log.info "VirtConfig::ConfigureDom0: Checking for Installed Patterns and Packages"
       UI.ChangeWidget(Id(:xen_server), :Enabled, !Package.Installed("patterns-server-xen_server"))
       UI.ChangeWidget(Id(:xen_tools), :Enabled, !Package.Installed("patterns-server-xen_tools"))
       UI.ChangeWidget(Id(:kvm_server), :Enabled, !Package.Installed("patterns-server-kvm_server"))
       UI.ChangeWidget(Id(:kvm_tools), :Enabled, !Package.Installed("patterns-server-kvm_tools"))
-
-      if Package.Installed("libvirt-daemon-lxc") && Package.Installed("libvirt-daemon-config-network")
-        UI.ChangeWidget(Id(:lxc), :Enabled, false)
-      end
 
       widget_id = UI.UserInput
       if widget_id == :accept
@@ -335,7 +270,6 @@ module Yast
           install_kvm_server = UI.QueryWidget(Id(:kvm_server), :Value)
           install_kvm_tools = UI.QueryWidget(Id(:kvm_tools), :Value)
           install_client_tools = UI.QueryWidget(Id(:client_tools), :Value)
-          install_lxc = UI.QueryWidget(Id(:lxc), :Value)
       end
 
       UI.CloseDialog
@@ -349,7 +283,7 @@ module Yast
       install_kvm = true if install_kvm_server || install_kvm_tools
       install_vm = true if install_client_tools
 
-      if widget_id == :cancel || !install_vm && !install_lxc
+      if widget_id == :cancel || !install_vm
         Builtins.y2milestone(
           "VirtConfig::ConfigureDom0 Cancel Selected or no platform selected."
         )
@@ -379,14 +313,6 @@ module Yast
       common_vm_packages = []
 
       result = true
-      if install_lxc
-        packages = ["libvirt-daemon-lxc", "libvirt-daemon-config-network"]
-        result = Package.DoInstall(packages)
-        unless result
-          Report.Error(Message.FailedToInstallPackages)
-          return false
-        end
-      end
 
       packages << "patterns-server-xen_server" if install_xen_server
       packages << "patterns-server-xen_tools" if install_xen_tools
@@ -537,7 +463,6 @@ module Yast
       )
       message_xen_ready = _("Xen Hypervisor and tools are installed.")
       message_client_ready = _("Virtualization client tools are installed.")
-      message_lxc_ready = _("Libvirt LXC components are installed.")
       message = ""
 
       if Arch.is_xen == false
@@ -563,15 +488,59 @@ module Yast
         message.concat(message_client_ready)
         message.concat("\n\n")
       end
-      if install_lxc
-        message.concat(message_lxc_ready)
-      end
+
       Popup.LongMessage(message)
 
       Wizard.CloseDialog
 
       Builtins.y2milestone("VirtConfig::ConfigureDom0 returned: %1", success)
       success
+    end
+
+    def information_widget
+      Frame(
+        _("Choose Hypervisor(s) to install"),
+        MarginBox(1, 0.5,
+          VBox(
+            Left(Label(_("Server: Minimal system to get a running Hypervisor"))),
+            Left(Label(_("Tools: Configure, manage and monitor virtual machines"))),
+            Left(Label(_("A disabled checkbox means the Hypervisor item has already been installed")))
+          )
+        )
+      )
+    end
+
+    def button_box_widget
+      ButtonBox(
+        PushButton(Id(:accept), Label.AcceptButton),
+        PushButton(Id(:cancel), Label.CancelButton)
+      )
+    end
+
+    def kvm_widget
+      Frame(
+        _("KVM Hypervisor"),
+        HBox(
+          Left(CheckBox(Id(:kvm_server), Opt(:key_F6), _("KVM server"))),
+          Left(CheckBox(Id(:kvm_tools), Opt(:key_F7), _("KVM tools"))),
+        )
+      )
+    end
+
+    def xen_widget
+      return if Arch.s390_64 || Arch.ppc64 || Arch.aarch64
+
+      Frame(
+        _("Xen Hypervisor"),
+        HBox(
+          Left(CheckBox(Id(:xen_server), Opt(:key_F8), _("Xen server"))),
+          Left(CheckBox(Id(:xen_tools), Opt(:key_F9), _("Xen tools"))),
+        )
+      )
+    end
+
+    def widgets
+      [information_widget, xen_widget, kvm_widget, button_box_widget].compact
     end
 
     publish :function => :isOpenSuse, :type => "boolean ()"
