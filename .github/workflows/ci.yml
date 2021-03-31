@@ -9,7 +9,7 @@ jobs:
   # FIXME: no unite tests
   # Tests:
   #   runs-on: ubuntu-latest
-  #   container: registry.opensuse.org/yast/head/containers/yast-ruby:latest
+  #   container: registry.opensuse.org/yast/sle-15/sp3/containers/yast-ruby:latest
 
   #   steps:
 
@@ -35,7 +35,7 @@ jobs:
   # FIXME: Rubocop is not used here
   # Rubocop:
   #   runs-on: ubuntu-latest
-  #   container: registry.opensuse.org/yast/head/containers/yast-ruby:latest
+  #   container: registry.opensuse.org/yast/sle-15/sp3/containers/yast-ruby:latest
 
   #   steps:
 
@@ -47,7 +47,7 @@ jobs:
 
   Package:
     runs-on: ubuntu-latest
-    container: registry.opensuse.org/yast/head/containers/yast-ruby:latest
+    container: registry.opensuse.org/yast/sle-15/sp3/containers/yast-ruby:latest
 
     steps:
 
@@ -60,7 +60,7 @@ jobs:
   # FIXME: no yardops
   # Yardoc:
   #   runs-on: ubuntu-latest
-  #   container: registry.opensuse.org/yast/head/containers/yast-ruby:latest
+  #   container: registry.opensuse.org/yast/sle-15/sp3/containers/yast-ruby:latest
 
   #   steps:
 
@@ -74,7 +74,7 @@ jobs:
   # checks into one job avoids that overhead
   Checks:
     runs-on: ubuntu-latest
-    container: registry.opensuse.org/yast/head/containers/yast-ruby:latest
+    container: registry.opensuse.org/yast/sle-15/sp3/containers/yast-ruby:latest
 
     steps:
 
