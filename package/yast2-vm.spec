@@ -1,7 +1,7 @@
 #
 # spec file for package yast2-vm
 #
-# Copyright (c) 2020 SUSE LLC
+# Copyright (c) 2021 SUSE LLC
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -15,25 +15,26 @@
 # Please submit bugfixes or comments via https://bugs.opensuse.org/
 #
 
+
 Name:           yast2-vm
-Summary:        Configure Hypervisor and Tools for Xen and KVM
-Version:        4.4.0
+Version:        4.4.1
 Release:        0
-Group:          System/YaST
+Summary:        Configure Hypervisor and Tools for Xen and KVM
 License:        GPL-2.0-only
-Url:            https://github.com/yast/yast-vm
-
+Group:          System/YaST
+URL:            https://github.com/yast/yast-vm
 Source0:        %{name}-%{version}.tar.bz2
-
-BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-testsuite
+BuildRequires:  perl-XML-Writer
+BuildRequires:  update-desktop-files
+BuildRequires:  yast2
 BuildRequires:  yast2-bootloader >= 3.1.35
-BuildRequires:  yast2-devtools >= 4.2.2
-
+BuildRequires:  yast2-devtools >= 4.4.0
+BuildRequires:  yast2-testsuite
 # OSRelease
 Requires:       yast2 >= 3.0.4
-Requires:       yast2-ruby-bindings >= 1.0.0
-Requires:       yast2-network >= 3.1.108
 Requires:       yast2-bootloader >= 3.1.35
+Requires:       yast2-network >= 3.1.108
+Requires:       yast2-ruby-bindings >= 1.0.0
 
 %description
 This YaST module installs the tools necessary for creating VMs with Xen or KVM.
@@ -47,23 +48,24 @@ This YaST module installs the tools necessary for creating VMs with Xen or KVM.
 %install
 %yast_install
 
-%ifarch %ix86
-rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/org.opensuse.yast.VirtualizationConfig.desktop
-rm -f $RPM_BUILD_ROOT/usr/share/applications/YaST2/org.opensuse.yast.RelocationServer.desktop
-rm -rf $RPM_BUILD_ROOT/usr/share/icons/*
+%ifarch %{ix86}
+rm -f %{buildroot}%{_datadir}/applications/YaST2/org.opensuse.yast.VirtualizationConfig.desktop
+rm -f %{buildroot}%{_datadir}/applications/YaST2/org.opensuse.yast.RelocationServer.desktop
+rm -rf %{buildroot}%{_datadir}/icons/*
 %else
 %yast_metainfo
 %endif
 
 %files
+%license COPYING
 %{yast_clientdir}
 %{yast_moduledir}
 %{yast_yncludedir}
 %{yast_scrconfdir}
-%ifnarch %ix86
+%ifnarch %{ix86}
 %{yast_desktopdir}
 %{yast_icondir}
 %{yast_metainfodir}
 %endif
-%doc %{yast_docdir}
-%license %{yast_docdir}/COPYING
+
+%changelog
