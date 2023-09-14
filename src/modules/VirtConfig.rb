@@ -434,13 +434,28 @@ module Yast
       # Force AppArmor to reload the profiles
       reloadApparmor
 
-      # Enable and start the libvirtd daemon for both KVM and Xen
-      cmd = "systemctl enable libvirtd.service"
-      Builtins.y2milestone("Enable libvirtd.service: %1", cmd)
-      SCR.Execute(path(".target.bash"), cmd)
-      cmd = "systemctl start libvirtd.service"
-      Builtins.y2milestone("Start libvirtd.service: %1", cmd)
-      SCR.Execute(path(".target.bash"), cmd)
+      # Enable and start the libvirt virtqemud daemon for KVM
+      if install_kvm
+        cmd = "systemctl enable virtqemud.service"
+        Builtins.y2milestone("Enable virtqemud.service: %1", cmd)
+        SCR.Execute(path(".target.bash"), cmd)
+        if Arch.is_xen == false
+          cmd = "systemctl start virtqemud.service"
+          Builtins.y2milestone("Start virtqemud.service: %1", cmd)
+          SCR.Execute(path(".target.bash"), cmd)
+        end
+      end
+      # Enable and start the libvirt virtxend daemon for Xen
+      if install_xen
+        cmd = "systemctl enable virtxend.service"
+        Builtins.y2milestone("Enable virtxend.service: %1", cmd)
+        SCR.Execute(path(".target.bash"), cmd)
+        if Arch.is_xen == true
+          cmd = "systemctl start virtxend.service"
+          Builtins.y2milestone("Start virtxend.service: %1", cmd)
+          SCR.Execute(path(".target.bash"), cmd)
+        end
+      end
 
       # Enable and start the virtlogd socket (libvirt >= 1.3.0) for both KVM and Xen
       cmd = "systemctl enable virtlogd.socket"
