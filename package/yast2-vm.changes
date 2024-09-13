@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Fri Sep 13 08:26:42 UTC 2024 - Ladislav Slezák <lslezak@suse.com>
+
+- Branch package for SP7 (bsc#1230201)
+
+-------------------------------------------------------------------
 Thu Apr 20 15:22:54 MDT 2023 - carnold@suse.com
 
 - The libvirtd daemon is deprecated and is going away.
